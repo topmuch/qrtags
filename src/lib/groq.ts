@@ -8,7 +8,7 @@
  * Priorité des clés API: DB (Setting table) > process.env
  */
 
-import type { GroqRequest, GroqMessage, GroqResult } from '@/types/ai';
+import type { GroqRequest, GroqResult } from '@/types/ai';
 import {
   API_RETRY_COUNT,
   FALLBACK_MESSAGES,
@@ -191,7 +191,7 @@ const FALLBACK_WHATSAPP_MESSAGES: Record<string, (p: WhatsAppMessageParams) => s
 const SYSTEM_PROMPTS: Record<string, string> = {
   fr: `Tu es un assistant QRBag. Génère UN SEUL message WhatsApp d'alerte de scan de bagage.
 RÈGLES STRICTES:
-- Maximum 280 caractères
+- Maximum 280 caractères STRICT
 - Ton urgent mais rassurant
 - Utilise des emojis pertinents
 - Formate comme un message WhatsApp (sauts de ligne avec \\n)
@@ -201,7 +201,7 @@ RÈGLES STRICTES:
 
   en: `You are a QRBag assistant. Generate a SINGLE WhatsApp baggage scan alert message.
 STRICT RULES:
-- Maximum 280 characters
+- Maximum 280 characters STRICT
 - Urgent but reassuring tone
 - Use relevant emojis
 - Format as a WhatsApp message (newlines with \\n)
@@ -211,7 +211,7 @@ STRICT RULES:
 
   ar: `أنت مساعد QRBag. قم بتوليد رسالة تنبيه مسح أمتعة واحدة عبر واتساب.
 قواعد صارمة:
-- بحد أقصى 280 حرفًا
+- بحد أقصى 280 حرفًا كحد أقصى
 - نبرة عاجلة ولكن مطمئنة
 - استخدم رموز تعبيرية مناسبة
 - صيغة كرسالة واتساب (أسطر جديدة مع \\n)

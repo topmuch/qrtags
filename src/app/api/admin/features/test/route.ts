@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
 import { getSetting, invalidateSettingsCache } from '@/lib/settings';
 
 // ═══════════════════════════════════════════════════════
@@ -120,6 +119,7 @@ export async function POST(request: NextRequest) {
       case 'wakit_api':
         return testWakitAPI();
       case 'whatsapp_automated':
+      case 'push_notifications':
         return testWhatsAppAPI();
       case 'geolocation_advanced':
         return testGeolocationAPI();

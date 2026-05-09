@@ -60,21 +60,12 @@ export async function PUT(request: NextRequest) {
       });
     }
 
-    // Invalider le cache des paramètres si des clés API ont été modifiées
-    const apiKeys = ['wakit_api_key', 'wakit_base_url', 'wakit_phone_number_id',
-      'wakit_template_scan_alert', 'wakit_timeout_ms',
-      'groq_api_key', 'groq_base_url', 'groq_model_chat',
-      'groq_model_analysis', 'groq_timeout_ms'];
-    
-    const hasApiKeyChange = Object.keys(settings).some(key => apiKeys.includes(key));
-    if (hasApiKeyChange) {
-      // Invalidation dynamique du cache
-      try {
-        const { invalidateSettingsCache } = await import('@/lib/settings');
-        invalidateSettingsCache();
-      } catch {
-        // Le cache sera automatiquement rafraîchi après le TTL
-      }
+    // Toujours invalider le cache après toute sauvegarde de paramètres
+    try {
+      const { invalidateSettingsCache } = await import('@/lib/settings');
+      invalidateSettingsCache();
+    } catch {
+      // Le cache sera automatiquement rafraîchi après le TTL (60s)
     }
 
     return NextResponse.json({ success: true });
