@@ -51,7 +51,7 @@ interface TravelerBaggage {
 interface Traveler {
   name: string;
   whatsapp: string | null;
-  email: null;
+  email: string | null;
   registeredAt: string;
   expirationDate: string | null;
   status: 'active' | 'expired';
@@ -150,6 +150,7 @@ export default function MarketingPage() {
     if (!data) return;
     const rows = data.travelers.map((t) => [
       t.name,
+      t.email || '',
       t.whatsapp || '',
       formatDate(t.registeredAt),
       t.status === 'active' ? 'Actif' : 'Expiré',
@@ -159,7 +160,7 @@ export default function MarketingPage() {
       t.baggages.map((b) => b.agencyName || '').filter(Boolean).join('; '),
     ]);
 
-    const header = ['Nom', 'WhatsApp', 'Date inscription', 'Statut', 'Date expiration', 'Nb bagages', 'Références', 'Agences'];
+    const header = ['Nom', 'Email', 'WhatsApp', 'Date inscription', 'Statut', 'Date expiration', 'Nb bagages', 'Références', 'Agences'];
     const csv = [header, ...rows].map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -361,6 +362,7 @@ export default function MarketingPage() {
                 <thead>
                   <tr className="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
                     <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Nom</th>
+                    <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Email</th>
                     <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">WhatsApp</th>
                     <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Inscription</th>
                     <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Statut</th>
@@ -454,6 +456,15 @@ function TravelerRow({ traveler, onView }: { traveler: Traveler; onView: () => v
     expiryStr
   );
 
+  const emailBody = buildRenewalMessage(
+    traveler.name.split(' ')[0] || 'voyageur',
+    traveler.baggages[0]?.reference || '',
+    expiryStr
+  );
+  const mailtoUrl = traveler.email
+    ? getMailtoUrl(traveler.email, 'Renouvellement QRBag', emailBody)
+    : null;
+
   return (
     <tr className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
       <td className="px-5 py-4">
@@ -461,6 +472,15 @@ function TravelerRow({ traveler, onView }: { traveler: Traveler; onView: () => v
           <p className="font-medium text-slate-800 dark:text-white">{traveler.name}</p>
           <p className="text-xs text-slate-400 mt-0.5">{traveler.totalBaggages} bagage{traveler.totalBaggages > 1 ? 's' : ''}</p>
         </div>
+      </td>
+      <td className="px-5 py-4">
+        {traveler.email ? (
+          <a href={mailtoUrl!} className="text-sm text-blue-600 dark:text-blue-400 hover:underline">
+            {traveler.email}
+          </a>
+        ) : (
+          <span className="text-sm text-slate-400">—</span>
+        )}
       </td>
       <td className="px-5 py-4">
         <span className="text-sm text-slate-600 dark:text-slate-300 font-mono">
@@ -494,6 +514,15 @@ function TravelerRow({ traveler, onView }: { traveler: Traveler; onView: () => v
               <MessageCircle className="w-4 h-4" />
             </a>
           )}
+          {mailtoUrl && (
+            <a
+              href={mailtoUrl}
+              className="p-2 rounded-lg bg-blue-500 hover:bg-blue-600 text-white transition-colors"
+              title="Envoyer un Email"
+            >
+              <Mail className="w-4 h-4" />
+            </a>
+          )}
           <button
             onClick={onView}
             className="p-2 rounded-lg bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 transition-colors"
@@ -517,6 +546,14 @@ function TravelerCard({ traveler, onView }: { traveler: Traveler; onView: () => 
     traveler.baggages[0]?.reference || '',
     expiryStr
   );
+  const emailBody = buildRenewalMessage(
+    traveler.name.split(' ')[0] || 'voyageur',
+    traveler.baggages[0]?.reference || '',
+    expiryStr
+  );
+  const mailtoUrl = traveler.email
+    ? getMailtoUrl(traveler.email, 'Renouvellement QRBag', emailBody)
+    : null;
 
   return (
     <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4">
@@ -536,6 +573,12 @@ function TravelerCard({ traveler, onView }: { traveler: Traveler; onView: () => 
 
       {/* Info */}
       <div className="space-y-1.5 mb-4 text-sm">
+        {traveler.email && (
+          <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+            <Mail className="w-3.5 h-3.5 text-slate-400" />
+            <span>{traveler.email}</span>
+          </div>
+        )}
         {traveler.whatsapp && (
           <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
             <Phone className="w-3.5 h-3.5 text-slate-400" />
@@ -565,6 +608,15 @@ function TravelerCard({ traveler, onView }: { traveler: Traveler; onView: () => 
             WhatsApp
           </a>
         )}
+        {mailtoUrl && (
+          <a
+            href={mailtoUrl}
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-sm font-medium transition-colors"
+          >
+            <Mail className="w-4 h-4" />
+            Email
+          </a>
+        )}
         <button
           onClick={onView}
           className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-xl text-sm font-medium transition-colors"
@@ -587,6 +639,14 @@ function DetailModalContent({ traveler }: { traveler: Traveler }) {
     traveler.baggages[0]?.reference || '',
     expiryStr
   );
+  const emailBody = buildRenewalMessage(
+    traveler.name.split(' ')[0] || 'voyageur',
+    traveler.baggages[0]?.reference || '',
+    expiryStr
+  );
+  const mailtoUrl = traveler.email
+    ? getMailtoUrl(traveler.email, 'Renouvellement QRBag', emailBody)
+    : null;
 
   return (
     <div className="space-y-5 mt-2">
@@ -595,6 +655,14 @@ function DetailModalContent({ traveler }: { traveler: Traveler }) {
         <div>
           <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Nom</p>
           <p className="font-medium text-slate-800 dark:text-white">{traveler.name}</p>
+        </div>
+        <div>
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Email</p>
+          {traveler.email ? (
+            <a href={mailtoUrl!} className="font-medium text-blue-600 dark:text-blue-400 hover:underline">{traveler.email}</a>
+          ) : (
+            <p className="font-medium text-slate-400">—</p>
+          )}
         </div>
         <div>
           <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">WhatsApp</p>
@@ -665,16 +733,25 @@ function DetailModalContent({ traveler }: { traveler: Traveler }) {
             WhatsApp
           </a>
         )}
-        <button
-          onClick={() => {
-            const emailBody = buildRenewalMessage(traveler.name.split(' ')[0] || 'voyageur', traveler.baggages[0]?.reference || '', expiryStr);
-            window.location.href = getMailtoUrl('contact@qrbag.com', 'Renouvellement QRBag', emailBody);
-          }}
-          className="flex-1 flex items-center justify-center gap-2 py-3 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-xl font-medium transition-colors"
-        >
-          <Mail className="w-5 h-5" />
-          Email
-        </button>
+        {mailtoUrl ? (
+          <a
+            href={mailtoUrl}
+            className="flex-1 flex items-center justify-center gap-2 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-xl font-medium transition-colors"
+          >
+            <Mail className="w-5 h-5" />
+            Email
+          </a>
+        ) : (
+          <button
+            onClick={() => {
+              window.location.href = getMailtoUrl('contact@qrbag.com', 'Renouvellement QRBag', emailBody);
+            }}
+            className="flex-1 flex items-center justify-center gap-2 py-3 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-xl font-medium transition-colors"
+          >
+            <Mail className="w-5 h-5" />
+            Email
+          </button>
+        )}
       </div>
     </div>
   );

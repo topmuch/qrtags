@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { getSession } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
 
@@ -149,8 +150,24 @@ function groupBaggagesByTraveler(baggages: BaggageWithAgency[]): Traveler[] {
 }
 
 // GET - Marketing/CRM data with traveler grouping and stats
+// Access: SuperAdmin only
 export async function GET(request: Request) {
   try {
+    // ─── Auth check: SuperAdmin only ───
+    const user = await getSession();
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Non autorisé — Connexion requise' },
+        { status: 401 }
+      );
+    }
+    if (user.role !== 'superadmin') {
+      return NextResponse.json(
+        { error: 'Accès interdit — Réservé au SuperAdmin' },
+        { status: 403 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
 
     const filter = searchParams.get('filter') || 'all'; // all | active | expired

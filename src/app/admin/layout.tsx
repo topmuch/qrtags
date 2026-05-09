@@ -109,8 +109,8 @@ function Sidebar({
     // Analysis Category
     { label: "ANALYSE", icon: null, isCategory: true },
 
-    // Marketing & Publicités
-    { label: "Marketing & Relances", icon: <TrendingUp className="w-5 h-5" />, href: "/admin/marketing", roles: ['superadmin', 'admin'] },
+    // Marketing & Relances — SuperAdmin uniquement
+    { label: "Marketing & Relances", icon: <TrendingUp className="w-5 h-5" />, href: "/admin/marketing", roles: ['superadmin'] },
 
     // Marketing & Publicités
     { label: "Marketing & Publicités", icon: <Megaphone className="w-5 h-5" />, href: "/admin/publicites", roles: ['superadmin', 'admin'] },
