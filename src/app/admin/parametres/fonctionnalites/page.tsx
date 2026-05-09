@@ -57,6 +57,8 @@ const NEEDS_CONFIG: string[] = [
   'geolocation_advanced',
   'push_notifications',
   'api_webhooks',
+  'wakit_api',
+  'groq_api',
 ];
 
 // Features that can be tested
@@ -65,6 +67,8 @@ const TESTABLE_FEATURES: string[] = [
   'geolocation_advanced',
   'push_notifications',
   'api_webhooks',
+  'wakit_api',
+  'groq_api',
   'ai_translation',
   'ai_fraud_detection',
   'ai_message_summary',
@@ -170,6 +174,98 @@ const CONFIG_FIELDS: Record<string, {
         help: 'Ajouté dans le header X-Webhook-Secret'
       },
     ],
+  },
+  // ─── Wakit (WhatsApp Business API) ───
+  wakit_api: {
+    title: '🔑 Configuration Wakit API',
+    description: 'Connectez votre API WhatsApp Business Wakit pour l\'envoi automatisé de messages aux voyageurs.',
+    fields: [
+      {
+        key: 'wakit_api_key',
+        label: 'Clé API Wakit',
+        type: 'password',
+        placeholder: 'ex: wakit_sk_xxxxxxxxxxxx',
+        help: 'Votre clé API secrète Wakit. Stockée de manière sécurisée en base de données.'
+      },
+      {
+        key: 'wakit_base_url',
+        label: 'URL de base API',
+        type: 'text',
+        placeholder: 'https://api.wakit.ai/v1',
+        help: 'URL de base de l\'API Wakit (ne changez pas sauf indication)'
+      },
+      {
+        key: 'wakit_phone_number_id',
+        label: 'Phone Number ID',
+        type: 'text',
+        placeholder: 'ex: 7101234567',
+        help: 'Identifiant du numéro WhatsApp Business associé à votre compte Wakit'
+      },
+      {
+        key: 'wakit_template_scan_alert',
+        label: 'Template d\'alerte scan',
+        type: 'text',
+        placeholder: 'baggage_scan_alert',
+        help: 'Nom du template WhatsApp utilisé pour les alertes de scan de bagage'
+      },
+      {
+        key: 'wakit_timeout_ms',
+        label: 'Timeout (ms)',
+        type: 'text',
+        placeholder: '10000',
+        help: 'Délai d\'attente maximum pour l\'appel API en millisecondes (défaut: 10000)'
+      },
+    ],
+    helpLink: {
+      url: 'https://www.wakit.ai/docs',
+      label: 'Documentation Wakit API'
+    }
+  },
+  // ─── Groq (AI Inference API) ───
+  groq_api: {
+    title: '🧠 Configuration Groq API',
+    description: 'Connectez l\'API Groq pour les fonctionnalités d\'intelligence artificielle: analyse de bagages, détection de fraude, traduction, résumés.',
+    fields: [
+      {
+        key: 'groq_api_key',
+        label: 'Clé API Groq',
+        type: 'password',
+        placeholder: 'ex: gsk_xxxxxxxxxxxx',
+        help: 'Votre clé API secrète Groq. Obtenez-la sur console.groq.com'
+      },
+      {
+        key: 'groq_base_url',
+        label: 'URL de base API',
+        type: 'text',
+        placeholder: 'https://api.groq.com/openai/v1/chat/completions',
+        help: 'URL de l\'endpoint Groq (ne changez pas sauf indication)'
+      },
+      {
+        key: 'groq_model_chat',
+        label: 'Modèle Chat',
+        type: 'text',
+        placeholder: 'llama3-8b-8192',
+        help: 'Modèle utilisé pour les conversations et résumés'
+      },
+      {
+        key: 'groq_model_analysis',
+        label: 'Modèle Analyse',
+        type: 'text',
+        placeholder: 'llama3-8b-8192',
+        help: 'Modèle utilisé pour l\'analyse de bagages et la détection de fraude'
+      },
+      {
+        key: 'groq_timeout_ms',
+        label: 'Timeout (ms)',
+        type: 'text',
+        placeholder: '30000',
+        help: 'Délai d\'attente maximum pour l\'appel API en millisecondes (défaut: 30000)'
+      },
+    ],
+    helpLink: {
+      url: 'https://console.groq.com/docs/quickstart',
+      label: 'Documentation Groq API'
+    }
   },
 };
 

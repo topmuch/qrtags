@@ -1,10 +1,13 @@
 /**
  * Client utilitaire Wakit — WhatsApp Business API
  *
- * Prêt à recevoir les appels. Pour l'instant:
- * - Si WAKIT_API_KEY n'est pas configurée → retourne { fallback: true }
+ * Prêt à recevoir les appels:
+ * - Si la clé API n'est pas configurée (DB + env) → retourne { fallback: true }
  * - Si l'API est configurée → envoie la requête avec timeout + retry (1 tentative)
  * - En cas d'échec → log console.warn et retourne { fallback: true }
+ *
+ * Les clés API sont lues depuis la DB (table Setting) en priorité,
+ * puis depuis process.env en fallback.
  *
  * Usage:
  *   const result = await sendWakitMessage({ to: "33612345678", template: "baggage_scan_alert", variables: { name: "Ali" } });
@@ -13,12 +16,11 @@
 
 import type { WakitPayload, WakitResult } from '@/types/ai';
 import {
-  WAKIT_API_KEY,
-  WAKIT_BASE_URL,
-  WAKIT_TIMEOUT_MS,
   API_RETRY_COUNT,
   FALLBACK_MESSAGES,
+  getServiceConfig,
 } from './config';
+import type { WakitServiceConfig } from './config';
 import { fetchWithRetry } from './fetch-util';
 
 // ═══════════════════════════════════════════════════════
@@ -49,15 +51,31 @@ function normalizePhone(phone: string): string {
 
 /**
  * Envoie un message WhatsApp via l'API Wakit.
+ * Lit la configuration depuis la DB (priorité) puis les env vars.
  *
  * @returns WakitResult — jamais lance d'exception
  */
 export async function sendWakitMessage(payload: WakitPayload): Promise<WakitResult> {
   const startTime = Date.now();
 
+  // ─── Charger la config (DB + env) ───
+  let config: WakitServiceConfig;
+  try {
+    config = await getServiceConfig('wakit');
+  } catch (error) {
+    console.warn('[Wakit] Erreur lecture config → fallback:', error);
+    return {
+      success: false,
+      status: 'fallback',
+      error: FALLBACK_MESSAGES.wakit.noApiKey,
+      fallback: true,
+      latencyMs: Date.now() - startTime,
+    };
+  }
+
   // ─── Guard: API key non configurée → fallback ───
-  if (!WAKIT_API_KEY) {
-    console.warn('[Wakit] Clé API non configurée → fallback.');
+  if (!config.apiKey) {
+    console.warn('[Wakit] Clé API non configurée (DB + env) → fallback.');
     return {
       success: false,
       status: 'fallback',
@@ -96,7 +114,7 @@ export async function sendWakitMessage(payload: WakitPayload): Promise<WakitResu
   // ─── Appel API ───
   console.log(`[Wakit] Envoi à ${phone.substring(0, 4)}*** via template "${payload.template}"`);
 
-  const url = `${WAKIT_BASE_URL}/messages`;
+  const url = `${config.baseUrl}/messages`;
   const body = {
     to: phone,
     template: payload.template,
@@ -109,11 +127,11 @@ export async function sendWakitMessage(payload: WakitPayload): Promise<WakitResu
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${WAKIT_API_KEY}`,
+        'Authorization': `Bearer ${config.apiKey}`,
       },
       body: JSON.stringify(body),
     },
-    WAKIT_TIMEOUT_MS,
+    config.timeoutMs,
     API_RETRY_COUNT,
     'Wakit'
   );

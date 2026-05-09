@@ -1,10 +1,11 @@
 /**
  * Configuration centralisée pour les services externes Wakit & Groq.
  *
- * Ce module ne contient que des constantes et fonctions pures.
- * Aucun appel réseau n'est effectué ici.
+ * Ce module contient:
+ * - Des constantes synchrones lues depuis process.env (fallback)
+ * - Une fonction async getServiceConfig() qui lit depuis la DB (priorité)
  *
- * Les clés API sont lues depuis process.env côté serveur uniquement.
+ * Priorité des clés API: DB (Setting table) > process.env
  */
 
 // ═══════════════════════════════════════════════════════
@@ -79,12 +80,12 @@ export const FALLBACK_MESSAGES = {
 } as const;
 
 // ═══════════════════════════════════════════════════════
-//  HELPERS
+//  HELPERS (SYNC — env vars only)
 // ═══════════════════════════════════════════════════════
 
 /**
- * Vérifie si un service externe est activé et prêt.
- * Un service est considéré "activé" si sa clé API est configurée.
+ * Vérifie si un service externe est activé et prêt (env vars uniquement).
+ * Pour la vérification complète (DB + env), utiliser isServiceEnabledAsync().
  */
 export function isEnabled(service: 'wakit' | 'groq'): boolean {
   if (service === 'wakit') return WAKIT_ENABLED;
@@ -93,8 +94,7 @@ export function isEnabled(service: 'wakit' | 'groq'): boolean {
 }
 
 /**
- * Retourne un résumé de l'état de tous les services externes.
- * Utile pour le debugging et le dashboard admin.
+ * Retourne un résumé de l'état de tous les services externes (env vars uniquement).
  */
 export function getServicesStatus(): Record<string, { enabled: boolean; label: string }> {
   return {
@@ -105,6 +105,136 @@ export function getServicesStatus(): Record<string, { enabled: boolean; label: s
     groq: {
       enabled: GROQ_ENABLED,
       label: 'IA Inference (Groq)',
+    },
+  };
+}
+
+// ═══════════════════════════════════════════════════════
+//  DB KEYS — Mapping entre Setting DB keys et service config
+// ═══════════════════════════════════════════════════════
+
+/** Clés dans la table Setting pour chaque service */
+export const DB_KEYS = {
+  wakit: {
+    apiKey: 'wakit_api_key',
+    baseUrl: 'wakit_base_url',
+    phoneNumberId: 'wakit_phone_number_id',
+    templateScanAlert: 'wakit_template_scan_alert',
+    timeoutMs: 'wakit_timeout_ms',
+  },
+  groq: {
+    apiKey: 'groq_api_key',
+    baseUrl: 'groq_base_url',
+    modelChat: 'groq_model_chat',
+    modelAnalysis: 'groq_model_analysis',
+    timeoutMs: 'groq_timeout_ms',
+  },
+} as const;
+
+// ═══════════════════════════════════════════════════════
+//  ASYNC CONFIG — Lecture DB + env fallback
+// ═══════════════════════════════════════════════════════
+
+/** Configuration complète d'un service (lue depuis DB ou env) */
+export interface ServiceConfig {
+  apiKey: string;
+  baseUrl: string;
+  enabled: boolean;
+}
+
+/** Configuration complète du service Wakit */
+export interface WakitServiceConfig extends ServiceConfig {
+  phoneNumberId: string;
+  templateScanAlert: string;
+  timeoutMs: number;
+}
+
+/** Configuration complète du service Groq */
+export interface GroqServiceConfig extends ServiceConfig {
+  modelChat: string;
+  modelAnalysis: string;
+  timeoutMs: number;
+}
+
+/**
+ * Récupère la configuration complète d'un service.
+ * Priorité: DB (table Setting) > process.env > valeurs par défaut.
+ * Résultat mis en cache 60 secondes côté settings.ts.
+ *
+ * @param service - 'wakit' ou 'groq'
+ */
+export async function getServiceConfig(service: 'wakit'): Promise<WakitServiceConfig>;
+export async function getServiceConfig(service: 'groq'): Promise<GroqServiceConfig>;
+export async function getServiceConfig(service: 'wakit' | 'groq'): Promise<WakitServiceConfig | GroqServiceConfig> {
+  // Import dynamique pour éviter les dépendances circulaires
+  const { getApiKey } = await import('./settings');
+
+  if (service === 'wakit') {
+    const [apiKey, baseUrl, phoneNumberId, templateScanAlert, timeoutStr] = await Promise.all([
+      getApiKey(DB_KEYS.wakit.apiKey, 'WAKIT_API_KEY', WAKIT_API_KEY),
+      getApiKey(DB_KEYS.wakit.baseUrl, 'WAKIT_BASE_URL', WAKIT_BASE_URL),
+      getApiKey(DB_KEYS.wakit.phoneNumberId, 'WAKIT_PHONE_NUMBER_ID', WAKIT_PHONE_NUMBER_ID),
+      getApiKey(DB_KEYS.wakit.templateScanAlert, 'WAKIT_TEMPLATE_SCAN_ALERT', WAKIT_TEMPLATE_SCAN_ALERT),
+      getApiKey(DB_KEYS.wakit.timeoutMs, 'WAKIT_TIMEOUT_MS', String(WAKIT_TIMEOUT_MS)),
+    ]);
+
+    return {
+      apiKey,
+      baseUrl,
+      phoneNumberId,
+      templateScanAlert,
+      timeoutMs: parseInt(timeoutStr, 10) || 10000,
+      enabled: apiKey.length > 0,
+    };
+  }
+
+  // groq
+  const [apiKey, baseUrl, modelChat, modelAnalysis, timeoutStr] = await Promise.all([
+    getApiKey(DB_KEYS.groq.apiKey, 'GROQ_API_KEY', GROQ_API_KEY),
+    getApiKey(DB_KEYS.groq.baseUrl, 'GROQ_BASE_URL', GROQ_BASE_URL),
+    getApiKey(DB_KEYS.groq.modelChat, 'GROQ_MODEL_CHAT', GROQ_MODEL_CHAT),
+    getApiKey(DB_KEYS.groq.modelAnalysis, 'GROQ_MODEL_ANALYSIS', GROQ_MODEL_ANALYSIS),
+    getApiKey(DB_KEYS.groq.timeoutMs, 'GROQ_TIMEOUT_MS', String(GROQ_TIMEOUT_MS)),
+  ]);
+
+  return {
+    apiKey,
+    baseUrl,
+    modelChat,
+    modelAnalysis,
+    timeoutMs: parseInt(timeoutStr, 10) || 30000,
+    enabled: apiKey.length > 0,
+  };
+}
+
+/**
+ * Vérifie de manière asynchrone si un service est activé.
+ * Check DB en premier, puis env vars.
+ */
+export async function isServiceEnabledAsync(service: 'wakit' | 'groq'): Promise<boolean> {
+  const config = await getServiceConfig(service);
+  return config.enabled;
+}
+
+/**
+ * Retourne le statut complet des services (DB + env).
+ */
+export async function getServicesStatusAsync(): Promise<Record<string, { enabled: boolean; label: string; source: string }>> {
+  const [wakitConfig, groqConfig] = await Promise.all([
+    getServiceConfig('wakit'),
+    getServiceConfig('groq'),
+  ]);
+
+  return {
+    wakit: {
+      enabled: wakitConfig.enabled,
+      label: 'WhatsApp Business (Wakit)',
+      source: wakitConfig.apiKey && wakitConfig.apiKey === WAKIT_API_KEY && WAKIT_API_KEY ? 'env' : 'db',
+    },
+    groq: {
+      enabled: groqConfig.enabled,
+      label: 'IA Inference (Groq)',
+      source: groqConfig.apiKey && groqConfig.apiKey === GROQ_API_KEY && GROQ_API_KEY ? 'env' : 'db',
     },
   };
 }

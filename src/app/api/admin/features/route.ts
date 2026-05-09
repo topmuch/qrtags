@@ -67,6 +67,23 @@ const FEATURE_DEFINITIONS = [
     icon: 'Webhook',
     enabled: false,
   },
+  // 🔐 API Services (Wakit & Groq)
+  {
+    key: 'wakit_api',
+    label: 'Wakit — WhatsApp Business API',
+    description: 'Connectez votre API WhatsApp Business (Wakit) pour l\'envoi automatisé de messages de scan et d\'alertes aux voyageurs.',
+    category: 'api_services',
+    icon: 'MessageSquare',
+    enabled: false,
+  },
+  {
+    key: 'groq_api',
+    label: 'Groq — IA Inference API',
+    description: 'Connectez l\'API Groq pour les fonctionnalités d\'intelligence artificielle: analyse de bagages, détection de fraude, traduction, résumés.',
+    category: 'api_services',
+    icon: 'Brain',
+    enabled: false,
+  },
   // 🤖 AI Features
   {
     key: 'ai_fraud_detection',
@@ -174,6 +191,7 @@ export async function GET() {
         notifications: 'Notifications',
         integration: 'Intégrations',
         ai: '🤖 Intelligence Artificielle',
+        api_services: '🔐 Clés API & Services',
       }
     });
   } catch (error) {
@@ -190,6 +208,7 @@ export async function GET() {
         notifications: 'Notifications',
         integration: 'Intégrations',
         ai: '🤖 Intelligence Artificielle',
+        api_services: '🔐 Clés API & Services',
       }
     });
   }

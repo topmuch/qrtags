@@ -1,10 +1,13 @@
 /**
  * Client utilitaire Groq — AI Inference API
  *
- * Prêt à recevoir les appels. Pour l'instant:
- * - Si GROQ_API_KEY n'est pas configurée → retourne { fallback: true }
+ * Prêt à recevoir les appels:
+ * - Si la clé API n'est pas configurée (DB + env) → retourne { fallback: true }
  * - Si l'API est configurée → envoie la requête avec timeout + retry (1 tentative)
  * - En cas d'échec → log console.warn et retourne { fallback: true }
+ *
+ * Les clés API sont lues depuis la DB (table Setting) en priorité,
+ * puis depuis process.env en fallback.
  *
  * Usage:
  *   const result = await callGroqAI({
@@ -16,13 +19,11 @@
 
 import type { GroqRequest, GroqResult } from '@/types/ai';
 import {
-  GROQ_API_KEY,
-  GROQ_BASE_URL,
-  GROQ_TIMEOUT_MS,
   API_RETRY_COUNT,
-  GROQ_MODEL_CHAT,
   FALLBACK_MESSAGES,
+  getServiceConfig,
 } from './config';
+import type { GroqServiceConfig } from './config';
 import { fetchWithRetry } from './fetch-util';
 
 // ═══════════════════════════════════════════════════════
@@ -31,6 +32,7 @@ import { fetchWithRetry } from './fetch-util';
 
 /**
  * Appelle le modèle Groq pour de l'inférence IA.
+ * Lit la configuration depuis la DB (priorité) puis les env vars.
  *
  * @param request - La requête Groq (model, messages, temperature, max_tokens)
  * @returns GroqResult — jamais lance d'exception
@@ -38,9 +40,23 @@ import { fetchWithRetry } from './fetch-util';
 export async function callGroqAI(request: GroqRequest): Promise<GroqResult> {
   const startTime = Date.now();
 
+  // ─── Charger la config (DB + env) ───
+  let config: GroqServiceConfig;
+  try {
+    config = await getServiceConfig('groq');
+  } catch (error) {
+    console.warn('[Groq] Erreur lecture config → fallback:', error);
+    return {
+      success: false,
+      error: FALLBACK_MESSAGES.groq.noApiKey,
+      fallback: true,
+      latencyMs: Date.now() - startTime,
+    };
+  }
+
   // ─── Guard: API key non configurée → fallback ───
-  if (!GROQ_API_KEY) {
-    console.warn('[Groq] Clé API non configurée → fallback.');
+  if (!config.apiKey) {
+    console.warn('[Groq] Clé API non configurée (DB + env) → fallback.');
     return {
       success: false,
       error: FALLBACK_MESSAGES.groq.noApiKey,
@@ -60,7 +76,7 @@ export async function callGroqAI(request: GroqRequest): Promise<GroqResult> {
     };
   }
 
-  const model = request.model || GROQ_MODEL_CHAT;
+  const model = request.model || config.modelChat;
 
   // ─── Appel API ───
   console.log(
@@ -75,16 +91,16 @@ export async function callGroqAI(request: GroqRequest): Promise<GroqResult> {
   };
 
   const result = await fetchWithRetry(
-    GROQ_BASE_URL,
+    config.baseUrl,
     {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${GROQ_API_KEY}`,
+        'Authorization': `Bearer ${config.apiKey}`,
       },
       body: JSON.stringify(body),
     },
-    GROQ_TIMEOUT_MS,
+    config.timeoutMs,
     API_RETRY_COUNT,
     'Groq'
   );
