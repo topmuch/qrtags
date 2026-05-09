@@ -56,16 +56,17 @@ function LanguageSelector({ lang, setLang }: { lang: Language; setLang: (l: Lang
 
   return (
     <div className="relative">
+      {/* FIX: Taille réduite mobile, normale desktop */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-4 py-2.5 bg-white/10 rounded-full text-white hover:bg-white/20 transition-colors text-base font-medium backdrop-blur-sm border border-white/20 min-h-[48px]"
+        className="flex items-center gap-1.5 px-2.5 py-1.5 sm:px-4 sm:py-2.5 bg-white/10 rounded-full text-white hover:bg-white/20 transition-colors text-xs sm:text-sm md:text-base font-medium backdrop-blur-sm border border-white/20 min-h-[36px] sm:min-h-[40px] md:min-h-[48px]"
       >
-        <Globe className="w-5 h-5" />
+        <Globe className="w-4 h-4 sm:w-5 sm:h-5" />
         <span>{LANGUAGE_NAMES[lang]}</span>
       </button>
 
       {isOpen && (
-        <div className="absolute top-full right-0 mt-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl shadow-xl overflow-hidden z-50 min-w-[160px]">
+        <div /* FIX: Dropdown adapté mobile */ className="absolute top-full right-0 mt-1 sm:mt-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl shadow-xl overflow-hidden z-50 min-w-[140px] sm:min-w-[160px]">
           {(['fr', 'en', 'ar'] as Language[]).map((l) => (
             <button
               key={l}
@@ -73,7 +74,7 @@ function LanguageSelector({ lang, setLang }: { lang: Language; setLang: (l: Lang
                 setLang(l);
                 setIsOpen(false);
               }}
-              className={`w-full px-5 py-3.5 text-left text-base font-medium transition-colors ${
+              className={`w-full px-4 py-2.5 sm:px-5 sm:py-3.5 text-left text-xs sm:text-sm md:text-base font-medium transition-colors ${
                 lang === l 
                   ? 'bg-orange-500 text-white' 
                   : 'text-white/80 hover:bg-white/10 hover:text-white'
@@ -245,15 +246,15 @@ function ErrorScreen({
 }
 
 // Success Toast Component
-function SuccessToast({ show, message }: { show: boolean; message: string }) {
+function SuccessToast({ show, message, successTitle }: { show: boolean; message: string; successTitle: string }) {
   if (!show) return null;
   
   return (
-    <div className="fixed top-5 right-5 bg-orange-500 text-white px-6 py-4 rounded-xl shadow-lg z-50 animate-in slide-in-from-right duration-300">
+    <div className="fixed top-[calc(3.5rem+env(safe-area-inset-top,0px))] sm:top-[calc(4rem+env(safe-area-inset-top,0px))] right-3 sm:right-5 bg-orange-500 text-white px-4 sm:px-6 py-3 sm:py-4 rounded-xl shadow-lg z-50 animate-in slide-in-from-right duration-300 max-w-[calc(100vw-2rem)] sm:max-w-sm">
       <div className="flex items-center gap-3">
         <CheckCircle className="w-6 h-6" />
         <div>
-          <div className="font-bold text-lg">Wahoo ! 🎉</div>
+          <div className="font-bold text-lg">{successTitle} 🎉</div>
           <div className="text-base opacity-90">{message}</div>
         </div>
       </div>
@@ -294,7 +295,7 @@ export default function ScanPage() {
         setBaggageData(data);
       } catch (error) {
         console.error('Error fetching baggage:', error);
-        setBaggageData({ status: 'error', message: 'Erreur serveur' });
+        setBaggageData({ status: 'error', message: t('errors.server_error') });
       } finally {
         setLoading(false);
       }
@@ -342,13 +343,13 @@ export default function ScanPage() {
       let errorMessage = '';
 
       if (geoErr.code === 1) {
-        errorMessage = t('errors.location_permission_denied') || '⚠️ Accès à la localisation refusé. Activez-la dans Réglages > Safari > QRBag ou entrez le lieu manuellement.';
+        errorMessage = t('errors.location_permission_denied');
       } else if (geoErr.code === 2) {
-        errorMessage = t('errors.location_unavailable') || '📍 Service de localisation indisponible. Activez-le dans Réglages > Confidentialité > Services de localisation.';
+        errorMessage = t('errors.location_unavailable');
       } else if (geoErr.code === 3) {
-        errorMessage = t('errors.location_timeout') || '⏳ Détection impossible. Veuillez entrer le lieu manuellement.';
+        errorMessage = t('errors.location_timeout');
       } else {
-        errorMessage = t('errors.location_failed') || 'Impossible de détecter votre position.';
+        errorMessage = t('errors.location_failed');
       }
 
       setGeoError(errorMessage);
@@ -358,19 +359,19 @@ export default function ScanPage() {
     }
   }, [t]);
 
-  // Generate WhatsApp message
+  // Generate WhatsApp message (i18n-ready)
   const generateWhatsAppMessage = useCallback((finderName: string, finderPhone: string, locationText: string, mapLink: string) => {
     return encodeURIComponent(
-      `📦 *QRBag – Bagage trouvé !*\n\n` +
-      `📍 *Référence* : ${reference}\n` +
-      `📍 *Lieu* : ${locationText}\n` +
-      `🗺️ *Carte* : ${mapLink}\n\n` +
-      `👤 *Trouvé par* : ${finderName}\n` +
-      `📱 *Contact* : ${finderPhone}\n\n` +
-      `👉 Merci de le récupérer rapidement.\n` +
-      `*QRBag – Protégez vos bagages, en toute sérénité.*`
+      `${t('whatsapp.baggage_found')}\n\n` +
+      `${t('whatsapp.reference')} ${reference}\n` +
+      `${t('whatsapp.location')} ${locationText}\n` +
+      `${t('whatsapp.map')} ${mapLink}\n\n` +
+      `${t('whatsapp.found_by')} ${finderName}\n` +
+      `${t('whatsapp.contact')} ${finderPhone}\n\n` +
+      `${t('whatsapp.pickup_message')}\n` +
+      `${t('whatsapp.signature')}`
     );
-  }, [reference]);
+  }, [reference, t]);
 
   // Handle WhatsApp contact
   const handleWhatsApp = useCallback(async () => {
@@ -382,7 +383,7 @@ export default function ScanPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          location: otherLocation.trim() || locationText || "Non précisé",
+          location: otherLocation.trim() || locationText || t('finder.not_specified'),
           finderName: finderName.trim(),
           finderPhone: finderPhone.trim(),
           message: '',
@@ -391,10 +392,10 @@ export default function ScanPage() {
         }),
       });
 
-      const finalLocationText = otherLocation.trim() || locationText || "Non précisé";
+      const finalLocationText = otherLocation.trim() || locationText || t('finder.not_specified');
       const mapLink = sharedPosition
         ? `https://maps.app.goo.gl/?link=https://www.google.com/maps?q=${sharedPosition.lat},${sharedPosition.lng}`
-        : "Localisation non partagée";
+        : t('whatsapp.location_not_shared');
 
       const message = generateWhatsAppMessage(finderName, finderPhone, finalLocationText, mapLink);
       const ownerNumber = baggageData?.baggage?.whatsappOwner?.replace(/\D/g, '') || FALLBACK_PHONE;
@@ -431,7 +432,7 @@ export default function ScanPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          location: otherLocation.trim() || locationText || "Non précisé",
+          location: otherLocation.trim() || locationText || t('finder.not_specified'),
           finderName: finderName.trim(),
           finderPhone: finderPhone.trim(),
           message: '',
@@ -461,7 +462,7 @@ export default function ScanPage() {
   // Validate finder form before contacting
   const validateFinderForm = (): boolean => {
     if (!sharedPosition && !otherLocation.trim()) {
-      setGeoError(t('finder.please_enter_location') || 'Veuillez entrer le lieu où vous avez trouvé le bagage.');
+      setGeoError(t('finder.please_enter_location'));
       return false;
     }
     if (!finderName.trim() || !finderPhone.trim()) {
@@ -520,124 +521,178 @@ export default function ScanPage() {
   // ─── Main Render — Purple Theme with Enlarged Fonts ───
   return (
     <main 
-      className="min-h-screen bg-[#6613e3] flex items-center justify-center p-5 md:p-8" 
+      /* FIX: min-h-[100dvh] iOS Safari + px anti-débordement + pb safe-area-bottom */
+      className="min-h-[100dvh] min-h-screen bg-[#6613e3] flex flex-col px-4 sm:px-5 md:px-8 pb-[env(safe-area-inset-bottom,0px)]" 
       dir={dir}
     >
-      {/* Language Selector */}
-      <div className="absolute top-4 right-4 z-40">
+      {/* FIX: Header sticky + safe-area-top + bg blur pour empêcher l'overlap */}
+      <header className="sticky top-0 z-40 flex items-center justify-end pt-[env(safe-area-inset-top,0px)] px-0 py-2 sm:py-3 md:py-4 bg-[#6613e3]/95 backdrop-blur-md">
         <LanguageSelector lang={lang} setLang={setLang} />
-      </div>
+      </header>
 
       {/* Success Toast */}
-      <SuccessToast show={showSuccess} message={t('finder.message_sent')} />
+      <SuccessToast show={showSuccess} message={t('finder.message_sent')} successTitle={t('finder.success_title')} />
 
-      {/* Content Container */}
-      <div className="w-full max-w-md mx-auto">
-        {/* Urgent Banner for Lost Baggage */}
-        {isDeclaredLost && (
-          <div className="bg-red-600 text-white text-center py-3 px-5 rounded-t-2xl mb-0">
-            <p className="font-bold text-base md:text-lg flex items-center justify-center gap-2">
-              <AlertTriangle className="w-5 h-5" />
-              URGENT – Bagage signalé perdu !
-            </p>
-          </div>
-        )}
-
-        {/* Success Badge */}
-        <div className="bg-orange-500 text-white text-center py-3 px-6 rounded-full font-bold text-lg md:text-xl shadow-lg hover:shadow-xl transition-shadow tracking-wide mx-4 -mt-2 relative z-10">
-          {t('finder.success_badge')} ✈️
+      {/* FIX: Container avec mt-auto centrage vertical uniquement desktop, padding-top mobile */}
+      <div className="w-full max-w-md mx-auto flex-1 flex flex-col justify-center sm:justify-center py-4 sm:py-6 md:py-0">
+        {/* ─── BADGE DE STATUT (Premium Unifié) ─── */}
+        {/* FIX: mt-2 mobile pour éviter le chevauchement avec le header */}
+        <div className="mt-2 sm:mt-4 md:mt-6 mb-4 sm:mb-6 text-center">
+          <span className={`inline-flex items-center justify-center px-6 py-3 rounded-full font-bold text-lg shadow-lg transform transition-transform duration-300 ${
+            isDeclaredLost
+              ? 'bg-red-600 text-white shadow-red-500/30 animate-pulse'
+              : 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-orange-500/30 hover:scale-105'
+          }`}>
+            {isDeclaredLost ? `🚨 ${t('finder.lost_badge')}` : `${t('finder.success_badge')} ✈️`}
+          </span>
+          <p className="mt-3 text-white/90 text-base md:text-lg leading-relaxed max-w-md mx-auto">
+            {isDeclaredLost
+              ? t('finder.lost_description')
+              : t('finder.found_description')}
+          </p>
         </div>
 
         {/* Main Card — Glassmorphism */}
         <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-b-2xl rounded-t-2xl p-5 md:p-6 shadow-xl">
           
-          {/* ─── Owner Info Block ─── */}
+          {/* ─── CARTE 1 : IDENTITÉ PROPRIÉTAIRE (Premium) ─── */}
           {baggage && (
-            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-5 md:p-6 mb-4">
-              <h3 className="text-[#FFFFFF] text-sm font-bold uppercase tracking-widest mb-4">
-                {t('finder.owner_info')}
-              </h3>
-              <div className="flex items-center gap-4 mb-3">
-                <div className="w-14 h-14 bg-white/15 rounded-full flex items-center justify-center border border-white/20 flex-shrink-0">
-                  <Luggage className="w-7 h-7 text-orange-400" />
-                </div>
-                <div className="min-w-0">
-                  <div className="text-white font-bold text-xl md:text-2xl leading-tight truncate">
-                    {baggage.travelerName}
+            <div className="w-full bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 mb-4 shadow-xl relative overflow-hidden">
+              {/* Ligne décorative supérieure */}
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-white/30 to-transparent opacity-50"></div>
+
+              <h2 className="text-xs uppercase tracking-widest text-white/70 font-semibold mb-5 border-b border-white/10 pb-2 flex items-center gap-2">
+                <span>👤</span> {t('finder.owner_info')}
+              </h2>
+
+              <div className="space-y-5">
+                {/* Nom du propriétaire */}
+                <div className="flex items-start gap-4">
+                  <div className="bg-white/10 p-2 rounded-lg">
+                    <span className="text-2xl">👤</span>
                   </div>
-                  <div className="text-white/60 text-base font-mono mt-1">{reference}</div>
+                  <div>
+                    <p className="text-sm text-white/60 font-medium">{t('finder.fullName')}</p>
+                    <p className="text-xl font-bold text-white tracking-tight">{baggage.travelerName}</p>
+                  </div>
                 </div>
+
+                {/* Agence + WhatsApp en grille */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex items-start gap-3">
+                    <span className="text-xl mt-1">🏢</span>
+                    <div>
+                      <p className="text-sm text-white/60">{t('finder.agency')}</p>
+                      <p className="text-base font-semibold text-white">{baggage.agency || t('finder.noAgency')}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <span className="text-xl mt-1">📱</span>
+                    <div>
+                      <p className="text-sm text-white/60">WhatsApp</p>
+                      <p className="text-base font-mono text-orange-300">{baggage.whatsappOwner || '-'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {baggage.baggageType && (
+                  <div className="flex items-start gap-3 pt-2 border-t border-white/10 mt-2">
+                    <span className="text-xl">🧳</span>
+                    <div>
+                      <p className="text-sm text-white/60">{t('finder.bagType')}</p>
+                      <p className="text-base font-medium capitalize text-white">{baggage.baggageType}</p>
+                    </div>
+                  </div>
+                )}
               </div>
-              {baggage.agency && (
-                <div className="text-white/70 text-base flex items-center gap-2 mt-3 pl-1">
-                  <Shield className="w-5 h-5 text-orange-400" />
-                  {baggage.agency}
-                </div>
-              )}
             </div>
           )}
 
-          {/* ─── Travel Details Block ─── */}
+          {/* ─── CARTE 2 : DÉTAILS DU VOYAGE (Style Billet Premium) ─── */}
           {baggage && (
-            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-5 md:p-6 mb-5">
-              <h3 className="text-[#FFFFFF] text-sm font-bold uppercase tracking-widest mb-4">
-                {t('finder.travel_details')}
-              </h3>
-              <div className="space-y-3">
+            <div className="w-full bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 mb-8 shadow-xl relative">
+              {/* Halo décoratif orange style billet */}
+              <div className="absolute -right-4 -top-4 w-24 h-24 bg-orange-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+              <h2 className="text-xs uppercase tracking-widest text-white/70 font-semibold mb-5 border-b border-white/10 pb-2 flex items-center gap-2">
+                <span>✈️</span> {t('finder.travel_details')}
+              </h2>
+
+              <div className="space-y-6">
+                {/* Numéro de vol — Bloc mis en avant style tableau d'aéroport */}
                 {baggage.flightNumber && (
-                  <div className="flex items-center gap-3">
-                    <Plane className="w-5 h-5 text-white/70 flex-shrink-0" />
-                    <span className="text-white text-lg md:text-xl font-semibold">{baggage.flightNumber}</span>
+                  <div className="flex items-center justify-between bg-black/20 p-4 rounded-xl border border-white/5">
+                    <div className="flex flex-col">
+                      <span className="text-xs text-white/50 uppercase tracking-wide">{t('finder.flightNum')}</span>
+                      <span className="text-2xl font-bold tracking-widest text-white font-mono">{baggage.flightNumber}</span>
+                    </div>
+                    <div className="h-10 w-10 rounded-full bg-white/10 flex items-center justify-center">
+                      <Plane className="w-6 h-6 text-orange-400" />
+                    </div>
                   </div>
                 )}
-                {baggage.destination && (
-                  <div className="flex items-center gap-3">
-                    <MapPin className="w-5 h-5 text-white/70 flex-shrink-0" />
-                    <span className="text-white text-lg md:text-xl font-semibold">{baggage.destination}</span>
-                  </div>
-                )}
-                {baggage.departureDate && (
-                  <div className="flex items-center gap-3">
-                    <Clock className="w-5 h-5 text-white/70 flex-shrink-0" />
-                    <span className="text-white text-lg md:text-xl font-semibold">
-                      {formatDate(baggage.departureDate)}{baggage.departureTime ? ` – ${baggage.departureTime}` : ''}
-                    </span>
-                  </div>
-                )}
-                {!baggage.departureDate && baggage.createdAt && (
-                  <div className="flex items-center gap-3">
-                    <Clock className="w-5 h-5 text-white/70 flex-shrink-0" />
-                    <span className="text-white text-lg md:text-xl font-semibold">
-                      {t('finder.activation_date')} {formatDate(baggage.createdAt)}
-                    </span>
-                  </div>
-                )}
+
+                {/* Destination + Date en grille */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {baggage.destination && (
+                    <div className="flex items-start gap-3">
+                      <span className="text-2xl">📍</span>
+                      <div>
+                        <p className="text-sm text-white/60">{t('finder.destination')}</p>
+                        <p className="text-lg font-bold text-orange-300">{baggage.destination}</p>
+                      </div>
+                    </div>
+                  )}
+                  {(baggage.departureDate || baggage.createdAt) && (
+                    <div className="flex items-start gap-3">
+                      <span className="text-2xl">📅</span>
+                      <div>
+                        <p className="text-sm text-white/60">{baggage.departureDate ? t('finder.departureDate') : t('finder.activation_date')}</p>
+                        <p className="text-base font-medium text-white">
+                          {formatDate(baggage.departureDate || baggage.createdAt)}{baggage.departureTime ? ` – ${baggage.departureTime}` : ''}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}
 
-          {/* ─── Step 1: GPS Share Button ─── */}
+          {/* ─── ACTION : PARTAGER POSITION GPS (Premium) ─── */}
           {!showForm && (
-            <button
-              onClick={() => {
-                setShowForm(true);
-                handleShareLocation();
-              }}
-              disabled={isLoadingLocation}
-              className="w-full py-4 px-6 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-bold text-lg md:text-xl transition-all flex items-center justify-center gap-3 shadow-lg hover:shadow-xl min-h-[56px] disabled:opacity-70 focus:ring-2 focus:ring-orange-400 focus:ring-offset-2 focus:ring-offset-[#6613e3] mb-4"
-            >
-              {isLoadingLocation ? (
-                <>
-                  <span className="animate-spin text-xl">⏳</span>
-                  {t('finder.locating')}
-                </>
-              ) : (
-                <>
-                  <Navigation className="w-6 h-6" />
-                  {t('finder.share_gps')}
-                </>
-              )}
-            </button>
+            <div className="mb-4">
+              <button
+                onClick={() => {
+                  setShowForm(true);
+                  handleShareLocation();
+                }}
+                disabled={isLoadingLocation}
+                className="w-full group relative flex items-center justify-center gap-3 bg-orange-500 hover:bg-orange-600 active:bg-orange-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white font-bold text-lg py-5 px-6 rounded-2xl shadow-lg shadow-orange-500/40 transition-all duration-200 transform hover:-translate-y-1 min-h-[56px] focus:ring-2 focus:ring-orange-400 focus:ring-offset-2 focus:ring-offset-[#6613e3]"
+              >
+                {isLoadingLocation ? (
+                  <>
+                    <svg className="animate-spin h-6 w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>{t('finder.locating')}</span>
+                  </>
+                ) : (
+                  <>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 group-hover:animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <span>{t('finder.share_gps')}</span>
+                  </>
+                )}
+              </button>
+              <p className="text-center text-white/50 text-xs mt-3">
+                {t('finder.gps_security_note')}
+              </p>
+            </div>
           )}
 
           {/* ─── Step 2: Finder Form ─── */}

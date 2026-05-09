@@ -133,5 +133,26 @@
     "lost": "Lost",
     "found": "Found",
     "blocked": "Blocked"
+  },
+  "finder": {
+    "ownerInfo": "Owner Information",
+    "fullName": "Full name",
+    "agency": "Agency",
+    "noAgency": "Unaffiliated",
+    "bagType": "Baggage type",
+    "tripDetails": "Travel Details",
+    "flightNum": "Flight N°",
+    "destination": "Destination",
+    "departureDate": "Departure date",
+    "notSet": "Not set",
+    "not_specified": "Not specified",
+    "shareGps": "SHARE MY GPS LOCATION",
+    "locating": "Locating...",
+    "geoError": "Unable to access location. Please try again.",
+    "lost_badge": "BAGGAGE REPORTED LOST!",
+    "lost_description": "This baggage has been reported as lost. Please help find it.",
+    "found_description": "Thank you for helping locate this baggage.",
+    "gps_security_note": "Your location will be sent securely.",
+    "success_title": "Wahoo!"
   }
 }

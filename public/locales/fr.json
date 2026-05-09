@@ -49,7 +49,21 @@
     "retry_gps": "Réessayer le GPS",
     "message_sent": "Message envoyé avec succès !",
     "trust_note": "QRBag — Service officiel de protection des bagages",
-    "activation_date": "Activé le"
+    "activation_date": "Activé le",
+    "fullName": "Nom complet",
+    "agency": "Agence",
+    "noAgency": "Non affilié",
+    "bagType": "Type de bagage",
+    "flightNum": "Vol N°",
+    "destination": "Destination",
+    "departureDate": "Départ prévu",
+    "notSet": "Non renseigné",
+    "not_specified": "Non précisé",
+    "lost_badge": "BAGAGE SIGNALÉ PERDU !",
+    "lost_description": "Ce bagage est signalé perdu. Merci d'aider à le retrouver.",
+    "found_description": "Merci d'avoir aidé à localiser ce bagage.",
+    "gps_security_note": "Votre position sera envoyée de manière sécurisée.",
+    "success_title": "Wahoo !"
   },
   "whatsapp": {
     "baggage_found": "📦 *QRBag – Bagage trouvé !*",

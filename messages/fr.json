@@ -133,5 +133,26 @@
     "lost": "Perdu",
     "found": "Retrouvé",
     "blocked": "Bloqué"
+  },
+  "finder": {
+    "ownerInfo": "Informations du propriétaire",
+    "fullName": "Nom complet",
+    "agency": "Agence",
+    "noAgency": "Non affilié",
+    "bagType": "Type de bagage",
+    "tripDetails": "Détails du voyage",
+    "flightNum": "Vol N°",
+    "destination": "Destination",
+    "departureDate": "Départ prévu",
+    "notSet": "Non renseigné",
+    "not_specified": "Non précisé",
+    "shareGps": "PARTAGER MA POSITION GPS",
+    "locating": "Localisation en cours...",
+    "geoError": "Impossible d'accéder à la position. Veuillez réessayer.",
+    "lost_badge": "BAGAGE SIGNALÉ PERDU !",
+    "lost_description": "Ce bagage est signalé perdu. Merci d'aider à le retrouver.",
+    "found_description": "Merci d'avoir aidé à localiser ce bagage.",
+    "gps_security_note": "Votre position sera envoyée de manière sécurisée.",
+    "success_title": "Wahoo !"
   }
 }

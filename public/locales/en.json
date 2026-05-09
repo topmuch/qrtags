@@ -49,7 +49,21 @@
     "retry_gps": "Retry GPS",
     "message_sent": "Message sent successfully!",
     "trust_note": "QRBag — Official baggage protection service",
-    "activation_date": "Activated on"
+    "activation_date": "Activated on",
+    "fullName": "Full name",
+    "agency": "Agency",
+    "noAgency": "Unaffiliated",
+    "bagType": "Baggage type",
+    "flightNum": "Flight N°",
+    "destination": "Destination",
+    "departureDate": "Departure date",
+    "notSet": "Not set",
+    "not_specified": "Not specified",
+    "lost_badge": "BAGGAGE REPORTED LOST!",
+    "lost_description": "This baggage has been reported as lost. Please help find it.",
+    "found_description": "Thank you for helping locate this baggage.",
+    "gps_security_note": "Your location will be sent securely.",
+    "success_title": "Wahoo!"
   },
   "whatsapp": {
     "baggage_found": "📦 *QRBag – Baggage found!*",

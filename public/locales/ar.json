@@ -49,7 +49,21 @@
     "retry_gps": "إعادة محاولة GPS",
     "message_sent": "تم إرسال الرسالة بنجاح!",
     "trust_note": "كيو آر باغ — خدمة حماية الأمتعة الرسمية",
-    "activation_date": "تم التفعيل في"
+    "activation_date": "تم التفعيل في",
+    "fullName": "الاسم الكامل",
+    "agency": "الوكالة",
+    "noAgency": "غير تابع",
+    "bagType": "نوع الأمتعة",
+    "flightNum": "الرحلة رقم",
+    "destination": "الوجهة",
+    "departureDate": "تاريخ المغادرة",
+    "notSet": "غير محدد",
+    "not_specified": "غير محدد",
+    "lost_badge": "تم الإبلاغ عن فقدان الأمتعة!",
+    "lost_description": "تم الإبلاغ عن فقدان هذه الأمتعة. يرجى المساعدة في العثور عليها.",
+    "found_description": "شكراً لمساعدتك في تحديد موقع هذه الأمتعة.",
+    "gps_security_note": "سيتم إرسال موقعك بشكل آمن.",
+    "success_title": "واوو!"
   },
   "whatsapp": {
     "baggage_found": "📦 *QRBag – تم العثور على الحقيبة!*",
