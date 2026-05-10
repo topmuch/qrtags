@@ -482,7 +482,7 @@ export default function InscrirePage() {
       <main className="min-h-screen bg-[#6613e3] flex items-center justify-center">
         <div className="text-center text-white">
           <div className="animate-spin w-12 h-12 border-4 border-white/30 border-t-white rounded-full mx-auto mb-4"></div>
-          <p className="text-base md:text-lg">Chargement...</p>
+          <p className="text-base md:text-lg">...</p>
         </div>
       </main>
     }>
