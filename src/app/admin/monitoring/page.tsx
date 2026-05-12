@@ -96,15 +96,24 @@ export default function MonitoringPage() {
 
   useEffect(() => {
     if (!autoRefresh) return;
+    let cancelled = false;
     const tick = async () => {
       setRefreshing(true);
-      await Promise.all([runDiagnostic(), fetchLogs()]);
-      setRefreshing(false);
+      try {
+        await Promise.all([runDiagnostic(), fetchLogs()]);
+      } catch (err) {
+        console.error('Auto-refresh error:', err);
+      } finally {
+        if (!cancelled) setRefreshing(false);
+      }
     };
     // Run immediately on toggle
     tick();
     const interval = setInterval(tick, 30000);
-    return () => clearInterval(interval);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
   }, [autoRefresh, runDiagnostic, fetchLogs]);
 
   const statusColors: Record<string, string> = {
