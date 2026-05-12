@@ -862,6 +862,7 @@ export default function AgencyDashboardPage() {
                                       if (res.ok) fetchBaggages();
                                     } catch (error) {
                                       console.error('Error marking found:', error);
+                                    }
                                   }
                                 }}
                                 className="p-2 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-colors group"
