@@ -55,76 +55,78 @@ export default function TrackingWidget() {
   };
 
   return (
-    <div
+    <section
       dir={dir}
-      className="w-full max-w-lg mx-auto px-4"
+      className="w-full bg-blue-600 py-10 sm:py-14"
     >
-      <div className="relative bg-black/30 backdrop-blur-sm border border-[#3B82F6]/20 rounded-2xl p-6 sm:p-8 shadow-lg shadow-black/20">
-        {/* Label */}
-        <label
-          htmlFor={inputId}
-          className="flex items-center gap-2 text-white font-semibold text-base sm:text-lg mb-4"
-        >
-          <Search className="w-5 h-5 text-[#3B82F6]" />
-          {t('home.tracking_label')}
-        </label>
-
-        {/* Input + Button */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          <input
-            id={inputId}
-            type="text"
-            value={inputValue}
-            onChange={handleInputChange}
-            onKeyDown={handleKeyDown}
-            placeholder={t('home.tracking_placeholder')}
-            aria-label={t('home.tracking_label')}
-            aria-describedby={error ? errorId : undefined}
-            aria-invalid={error !== ''}
-            autoComplete="off"
-            spellCheck={false}
-            maxLength={15}
-            className={`
-              flex-1 w-full sm:w-auto px-4 py-3.5 rounded-xl text-base font-mono tracking-wider
-              bg-black/50 border text-white placeholder:text-white/30
-              transition-all duration-200 outline-none
-              focus:ring-2 focus:ring-[#3B82F6]/50
-              ${error
-                ? 'border-red-400/60 focus:border-red-400'
-                : 'border-white/10 focus:border-[#3B82F6]/50'
-              }
-            `}
-          />
-          <button
-            type="button"
-            onClick={handleSubmit}
-            className="
-              flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl
-              bg-[#1D4ED8] hover:bg-blue-700 active:bg-blue-800
-              text-white font-semibold text-base
-              shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40
-              transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]
-              min-h-[48px]
-            "
+      <div className="max-w-lg mx-auto px-4">
+        <div className="bg-blue-700 border border-blue-500/30 rounded-2xl p-6 sm:p-8 shadow-xl shadow-blue-900/20">
+          {/* Label */}
+          <label
+            htmlFor={inputId}
+            className="flex items-center gap-2 text-white font-bold text-lg sm:text-xl mb-5"
           >
-            <Search className="w-4 h-4" />
-            <span>{t('home.tracking_button')}</span>
-          </button>
+            <Search className="w-5 h-5 text-blue-200" />
+            {t('home.tracking_label')}
+          </label>
+
+          {/* Input + Button */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <input
+              id={inputId}
+              type="text"
+              value={inputValue}
+              onChange={handleInputChange}
+              onKeyDown={handleKeyDown}
+              placeholder={t('home.tracking_placeholder')}
+              aria-label={t('home.tracking_label')}
+              aria-describedby={error ? errorId : undefined}
+              aria-invalid={error !== ''}
+              autoComplete="off"
+              spellCheck={false}
+              maxLength={15}
+              className={`
+                flex-1 w-full sm:w-auto px-5 py-4 rounded-xl text-base font-mono tracking-wider
+                bg-white/10 border text-white placeholder:text-white/40
+                transition-all duration-200 outline-none
+                focus:ring-2 focus:ring-white/30
+                ${error
+                  ? 'border-red-300/60 focus:border-red-300'
+                  : 'border-white/15 focus:border-white/40'
+                }
+              `}
+            />
+            <button
+              type="button"
+              onClick={handleSubmit}
+              className="
+                flex items-center justify-center gap-2 px-7 py-4 rounded-xl
+                bg-white hover:bg-blue-50 active:bg-blue-100
+                text-blue-700 font-bold text-base
+                shadow-lg shadow-blue-900/30 hover:shadow-blue-900/40
+                transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]
+                min-h-[52px]
+              "
+            >
+              <Search className="w-4 h-4" />
+              <span>{t('home.tracking_button')}</span>
+            </button>
+          </div>
+
+          {/* Error message */}
+          {error !== '' && (
+            <p
+              id={errorId}
+              role="alert"
+              aria-live="polite"
+              className="text-red-200 text-sm mt-3 flex items-center gap-1.5 font-medium"
+            >
+              <span className="inline-block w-1.5 h-1.5 bg-red-300 rounded-full flex-shrink-0" />
+              {error}
+            </p>
+          )}
         </div>
-
-        {/* Error message — rendu conditionnel uniquement si nécessaire */}
-        {error !== '' && (
-          <p
-            id={errorId}
-            role="alert"
-            aria-live="polite"
-            className="text-red-400 text-xs mt-2 flex items-center gap-1"
-          >
-            <span className="inline-block w-1 h-1 bg-red-400 rounded-full flex-shrink-0" />
-            {error}
-          </p>
-        )}
       </div>
-    </div>
+    </section>
   );
 }

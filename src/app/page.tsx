@@ -1068,7 +1068,7 @@ function Footer() {
             <div className="mb-5">
               <img src="/logo.png" alt="QRBag" className="h-8 w-auto object-contain" />
             </div>
-            <p className="text-sm leading-relaxed max-w-xs text-slate-500 mb-7">
+            <p className="text-base leading-relaxed max-w-xs text-white/70 mb-7">
               Protection intelligente des bagages pour voyageurs et pèlerins.
             </p>
             {/* Social */}
@@ -1079,7 +1079,7 @@ function Footer() {
                 { icon: Twitter, href: 'https://twitter.com/qrbag', label: 'Twitter' },
               ].map(s => (
                 <a key={s.label} href={s.href} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-white/[0.05] hover:bg-white/[0.1] rounded-xl flex items-center justify-center transition-all duration-300" aria-label={s.label}>
-                  <s.icon className="w-4 h-4 text-slate-500 hover:text-white transition-colors" />
+                  <s.icon className="w-5 h-5 text-white/60 hover:text-white transition-colors" />
                 </a>
               ))}
             </div>
@@ -1088,11 +1088,11 @@ function Footer() {
           {/* Links */}
           {columns.map(col => (
             <div key={col.title}>
-              <h4 className="text-xs font-bold tracking-[0.1em] uppercase text-slate-400 mb-5">{col.title}</h4>
+              <h4 className="text-sm font-bold tracking-[0.1em] uppercase text-white/90 mb-5">{col.title}</h4>
               <ul className="space-y-3">
                 {col.links.map(link => (
                   <li key={link.label}>
-                    <Link href={link.href} className="text-sm text-slate-500 hover:text-white transition-colors duration-300">
+                    <Link href={link.href} className="text-base text-white/70 hover:text-white transition-colors duration-300">
                       {link.label}
                     </Link>
                   </li>
@@ -1104,10 +1104,10 @@ function Footer() {
 
         {/* Bottom */}
         <div className="mt-20 pt-8 border-t border-white/[0.06] flex flex-col sm:flex-row justify-between items-center gap-4">
-          <p className="text-xs text-slate-600">
+          <p className="text-sm text-white/60">
             &copy; {new Date().getFullYear()} QRBag. Tous droits réservés.
           </p>
-          <p className="text-xs text-slate-700">
+          <p className="text-sm text-white/50">
             Fait avec soin à Dakar, pour le monde.
           </p>
         </div>
@@ -1124,6 +1124,7 @@ export default function HomePage() {
     <main className="bg-white">
       <Navigation />
       <HeroSection />
+      <TrackingWidget />
       <QRBagEnActionSection />
       <TransportModesSection />
       <WhyQRBagSection />
@@ -1135,7 +1136,6 @@ export default function HomePage() {
       <FinalCTASection />
       <ContactCTASection />
       <Footer />
-      <TrackingWidget />
       <LandingChatbotWidget />
     </main>
   );
