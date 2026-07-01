@@ -524,16 +524,22 @@ function WhyQRBagSection() {
       icon: Globe,
       title: 'Ancré en Afrique, pensé pour le monde',
       description: 'Né à Dakar, déployé dans 15 pays. QRBag comprend les réalités du voyage africain et international avec une solution adaptée à chaque contexte.',
+      bgColor: 'bg-blue-600',
+      iconBg: 'bg-blue-500',
     },
     {
       icon: Shield,
       title: 'Sécurité certifiée RGPD',
       description: 'Zéro donnée sensible stockée publiquement. Vos informations personnelles sont chiffrées et protégées selon les normes européennes les plus strictes.',
+      bgColor: 'bg-orange-500',
+      iconBg: 'bg-orange-400',
     },
     {
       icon: Heart,
       title: 'Pour les pèlerins, les voyageurs, les agences',
       description: "Hajj, Omra, tourisme, affaires — une seule solution qui s'adapte à chaque voyageur. Plus de 10 000 bagages déjà protégés à travers le monde.",
+      bgColor: 'bg-emerald-600',
+      iconBg: 'bg-emerald-500',
     },
   ];
 
@@ -556,21 +562,16 @@ function WhyQRBagSection() {
         <div className="grid md:grid-cols-3 gap-6">
           {cards.map((card, i) => (
             <FadeIn key={card.title} delay={i * 0.12}>
-              <div className="group relative h-full bg-gradient-to-b from-slate-50/80 to-white border border-slate-100/80 rounded-[2rem] p-9 hover:shadow-[0_32px_64px_-16px_rgba(0,0,0,0.08)] transition-all duration-700 hover:-translate-y-1.5">
-                {/* Hover gradient overlay */}
-                <div className="absolute inset-0 rounded-[2rem] bg-gradient-to-b from-blue-50/0 to-blue-50/0 group-hover:from-blue-50/30 group-hover:to-transparent transition-all duration-700" />
-
-                <div className="relative z-10">
-                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center mb-7 group-hover:from-blue-100 group-hover:to-indigo-100 transition-colors duration-500">
-                    <card.icon className="w-6 h-6 text-blue-600" />
-                  </div>
-                  <h3 className="text-lg font-bold text-slate-900 mb-3 leading-snug">
-                    {card.title}
-                  </h3>
-                  <p className="text-[15px] text-slate-500 leading-relaxed">
-                    {card.description}
-                  </p>
+              <div className={`group h-full ${card.bgColor} rounded-[2rem] p-9 hover:shadow-[0_32px_64px_-16px_rgba(0,0,0,0.2)] transition-all duration-500 hover:-translate-y-1.5`}>
+                <div className={`w-14 h-14 rounded-2xl ${card.iconBg} flex items-center justify-center mb-7`}>
+                  <card.icon className="w-6 h-6 text-white" />
                 </div>
+                <h3 className="text-lg font-bold text-white mb-3 leading-snug">
+                  {card.title}
+                </h3>
+                <p className="text-[15px] text-white/80 leading-relaxed">
+                  {card.description}
+                </p>
               </div>
             </FadeIn>
           ))}
@@ -590,27 +591,24 @@ function SolutionsSection() {
       description: 'Protection complète pour les pèlerins avec 3 bagages inclus (cabine + 2 soutes). Gérée par votre agence de voyage partenaire.',
       icon: Shield,
       href: '/hajj-omra',
-      gradient: 'from-amber-500 via-orange-500 to-red-500',
-      lightGradient: 'from-amber-50 to-orange-50',
-      iconColor: 'text-amber-600',
+      bgColor: 'bg-amber-500',
+      iconBg: 'bg-amber-400',
     },
     {
       title: 'Voyageurs Standard',
       description: 'Protection flexible pour tous vos voyages. Choisissez 1 ou 3 bagages avec une durée adaptée à vos besoins.',
       icon: Plane,
       href: '/voyageurs-standard',
-      gradient: 'from-blue-500 via-indigo-500 to-violet-500',
-      lightGradient: 'from-blue-50 to-indigo-50',
-      iconColor: 'text-blue-600',
+      bgColor: 'bg-blue-600',
+      iconBg: 'bg-blue-500',
     },
     {
       title: 'Devenir Partenaire',
       description: 'Agences de voyage, compagnies aériennes, hôtels — proposez QRBag à vos clients et générez des revenus complémentaires.',
       icon: Users,
       href: '/devenir-partenaire',
-      gradient: 'from-emerald-500 via-teal-500 to-cyan-500',
-      lightGradient: 'from-emerald-50 to-teal-50',
-      iconColor: 'text-emerald-600',
+      bgColor: 'bg-violet-600',
+      iconBg: 'bg-violet-500',
     },
   ];
 
@@ -620,10 +618,10 @@ function SolutionsSection() {
         <FadeIn className="text-center mb-20">
           <span className="inline-flex items-center gap-2 text-xs font-bold tracking-[0.15em] uppercase text-blue-600 mb-5">
             <Luggage className="w-3.5 h-3.5" />
-            Nos solutions
+            Solutions
           </span>
           <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-slate-900 mb-6 tracking-[-0.02em]">
-            Une solution pour chaque voyageur
+            Deux solutions, une protection
           </h2>
           <p className="text-lg text-slate-500 max-w-2xl mx-auto leading-relaxed">
             Que vous soyez pèlerin ou voyageur, QRBag s&apos;adapte à vos besoins avec des solutions sur mesure.
@@ -634,16 +632,13 @@ function SolutionsSection() {
           {solutions.map((sol, i) => (
             <FadeIn key={sol.title} delay={i * 0.12}>
               <Link href={sol.href} className="group block h-full">
-                <div className="relative h-full bg-white border border-slate-100/80 rounded-[2rem] p-9 hover:shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] transition-all duration-700 hover:-translate-y-2 overflow-hidden">
-                  {/* Gradient accent top */}
-                  <div className={`absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r ${sol.gradient} scale-x-0 group-hover:scale-x-100 transition-transform duration-700 origin-left`} />
-
-                  <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${sol.lightGradient} flex items-center justify-center mb-7`}>
-                    <sol.icon className={`w-6 h-6 ${sol.iconColor}`} />
+                <div className={`h-full ${sol.bgColor} rounded-[2rem] p-9 hover:shadow-[0_32px_64px_-16px_rgba(0,0,0,0.2)] transition-all duration-500 hover:-translate-y-1.5`}>
+                  <div className={`w-14 h-14 rounded-2xl ${sol.iconBg} flex items-center justify-center mb-7`}>
+                    <sol.icon className="w-6 h-6 text-white" />
                   </div>
-                  <h3 className="text-lg font-bold text-slate-900 mb-3">{sol.title}</h3>
-                  <p className="text-[15px] text-slate-500 leading-relaxed mb-8">{sol.description}</p>
-                  <span className="inline-flex items-center gap-2 text-sm font-semibold text-slate-900 group-hover:text-blue-600 transition-colors duration-300">
+                  <h3 className="text-lg font-bold text-white mb-3">{sol.title}</h3>
+                  <p className="text-[15px] text-white/80 leading-relaxed mb-8">{sol.description}</p>
+                  <span className="inline-flex items-center gap-2 text-sm font-semibold text-white group-hover:text-white/90 transition-colors duration-300">
                     En savoir plus
                     <ArrowUpRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform duration-300" />
                   </span>
@@ -705,21 +700,27 @@ function HowItWorksSection() {
   const steps = [
     {
       step: '01',
-      icon: QrCode,
-      title: 'Activez votre QR',
-      description: "Collez l'autocollant QRBag sur votre bagage et scannez-le pour l'activer en 30 secondes.",
+      image: '/images/landing-v2/step-receive.jpg',
+      title: 'Recevez votre QR',
+      description: 'Commandez vos QR codes via notre formulaire B2B ou auprès de votre agence partenaire.',
     },
     {
       step: '02',
-      icon: Plane,
-      title: 'Voyagez serein',
-      description: 'Profitez de votre voyage. Votre bagage est désormais protégé et traçable en temps réel.',
+      image: '/images/landing-v2/step-activate.jpg',
+      title: 'Activez en 30 secondes',
+      description: 'Scannez le QR code et remplissez le formulaire avec vos informations de voyage.',
     },
     {
       step: '03',
-      icon: MessageCircle,
-      title: 'Soyez notifié',
-      description: "Si quelqu'un trouve votre bagage, vous recevez instantanément une notification WhatsApp avec sa localisation.",
+      image: '/images/landing-v2/step-travel.jpg',
+      title: 'Voyagez serein',
+      description: 'Vos bagages sont protégés. Collez simplement l\'autocollant bien visible sur chaque valise.',
+    },
+    {
+      step: '04',
+      image: '/images/landing-v2/step-notify.jpg',
+      title: 'Soyez notifié instantanément',
+      description: 'Si quelqu\'un trouve votre bagage, vous recevez une alerte immédiatement via WhatsApp.',
     },
   ];
 
@@ -732,33 +733,36 @@ function HowItWorksSection() {
             Comment ça marche
           </span>
           <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-slate-900 mb-6 tracking-[-0.02em]">
-            Simple comme 1-2-3
+            La protection en 4 étapes
           </h2>
           <p className="text-lg text-slate-500 max-w-2xl mx-auto leading-relaxed">
-            Trois étapes pour protéger vos bagages et voyager l&apos;esprit tranquille.
+            Simple, rapide, sans application à installer.
           </p>
         </FadeIn>
 
-        <div className="grid md:grid-cols-3 gap-8 lg:gap-12 relative">
-          {/* Connector line (desktop) */}
-          <div className="hidden md:block absolute top-[52px] left-[20%] right-[20%] h-[2px]">
-            <div className="w-full h-full bg-gradient-to-r from-blue-200 via-blue-300 to-blue-200 rounded-full" />
-          </div>
-
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {steps.map((step, i) => (
-            <FadeIn key={step.step} delay={i * 0.15}>
-              <div className="text-center relative">
-                {/* Step icon */}
-                <div className="relative inline-flex mb-8">
-                  <div className="w-[88px] h-[88px] rounded-3xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100/50 flex items-center justify-center mx-auto relative z-10 group-hover:shadow-lg transition-shadow duration-500">
-                    <step.icon className="w-8 h-8 text-blue-600" />
-                  </div>
-                  <span className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-br from-slate-900 to-slate-800 text-white text-xs font-bold rounded-xl flex items-center justify-center z-20 shadow-lg">
+            <FadeIn key={step.step} delay={i * 0.1}>
+              <div className="group bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-slate-200/40 transition-all duration-500 hover:-translate-y-1">
+                {/* Image */}
+                <div className="relative aspect-square overflow-hidden">
+                  <Image
+                    src={step.image}
+                    alt={step.title}
+                    fill
+                    className="object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
+                  />
+                  {/* Step number */}
+                  <span className="absolute top-3 right-3 w-9 h-9 bg-slate-900 text-white text-xs font-bold rounded-xl flex items-center justify-center shadow-lg">
                     {step.step}
                   </span>
                 </div>
-                <h3 className="text-xl font-bold text-slate-900 mb-3">{step.title}</h3>
-                <p className="text-[15px] text-slate-500 leading-relaxed max-w-xs mx-auto">{step.description}</p>
+
+                {/* Content */}
+                <div className="p-5">
+                  <h3 className="text-base font-bold text-slate-900 mb-1.5">{step.title}</h3>
+                  <p className="text-sm text-slate-500 leading-relaxed">{step.description}</p>
+                </div>
               </div>
             </FadeIn>
           ))}
