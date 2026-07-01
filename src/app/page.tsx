@@ -139,10 +139,10 @@ function Navigation() {
   }, []);
 
   const navLinks = [
-    { label: 'Solutions', href: '/#solutions' },
-    { label: 'Comment ça marche', href: '/#comment' },
+    { label: 'Accueil', href: '/' },
+    { label: 'A propos', href: '/#comment' },
     { label: 'Tarifs', href: '/#tarifs' },
-    { label: 'Contact', href: '/contact' },
+    { label: 'Contactez-nous', href: '/contact' },
   ];
 
   return (
@@ -159,19 +159,14 @@ function Navigation() {
 
           <div className="hidden md:flex items-center gap-1">
             {navLinks.map(link => (
-              <a key={link.href} href={link.href} className="relative px-4 py-2 text-[13px] font-medium text-slate-600 hover:text-slate-900 transition-colors duration-300 group">
+              <a key={link.href} href={link.href} className="relative px-4 py-2 text-[13px] font-medium text-black hover:text-slate-700 transition-colors duration-300 group">
                 {link.label}
-                <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-[2px] bg-slate-900 rounded-full transition-all duration-300 group-hover:w-4" />
+                <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-[2px] bg-black rounded-full transition-all duration-300 group-hover:w-4" />
               </a>
             ))}
           </div>
 
           <div className="hidden md:flex items-center gap-3">
-            <Link href="/agence/connexion">
-              <Button variant="ghost" className="text-slate-500 hover:text-slate-900 hover:bg-slate-100/60 text-[13px] font-medium transition-all duration-300">
-                Espace Agence
-              </Button>
-            </Link>
             <Link href="/devenir-partenaire">
               <Button className="bg-slate-900 text-white hover:bg-slate-800 font-semibold text-[13px] rounded-full px-5 h-9 shadow-lg shadow-slate-900/10 hover:shadow-slate-900/20 transition-all duration-300 hover:scale-[1.02]">
                 Devenir Partenaire
@@ -197,14 +192,11 @@ function Navigation() {
           >
             <div className="flex flex-col gap-1">
               {navLinks.map(link => (
-                <a key={link.href} href={link.href} className="text-slate-700 hover:text-slate-900 hover:bg-slate-50 font-medium py-2.5 px-3 rounded-xl text-base transition-colors" onClick={() => setIsOpen(false)}>
+                <a key={link.href} href={link.href} className="text-black hover:text-slate-700 hover:bg-slate-50 font-medium py-2.5 px-3 rounded-xl text-base transition-colors" onClick={() => setIsOpen(false)}>
                   {link.label}
                 </a>
               ))}
               <hr className="border-slate-100 my-2" />
-              <Link href="/agence/connexion" onClick={() => setIsOpen(false)}>
-                <Button variant="ghost" className="w-full text-slate-500 hover:text-slate-900 hover:bg-slate-50 justify-start">Espace Agence</Button>
-              </Link>
               <Link href="/devenir-partenaire" onClick={() => setIsOpen(false)}>
                 <Button className="w-full bg-slate-900 text-white font-medium rounded-full mt-1 hover:bg-slate-800">
                   Devenir Partenaire
@@ -854,27 +846,39 @@ function PricingSection() {
       price: '5',
       period: '/an',
       description: 'Idéal pour un voyage ponctuel',
-      features: ['1 bagage protégé', 'Activation en 30 secondes', 'Notifications WhatsApp', 'Géolocalisation temps réel'],
+      features: ['3 bagages QR codes', 'Activation en 30 secondes', 'Notifications WhatsApp', 'Géolocalisation temps réel'],
       popular: false,
       href: '/voyageurs-standard',
+      bgGradient: 'bg-gradient-to-br from-cyan-500 to-cyan-600',
+      iconBg: 'bg-cyan-400',
+      shadowColor: 'shadow-cyan-500/30',
+      btnClass: 'bg-white text-cyan-700 hover:bg-cyan-50',
     },
     {
       name: 'Famille',
       price: '12',
       period: '/an',
       description: 'Pour les familles ou voyageurs fréquents',
-      features: ['3 bagages protégés', 'Activation en 30 secondes', 'Notifications WhatsApp', 'Géolocalisation temps réel', 'Support prioritaire'],
+      features: ['9 bagages QR codes', 'Activation en 30 secondes', 'Notifications WhatsApp', 'Géolocalisation temps réel', 'Support prioritaire'],
       popular: true,
       href: '/voyageurs-standard',
+      bgGradient: 'bg-gradient-to-br from-orange-500 to-orange-600',
+      iconBg: 'bg-orange-400',
+      shadowColor: 'shadow-orange-500/30',
+      btnClass: 'bg-white text-orange-700 hover:bg-orange-50',
     },
     {
       name: 'Hajj & Omra',
-      price: '15',
+      price: '5',
       period: '/pèlerin',
       description: 'Protection complète pour les pèlerins',
-      features: ['3 bagages inclus', 'Géré par votre agence', 'Notifications WhatsApp', 'Support 24/7 dédié', 'Couverture internationale'],
+      features: ['3 bagages QR codes', 'Géré par votre agence', 'Notifications WhatsApp', 'Support 24/7 dédié', 'Couverture internationale'],
       popular: false,
       href: '/hajj-omra',
+      bgGradient: 'bg-gradient-to-br from-teal-500 to-teal-600',
+      iconBg: 'bg-teal-400',
+      shadowColor: 'shadow-teal-500/30',
+      btnClass: 'bg-white text-teal-700 hover:bg-teal-50',
     },
   ];
 
@@ -897,36 +901,28 @@ function PricingSection() {
         <div className="grid md:grid-cols-3 gap-6 items-start">
           {plans.map((plan, i) => (
             <FadeIn key={plan.name} delay={i * 0.12}>
-              <div className={`relative h-full rounded-[2rem] p-9 transition-all duration-500 hover:-translate-y-2 ${
-                plan.popular
-                  ? 'bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800 text-white shadow-[0_32px_64px_-16px_rgba(0,0,0,0.25)] scale-[1.03] border-0'
-                  : 'bg-white border border-slate-100/80 hover:shadow-[0_32px_64px_-16px_rgba(0,0,0,0.08)]'
-              }`}>
+              <div className={`relative h-full rounded-[2rem] p-9 transition-all duration-500 hover:-translate-y-2 ${plan.bgGradient} text-white shadow-[0_32px_64px_-16px_rgba(0,0,0,0.15)] hover:shadow-[0_32px_64px_-16px_rgba(0,0,0,0.25)]`}>
                 {plan.popular && (
-                  <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-xs font-bold px-5 py-1.5 rounded-full shadow-lg shadow-blue-500/30">
+                  <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-amber-400 to-yellow-300 text-slate-900 text-xs font-bold px-5 py-1.5 rounded-full shadow-lg shadow-amber-500/30">
                     Populaire
                   </span>
                 )}
-                <h3 className={`text-lg font-bold mb-1.5 ${plan.popular ? 'text-white' : 'text-slate-900'}`}>{plan.name}</h3>
-                <p className={`text-sm mb-6 ${plan.popular ? 'text-slate-400' : 'text-slate-500'}`}>{plan.description}</p>
+                <h3 className="text-xl font-bold mb-1.5 text-white">{plan.name}</h3>
+                <p className="text-sm mb-6 text-white/75">{plan.description}</p>
                 <div className="flex items-baseline gap-1 mb-8">
-                  <span className={`text-5xl font-bold tracking-[-0.02em] ${plan.popular ? 'text-white' : 'text-slate-900'}`}>{plan.price}€</span>
-                  <span className={`text-sm ${plan.popular ? 'text-slate-500' : 'text-slate-400'}`}>{plan.period}</span>
+                  <span className="text-5xl font-bold tracking-[-0.02em] text-white">{plan.price}€</span>
+                  <span className="text-sm text-white/60">{plan.period}</span>
                 </div>
                 <ul className="space-y-3.5 mb-9">
                   {plan.features.map((f) => (
                     <li key={f} className="flex items-center gap-3 text-sm">
-                      <CheckCircle className={`w-4 h-4 flex-shrink-0 ${plan.popular ? 'text-cyan-400' : 'text-emerald-500'}`} />
-                      <span className={plan.popular ? 'text-slate-300' : 'text-slate-600'}>{f}</span>
+                      <CheckCircle className="w-4 h-4 flex-shrink-0 text-white/80" />
+                      <span className="text-white/85">{f}</span>
                     </li>
                   ))}
                 </ul>
                 <Link href={plan.href}>
-                  <Button className={`w-full py-3.5 rounded-full font-semibold text-sm transition-all duration-300 hover:scale-[1.02] ${
-                    plan.popular
-                      ? 'bg-white text-slate-900 hover:bg-slate-50 shadow-[0_16px_32px_-8px_rgba(0,0,0,0.3)]'
-                      : 'bg-slate-900 text-white hover:bg-slate-800 shadow-[0_16px_32px_-8px_rgba(0,0,0,0.12)]'
-                  }`}>
+                  <Button className={`w-full py-3.5 rounded-full font-semibold text-sm transition-all duration-300 hover:scale-[1.02] shadow-[0_16px_32px_-8px_rgba(0,0,0,0.2)] ${plan.btnClass}`}>
                     Choisir {plan.name}
                     <ArrowRight className="w-4 h-4 ml-1" />
                   </Button>
@@ -1038,8 +1034,9 @@ function Footer() {
     {
       title: 'Entreprise',
       links: [
-        { label: 'À propos', href: '/a-propos' },
+        { label: 'À propos', href: '/#comment' },
         { label: 'Partenaires', href: '/devenir-partenaire' },
+        { label: 'Espace Agence', href: '/agence/connexion' },
         { label: 'Contact', href: '/contact' },
       ],
     },
