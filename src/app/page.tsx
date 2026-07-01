@@ -146,11 +146,7 @@ function Navigation() {
   ];
 
   return (
-    <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
-      scrolled
-        ? 'bg-white/95 backdrop-blur-2xl shadow-[0_1px_3px_rgba(0,0,0,0.06)]'
-        : 'bg-white shadow-[0_1px_0_0_rgba(0,0,0,0.05)]'
-    }`}>
+    <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 bg-black shadow-[0_1px_0_0_rgba(255,255,255,0.06)]`}>
       <div className="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 lg:h-[72px]">
           <Link href="/" className="flex items-center group">
@@ -159,23 +155,23 @@ function Navigation() {
 
           <div className="hidden md:flex items-center gap-1">
             {navLinks.map(link => (
-              <a key={link.href} href={link.href} className="relative px-4 py-2 text-[13px] font-medium text-black hover:text-slate-700 transition-colors duration-300 group">
+              <a key={link.href} href={link.href} className="relative px-4 py-2 text-[13px] font-medium text-white/80 hover:text-white transition-colors duration-300 group">
                 {link.label}
-                <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-[2px] bg-black rounded-full transition-all duration-300 group-hover:w-4" />
+                <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-[2px] bg-white rounded-full transition-all duration-300 group-hover:w-4" />
               </a>
             ))}
           </div>
 
           <div className="hidden md:flex items-center gap-3">
             <Link href="/devenir-partenaire">
-              <Button className="bg-slate-900 text-white hover:bg-slate-800 font-semibold text-[13px] rounded-full px-5 h-9 shadow-lg shadow-slate-900/10 hover:shadow-slate-900/20 transition-all duration-300 hover:scale-[1.02]">
+              <Button className="bg-white text-black hover:bg-slate-100 font-semibold text-[13px] rounded-full px-5 h-9 shadow-lg shadow-white/10 hover:shadow-white/20 transition-all duration-300 hover:scale-[1.02]">
                 Devenir Partenaire
               </Button>
             </Link>
           </div>
 
           <button
-            className="md:hidden text-slate-900 p-1.5"
+            className="md:hidden text-white p-1.5"
             onClick={() => setIsOpen(!isOpen)}
             aria-label="Menu"
           >
@@ -188,17 +184,17 @@ function Navigation() {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="md:hidden py-4 border-t border-slate-100 bg-white/98 backdrop-blur-xl rounded-b-2xl"
+            className="md:hidden py-4 border-t border-white/10 bg-black/98 backdrop-blur-xl rounded-b-2xl"
           >
             <div className="flex flex-col gap-1">
               {navLinks.map(link => (
-                <a key={link.href} href={link.href} className="text-black hover:text-slate-700 hover:bg-slate-50 font-medium py-2.5 px-3 rounded-xl text-base transition-colors" onClick={() => setIsOpen(false)}>
+                <a key={link.href} href={link.href} className="text-white/80 hover:text-white hover:bg-white/5 font-medium py-2.5 px-3 rounded-xl text-base transition-colors" onClick={() => setIsOpen(false)}>
                   {link.label}
                 </a>
               ))}
-              <hr className="border-slate-100 my-2" />
+              <hr className="border-white/10 my-2" />
               <Link href="/devenir-partenaire" onClick={() => setIsOpen(false)}>
-                <Button className="w-full bg-slate-900 text-white font-medium rounded-full mt-1 hover:bg-slate-800">
+                <Button className="w-full bg-white text-black font-medium rounded-full mt-1 hover:bg-slate-100">
                   Devenir Partenaire
                 </Button>
               </Link>
