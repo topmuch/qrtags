@@ -201,13 +201,9 @@ export default function LoginPage({ variant }: { variant: LoginVariant }) {
         <div className="relative z-10 flex flex-col h-full p-10 xl:p-14">
           {/* Top: Logo */}
           <div className="flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-3 group">
-              <div className="w-12 h-12 rounded-xl bg-white/10 backdrop-blur-sm p-1 border border-white/10 flex items-center justify-center group-hover:bg-white/15 transition-all">
+            <Link href="/" className="group">
+              <div className="w-20 h-20 rounded-2xl bg-white/10 backdrop-blur-sm p-2 border border-white/10 flex items-center justify-center group-hover:bg-white/15 transition-all">
                 <img src="/logo.png" alt="QRBag" className="w-full h-full object-contain" />
-              </div>
-              <div>
-                <span className="text-white font-bold text-xl tracking-tight">QRBag</span>
-                <span className="block text-white/40 text-[10px] tracking-[0.2em] uppercase">Protection intelligente</span>
               </div>
             </Link>
           </div>
@@ -287,11 +283,10 @@ export default function LoginPage({ variant }: { variant: LoginVariant }) {
 
         <div className="w-full max-w-[400px] relative z-10">
           {/* Mobile Logo */}
-          <div className="lg:hidden flex flex-col items-center mb-10">
-            <div className="w-14 h-14 rounded-xl bg-slate-900 p-1.5 mb-3 flex items-center justify-center">
+          <div className="lg:hidden flex items-center justify-center mb-10">
+            <div className="w-20 h-20 rounded-2xl bg-slate-900 p-2.5 flex items-center justify-center">
               <img src="/logo.png" alt="QRBag" className="w-full h-full object-contain" />
             </div>
-            <span className="text-slate-900 font-bold text-lg tracking-tight">QRBag</span>
           </div>
 
           {/* Badge */}
