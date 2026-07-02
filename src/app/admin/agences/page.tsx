@@ -23,6 +23,7 @@ import {
   Mail,
   Phone,
   Users,
+  Loader2,
 } from "lucide-react";
 
 // Types
@@ -47,7 +48,22 @@ export default function AgencesPage() {
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
-  
+
+  // Edit state
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editAgencyId, setEditAgencyId] = useState<string | null>(null);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState('');
+  const [editSuccess, setEditSuccess] = useState('');
+
+  const [editForm, setEditForm] = useState({
+    name: '',
+    slug: '',
+    email: '',
+    phone: '',
+    active: true,
+  });
+
   const [agencyForm, setAgencyForm] = useState({
     name: '',
     slug: '',
@@ -95,10 +111,10 @@ export default function AgencesPage() {
       setErrorMessage('Les mots de passe ne correspondent pas');
       return;
     }
-    
+
     setAgencyCreating(true);
     setErrorMessage('');
-    
+
     try {
       const agencyResponse = await fetch('/api/admin/agencies', {
         method: 'POST',
@@ -110,10 +126,10 @@ export default function AgencesPage() {
           phone: agencyForm.phone,
         }),
       });
-      
+
       if (agencyResponse.ok) {
         const agencyData = await agencyResponse.json();
-        
+
         await fetch('/api/admin/users', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -125,7 +141,7 @@ export default function AgencesPage() {
             agencyId: agencyData.agency.id,
           }),
         });
-        
+
         setSuccessMessage(`Agence "${agencyForm.name}" créée avec succès !`);
         fetchAgencies();
         setDialogOpen(false);
@@ -145,17 +161,108 @@ export default function AgencesPage() {
 
   const handleDeleteAgency = async (id: string) => {
     if (!confirm('Êtes-vous sûr de vouloir supprimer cette agence ?')) return;
-    
+
     try {
       const response = await fetch(`/api/admin/agencies?id=${id}`, {
         method: 'DELETE',
       });
-      
+
       if (response.ok) {
+        setSuccessMessage('Agence supprimée avec succès');
         fetchAgencies();
+        setTimeout(() => setSuccessMessage(''), 5000);
       }
     } catch (error) {
       console.error('Error deleting agency:', error);
+    }
+  };
+
+  // Open edit dialog with agency data
+  const handleOpenEdit = (agency: Agency) => {
+    setEditAgencyId(agency.id);
+    setEditForm({
+      name: agency.name,
+      slug: agency.slug,
+      email: agency.email || '',
+      phone: agency.phone || '',
+      active: agency.active,
+    });
+    setEditError('');
+    setEditSuccess('');
+    setEditDialogOpen(true);
+  };
+
+  // Save edit
+  const handleSaveEdit = async () => {
+    if (!editAgencyId) return;
+    if (!editForm.name.trim()) {
+      setEditError('Le nom est obligatoire');
+      return;
+    }
+    if (!editForm.slug.trim()) {
+      setEditError('Le slug est obligatoire');
+      return;
+    }
+
+    setEditSaving(true);
+    setEditError('');
+    setEditSuccess('');
+
+    try {
+      const response = await fetch('/api/admin/agencies', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: editAgencyId,
+          name: editForm.name,
+          slug: editForm.slug,
+          email: editForm.email,
+          phone: editForm.phone,
+        }),
+      });
+
+      if (response.ok) {
+        setEditSuccess('Agence modifiée avec succès !');
+        fetchAgencies();
+        setTimeout(() => {
+          setEditDialogOpen(false);
+          setEditSuccess('');
+        }, 1500);
+      } else {
+        const data = await response.json();
+        setEditError(data.error || 'Erreur lors de la modification');
+      }
+    } catch (error) {
+      console.error('Error updating agency:', error);
+      setEditError('Erreur lors de la modification');
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
+  // Toggle agency active status
+  const handleToggleActive = async (agency: Agency) => {
+    try {
+      const response = await fetch('/api/admin/agencies', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: agency.id,
+          name: agency.name,
+          slug: agency.slug,
+          email: agency.email || '',
+          phone: agency.phone || '',
+          active: !agency.active,
+        }),
+      });
+
+      if (response.ok) {
+        setSuccessMessage(`Agence ${!agency.active ? 'activée' : 'désactivée'} avec succès`);
+        fetchAgencies();
+        setTimeout(() => setSuccessMessage(''), 5000);
+      }
+    } catch (error) {
+      console.error('Error toggling agency status:', error);
     }
   };
 
@@ -195,69 +302,69 @@ export default function AgencesPage() {
                 )}
                 <div className="space-y-2">
                   <Label className="text-slate-700 dark:text-slate-300">Nom de l&apos;agence *</Label>
-                  <Input 
+                  <Input
                     placeholder="Ashraf Voyages"
                     value={agencyForm.name}
                     onChange={(e) => {
                       const name = e.target.value;
-                      setAgencyForm({ 
-                        ...agencyForm, 
+                      setAgencyForm({
+                        ...agencyForm,
                         name,
                         slug: name.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '')
                       });
                     }}
-                    className="bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-800 dark:text-white" 
+                    className="bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-800 dark:text-white"
                   />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-slate-700 dark:text-slate-300">Slug *</Label>
-                  <Input 
+                  <Input
                     placeholder="ashraf_voyages"
                     value={agencyForm.slug}
                     onChange={(e) => setAgencyForm({ ...agencyForm, slug: e.target.value })}
-                    className="bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-800 dark:text-white" 
+                    className="bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-800 dark:text-white"
                   />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="text-slate-700 dark:text-slate-300">Email *</Label>
-                    <Input 
+                    <Input
                       type="email"
                       placeholder="contact@agence.com"
                       value={agencyForm.email}
                       onChange={(e) => setAgencyForm({ ...agencyForm, email: e.target.value })}
-                      className="bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-800 dark:text-white" 
+                      className="bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-800 dark:text-white"
                     />
                   </div>
                   <div className="space-y-2">
                     <Label className="text-slate-700 dark:text-slate-300">Téléphone</Label>
-                    <Input 
+                    <Input
                       placeholder="+33 6 00 00 00 00"
                       value={agencyForm.phone}
                       onChange={(e) => setAgencyForm({ ...agencyForm, phone: e.target.value })}
-                      className="bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-800 dark:text-white" 
+                      className="bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-800 dark:text-white"
                     />
                   </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="text-slate-700 dark:text-slate-300">Mot de passe *</Label>
-                    <Input 
+                    <Input
                       type="password"
                       placeholder="Min 8 car., 1 maj, 1 chiffre"
                       value={agencyForm.password}
                       onChange={(e) => setAgencyForm({ ...agencyForm, password: e.target.value })}
-                      className="bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-800 dark:text-white" 
+                      className="bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-800 dark:text-white"
                     />
                   </div>
                   <div className="space-y-2">
                     <Label className="text-slate-700 dark:text-slate-300">Confirmer *</Label>
-                    <Input 
+                    <Input
                       type="password"
                       placeholder="Confirmer le mot de passe"
                       value={agencyForm.confirmPassword}
                       onChange={(e) => setAgencyForm({ ...agencyForm, confirmPassword: e.target.value })}
-                      className="bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-800 dark:text-white" 
+                      className="bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-800 dark:text-white"
                     />
                   </div>
                 </div>
@@ -273,6 +380,100 @@ export default function AgencesPage() {
           </Dialog>
         </div>
       </div>
+
+      {/* Edit Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white">
+          <DialogHeader>
+            <DialogTitle>Modifier l&apos;agence</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            {editError && (
+              <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 px-4 py-3 rounded-xl text-sm">
+                {editError}
+              </div>
+            )}
+            {editSuccess && (
+              <div className="bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 px-4 py-3 rounded-xl text-sm flex items-center gap-2">
+                <CheckCircle className="w-4 h-4" />
+                {editSuccess}
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label className="text-slate-700 dark:text-slate-300">Nom de l&apos;agence *</Label>
+              <Input
+                placeholder="Ashraf Voyages"
+                value={editForm.name}
+                onChange={(e) => {
+                  const name = e.target.value;
+                  setEditForm({
+                    ...editForm,
+                    name,
+                    slug: name.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '')
+                  });
+                }}
+                className="bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-800 dark:text-white"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-slate-700 dark:text-slate-300">Slug *</Label>
+              <Input
+                placeholder="ashraf_voyages"
+                value={editForm.slug}
+                onChange={(e) => setEditForm({ ...editForm, slug: e.target.value })}
+                className="bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-800 dark:text-white"
+              />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-slate-700 dark:text-slate-300">Email</Label>
+                <Input
+                  type="email"
+                  placeholder="contact@agence.com"
+                  value={editForm.email}
+                  onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                  className="bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-800 dark:text-white"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-slate-700 dark:text-slate-300">Téléphone</Label>
+                <Input
+                  placeholder="+33 6 00 00 00 00"
+                  value={editForm.phone}
+                  onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                  className="bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-800 dark:text-white"
+                />
+              </div>
+            </div>
+            <div className="flex items-center gap-3 pt-2">
+              <Label className="text-slate-700 dark:text-slate-300">Statut :</Label>
+              <button
+                onClick={() => setEditForm({ ...editForm, active: !editForm.active })}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-300 ${editForm.active ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-300 ${editForm.active ? 'translate-x-6' : 'translate-x-1'}`} />
+              </button>
+              <span className={`text-sm font-medium ${editForm.active ? 'text-emerald-600' : 'text-slate-400'}`}>
+                {editForm.active ? 'Active' : 'Inactive'}
+              </span>
+            </div>
+            <Button
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl"
+              onClick={handleSaveEdit}
+              disabled={editSaving}
+            >
+              {editSaving ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Enregistrement...
+                </>
+              ) : (
+                'Enregistrer les modifications'
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Success Message */}
       {successMessage && (
@@ -297,7 +498,7 @@ export default function AgencesPage() {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card className="bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 shadow-sm rounded-2xl">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -329,9 +530,18 @@ export default function AgencesPage() {
                 <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl flex items-center justify-center">
                   <Building className="w-6 h-6 text-blue-700 dark:text-blue-500" />
                 </div>
-                <Badge className={agency.active ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-blue-500' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'}>
-                  {agency.active ? 'Actif' : 'Inactif'}
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleToggleActive(agency)}
+                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-300 ${agency.active ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                    title={agency.active ? 'Désactiver' : 'Activer'}
+                  >
+                    <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform duration-300 ${agency.active ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                  </button>
+                  <Badge className={agency.active ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-blue-500' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'}>
+                    {agency.active ? 'Actif' : 'Inactif'}
+                  </Badge>
+                </div>
               </div>
 
               {/* Name + Slug */}
@@ -362,7 +572,12 @@ export default function AgencesPage() {
 
               {/* Actions */}
               <div className="flex gap-2 pt-4 border-t border-slate-100 dark:border-slate-700">
-                <Button size="sm" variant="ghost" className="text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl flex-1">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl flex-1"
+                  onClick={() => handleOpenEdit(agency)}
+                >
                   <Edit className="w-4 h-4 mr-1" />
                   Modifier
                 </Button>

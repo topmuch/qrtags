@@ -122,18 +122,41 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    const { id, ...data } = body;
-    const validatedData = agencySchema.parse(data);
+    const { id, active, ...data } = body;
+
+    if (!id) {
+      return NextResponse.json(
+        { error: 'Agency ID is required' },
+        { status: 400 }
+      );
+    }
+
+    // Validate only the fields that are present
+    const updateData: Record<string, unknown> = {};
+
+    if (data.name !== undefined) updateData.name = data.name;
+    if (data.slug !== undefined) updateData.slug = data.slug;
+    if (data.email !== undefined) updateData.email = data.email || null;
+    if (data.phone !== undefined) updateData.phone = data.phone || null;
+    if (data.address !== undefined) updateData.address = data.address || null;
+    if (active !== undefined) updateData.active = active;
+
+    // Check slug uniqueness if slug is being updated
+    if (data.slug) {
+      const existingWithSlug = await db.agency.findFirst({
+        where: { slug: data.slug, NOT: { id } }
+      });
+      if (existingWithSlug) {
+        return NextResponse.json(
+          { error: 'Ce slug est déjà utilisé par une autre agence' },
+          { status: 400 }
+        );
+      }
+    }
 
     const agency = await db.agency.update({
       where: { id },
-      data: {
-        name: validatedData.name,
-        slug: validatedData.slug,
-        email: validatedData.email || null,
-        phone: validatedData.phone || null,
-        address: validatedData.address || null,
-      }
+      data: updateData,
     });
 
     return NextResponse.json({ agency });
