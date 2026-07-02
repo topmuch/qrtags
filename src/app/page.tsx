@@ -441,20 +441,23 @@ function HeroSection() {
         </div>
       </div>
 
-      {/* Feature pills strip */}
-      <div className="bg-white border-t border-slate-100 py-5 mt-4">
+      {/* Feature pills strip - Multicolor buttons */}
+      <div className="bg-white border-t border-slate-100 py-8 mt-4">
         <div className="max-w-7xl mx-auto px-5 sm:px-6">
-          <div className="flex flex-wrap justify-center gap-4 sm:gap-6">
+          <div className="flex flex-wrap justify-center gap-4 sm:gap-5">
             {[
-              { icon: Smartphone, text: 'Sans application', color: 'text-violet-600 bg-violet-50' },
-              { icon: Zap, text: 'Sans batterie', color: 'text-amber-600 bg-amber-50' },
-              { icon: MapPin, text: 'Géolocalisation temps réel', color: 'text-emerald-600 bg-emerald-50' },
-              { icon: Lock, text: 'Sécurisé RGPD', color: 'text-blue-600 bg-blue-50' },
-              { icon: MessageCircle, text: 'Alertes WhatsApp', color: 'text-green-600 bg-green-50' },
+              { icon: Smartphone, text: 'Sans application', gradient: 'from-violet-500 to-purple-600', shadow: 'shadow-violet-500/30', hoverGradient: 'hover:from-violet-600 hover:to-purple-700' },
+              { icon: Zap, text: 'Sans batterie', gradient: 'from-amber-400 to-orange-500', shadow: 'shadow-amber-500/30', hoverGradient: 'hover:from-amber-500 hover:to-orange-600' },
+              { icon: MapPin, text: 'Géolocalisation temps réel', gradient: 'from-emerald-400 to-teal-600', shadow: 'shadow-emerald-500/30', hoverGradient: 'hover:from-emerald-500 hover:to-teal-700' },
+              { icon: Lock, text: 'Sécurisé RGPD', gradient: 'from-blue-500 to-indigo-600', shadow: 'shadow-blue-500/30', hoverGradient: 'hover:from-blue-600 hover:to-indigo-700' },
+              { icon: MessageCircle, text: 'Alertes WhatsApp', gradient: 'from-green-500 to-emerald-600', shadow: 'shadow-green-500/30', hoverGradient: 'hover:from-green-600 hover:to-emerald-700' },
             ].map((item, idx) => (
-              <div key={item.text} className={`flex items-center gap-2 px-4 py-2 rounded-full ${item.color}`}>
-                <item.icon className="w-3.5 h-3.5" />
-                <span className="text-xs font-semibold">{item.text}</span>
+              <div
+                key={item.text}
+                className={`flex items-center gap-3 px-6 py-3.5 rounded-2xl bg-gradient-to-r ${item.gradient} ${item.hoverGradient} text-white shadow-lg ${item.shadow} transition-all duration-300 hover:scale-105 hover:shadow-xl cursor-default`}
+              >
+                <item.icon className="w-5 h-5 shrink-0" />
+                <span className="text-sm font-bold whitespace-nowrap">{item.text}</span>
               </div>
             ))}
           </div>
