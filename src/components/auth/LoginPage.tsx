@@ -17,6 +17,10 @@ import {
   KeyRound,
   Mail,
   Lock,
+  Plane,
+  Luggage,
+  Globe,
+  Sparkles,
 } from "lucide-react";
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -34,76 +38,70 @@ interface LoginConfig {
   demoLabel: string;
   role: string;
   redirectPath: string;
-  bgImage: string;
   accentColor: string;
   accentHover: string;
-  accentLight: string;
-  accentGlow: string;
   badgeText: string;
   badgeIcon: typeof QrCode;
-  leftTitle: string;
-  leftSubtitle: string;
   switchText: string;
   switchLink: string;
   switchHref: string;
-  features: { icon: typeof QrCode; title: string; desc: string }[];
+  stats: { value: string; label: string }[];
+  testimonials: { name: string; role: string; text: string }[];
 }
 
 const CONFIGS: Record<LoginVariant, LoginConfig> = {
   agence: {
     type: 'agence',
-    title: 'Espace Agence',
-    subtitle: 'Connectez-vous à votre espace professionnel',
+    title: 'Bienvenue',
+    subtitle: 'Connectez-vous à votre espace agence pour gérer vos bagages et QR codes',
     demoEmail: 'agence@qrbag.com',
     demoPassword: 'agence123',
     demoLabel: 'Agence',
     role: 'agency',
     redirectPath: '/agence/tableau-de-bord',
-    bgImage: '/login-agence-bg.png',
     accentColor: '#2563EB',
     accentHover: '#1D4ED8',
-    accentLight: '#EFF6FF',
-    accentGlow: 'rgba(37,99,235,0.15)',
     badgeText: 'Agence',
     badgeIcon: Building2,
-    leftTitle: 'QRBag pour les professionnels du voyage',
-    leftSubtitle: 'Gérez vos bagages, vos clients, vos QR — depuis un seul tableau de bord.',
     switchText: 'Vous êtes administrateur ?',
     switchLink: 'Connexion SuperAdmin',
     switchHref: '/admin/connexion',
-    features: [
-      { icon: CheckCircle, title: 'Scan en temps réel', desc: 'Suivez chaque bagage dès qu\'il est scanné' },
-      { icon: QrCode, title: 'Commande en 1 clic', desc: 'Générez des lots de QR en 30 secondes' },
-      { icon: Building2, title: 'Dashboard intuitif', desc: 'Suivi des pèlerins, statuts, trouvailles' },
-      { icon: Shield, title: 'Support 24/7', desc: 'Nous sommes là pour vous aider' },
+    stats: [
+      { value: '2M+', label: 'Bagages protégés' },
+      { value: '850+', label: 'Agences partenaires' },
+      { value: '45+', label: 'Pays couverts' },
+      { value: '99.9%', label: 'Disponibilité' },
+    ],
+    testimonials: [
+      { name: 'Fatou Diallo', role: 'Agence Hajj Express', text: 'QRBag a transformé notre gestion de bagages. Zéro perte depuis 2 ans.' },
+      { name: 'Moussa Koné', role: 'Voyages Sahel', text: 'Le dashboard est simple et efficace. Nos clients sont rassurés.' },
     ],
   },
   superadmin: {
     type: 'superadmin',
-    title: 'Espace Administrateur',
-    subtitle: 'Connexion sécurisée réservée aux administrateurs',
+    title: 'Administration',
+    subtitle: 'Accès réservé aux administrateurs de la plateforme QRBag',
     demoEmail: 'admin@qrbag.com',
     demoPassword: 'admin123',
     demoLabel: 'SuperAdmin',
     role: 'superadmin',
     redirectPath: '/admin/tableau-de-bord',
-    bgImage: '/login-admin-bg.png',
-    accentColor: '#1E40AF',
-    accentHover: '#1E3A8A',
-    accentLight: '#EFF6FF',
-    accentGlow: 'rgba(30,64,175,0.15)',
+    accentColor: '#0F172A',
+    accentHover: '#1E293B',
     badgeText: 'Admin',
     badgeIcon: Shield,
-    leftTitle: 'QRBag — Contrôle centralisé',
-    leftSubtitle: 'Gérez agences, QR codes, utilisateurs et API — tout depuis un seul tableau de bord.',
     switchText: 'Vous êtes une agence ?',
     switchLink: 'Connexion Agence',
     switchHref: '/agence/connexion',
-    features: [
-      { icon: Shield, title: 'Sécurité renforcée', desc: 'Authentification stricte, logs complets' },
-      { icon: Building2, title: 'Tableau de bord centralisé', desc: 'Suivi en temps réel de toutes les activités' },
-      { icon: QrCode, title: 'Intégrations API', desc: 'Green API, géoloc, PDF à la demande' },
-      { icon: CheckCircle, title: 'Gestion des rôles', desc: 'Agences, admins, agents — tout contrôlé' },
+    stats: [
+      { value: '2M+', label: 'Bagages protégés' },
+      { value: '850+', label: 'Agences partenaires' },
+      { value: '45+', label: 'Pays couverts' },
+      { value: '99.9%', label: 'Disponibilité' },
+    ],
+    testimonials: [
+      { name: 'Fatou Diallo', role: 'Agence Hajj Express', text: 'QRBag a transformé notre gestion de bagages. Zéro perte depuis 2 ans.' },
+      { name: 'Moussa Koné', role: 'Voyages Sahel', text: 'Le dashboard est simple et efficace. Nos clients sont rassurés.' },
     ],
   },
 };
@@ -123,6 +121,7 @@ export default function LoginPage({ variant }: { variant: LoginVariant }) {
   const [loading, setLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
+  const [activeTestimonial, setActiveTestimonial] = useState(0);
 
   // Redirect if already logged in
   useEffect(() => {
@@ -131,6 +130,14 @@ export default function LoginPage({ variant }: { variant: LoginVariant }) {
       router.replace(config.redirectPath);
     }
   }, [user, authLoading, isAgency, isSuperAdmin, variant, router, config.redirectPath]);
+
+  // Rotate testimonials
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveTestimonial(prev => (prev + 1) % config.testimonials.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [config.testimonials.length]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -169,113 +176,145 @@ export default function LoginPage({ variant }: { variant: LoginVariant }) {
   const BadgeIcon = config.badgeIcon;
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col lg:flex-row">
-      {/* ─── LEFT: Immersive Visual Panel ─── */}
-      <div className="relative hidden lg:flex lg:w-[55%] xl:w-[58%] min-h-screen items-center justify-center overflow-hidden">
-        {/* Background Image */}
-        <Image
-          src={config.bgImage}
-          alt="QRBag"
-          fill
-          className="object-cover"
-          priority
-          sizes="58vw"
-        />
+    <div className="min-h-screen flex flex-col lg:flex-row bg-[#0a0e1a]">
+      {/* ─── LEFT: Dark Immersive Panel ─── */}
+      <div className="relative hidden lg:flex lg:w-[52%] min-h-screen flex-col overflow-hidden">
+        {/* Animated gradient background */}
+        <div className="absolute inset-0">
+          <div className="absolute inset-0 bg-gradient-to-br from-[#0a0e1a] via-[#0f1629] to-[#0a0e1a]" />
+          {/* Animated orbs */}
+          <div className="absolute top-1/4 -left-20 w-80 h-80 rounded-full bg-blue-600/10 blur-[100px] animate-pulse" />
+          <div className="absolute bottom-1/4 right-10 w-96 h-96 rounded-full bg-blue-500/8 blur-[120px] animate-pulse" style={{ animationDelay: '1s' }} />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-blue-600/5 blur-[150px]" />
+        </div>
 
-        {/* Multi-layer Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-br from-black/80 via-black/60 to-black/40" />
-        <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${config.accentColor}33 0%, transparent 50%, ${config.accentColor}22 100%)` }} />
-
-        {/* Decorative Grid Pattern */}
-        <div className="absolute inset-0 opacity-[0.03]" style={{
-          backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)',
-          backgroundSize: '40px 40px',
+        {/* Grid pattern overlay */}
+        <div className="absolute inset-0 opacity-[0.04]" style={{
+          backgroundImage: `
+            linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)
+          `,
+          backgroundSize: '60px 60px',
         }} />
 
         {/* Content */}
-        <div className="relative z-10 h-full flex flex-col justify-between p-10 xl:p-14 w-full">
-          {/* Top: Logo + Badge */}
+        <div className="relative z-10 flex flex-col h-full p-10 xl:p-14">
+          {/* Top: Logo */}
           <div className="flex items-center justify-between">
-            <Link href="/" className="flex items-center group">
-              <div className="w-14 h-14 rounded-2xl backdrop-blur-xl p-1.5 border border-white/20 flex items-center justify-center group-hover:bg-white/15 transition-all duration-300">
+            <Link href="/" className="flex items-center gap-3 group">
+              <div className="w-12 h-12 rounded-xl bg-white/10 backdrop-blur-sm p-1 border border-white/10 flex items-center justify-center group-hover:bg-white/15 transition-all">
                 <img src="/logo.png" alt="QRBag" className="w-full h-full object-contain" />
               </div>
-            </Link>
-
-            <span className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold tracking-wide uppercase backdrop-blur-xl border ${
-              isAgence
-                ? 'bg-blue-500/15 border-blue-400/20 text-blue-300'
-                : 'bg-blue-800/20 border-blue-600/20 text-blue-200'
-            }`}>
-              <BadgeIcon className="w-3.5 h-3.5" />
-              {config.badgeText}
-            </span>
-          </div>
-
-          {/* Middle: Title + Subtitle */}
-          <div className="max-w-lg">
-            <h2 className="text-4xl xl:text-5xl font-bold text-white mb-5 leading-tight">
-              {config.leftTitle}
-            </h2>
-            <p className="text-white/65 text-lg xl:text-xl leading-relaxed max-w-md">
-              {config.leftSubtitle}
-            </p>
-          </div>
-
-          {/* Bottom: Feature Cards */}
-          <div className="grid grid-cols-2 gap-3">
-            {config.features.map((feat, i) => (
-              <div
-                key={feat.title}
-                className="group bg-white/[0.06] hover:bg-white/[0.1] backdrop-blur-sm rounded-2xl px-5 py-4 border border-white/[0.08] hover:border-white/[0.15] transition-all duration-300"
-                style={{ animationDelay: `${i * 100}ms` }}
-              >
-                <feat.icon className="w-5 h-5 text-white/50 mb-2.5 group-hover:text-white/70 transition-colors" />
-                <p className="text-white text-sm font-semibold leading-tight mb-1">{feat.title}</p>
-                <p className="text-white/40 text-xs leading-snug">{feat.desc}</p>
+              <div>
+                <span className="text-white font-bold text-xl tracking-tight">QRBag</span>
+                <span className="block text-white/40 text-[10px] tracking-[0.2em] uppercase">Protection intelligente</span>
               </div>
-            ))}
+            </Link>
+          </div>
+
+          {/* Middle: Hero Content */}
+          <div className="flex-1 flex flex-col justify-center max-w-lg">
+            {/* Floating QR Code illustration */}
+            <div className="relative mb-10">
+              <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shadow-2xl shadow-blue-600/30">
+                <QrCode className="w-10 h-10 text-white" />
+              </div>
+              {/* Decorative floating elements */}
+              <div className="absolute -top-3 -right-3 w-6 h-6 rounded-full bg-emerald-500/80 animate-bounce" style={{ animationDelay: '0.5s' }} />
+              <div className="absolute -bottom-2 -right-6 w-4 h-4 rounded-full bg-amber-400/60 animate-bounce" style={{ animationDelay: '1s' }} />
+            </div>
+
+            <h2 className="text-4xl xl:text-5xl font-bold text-white mb-4 leading-[1.1]">
+              Protégez chaque
+              <br />
+              <span className="bg-gradient-to-r from-blue-400 to-blue-200 bg-clip-text text-transparent">
+                bagage, en toute
+              </span>
+              <br />
+              sérénité.
+            </h2>
+            <p className="text-white/50 text-lg leading-relaxed mb-10 max-w-md">
+              Gérez vos bagages, vos clients et vos QR codes depuis un seul tableau de bord intuitif.
+            </p>
+
+            {/* Stats row */}
+            <div className="grid grid-cols-4 gap-4">
+              {config.stats.map((stat, i) => (
+                <div key={i} className="text-center">
+                  <p className="text-white font-bold text-xl xl:text-2xl">{stat.value}</p>
+                  <p className="text-white/30 text-[10px] xl:text-xs mt-1 leading-tight">{stat.label}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Bottom: Testimonial */}
+          <div className="relative">
+            <div className="border-l-2 border-blue-500/40 pl-5">
+              <p className="text-white/60 text-sm italic leading-relaxed mb-3">
+                &ldquo;{config.testimonials[activeTestimonial].text}&rdquo;
+              </p>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
+                  <span className="text-white text-xs font-bold">
+                    {config.testimonials[activeTestimonial].name.split(' ').map(n => n[0]).join('')}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-white/80 text-xs font-medium">{config.testimonials[activeTestimonial].name}</p>
+                  <p className="text-white/30 text-[10px]">{config.testimonials[activeTestimonial].role}</p>
+                </div>
+              </div>
+            </div>
+            {/* Dots indicator */}
+            <div className="flex gap-1.5 mt-4">
+              {config.testimonials.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setActiveTestimonial(i)}
+                  className={`w-1.5 h-1.5 rounded-full transition-all ${i === activeTestimonial ? 'bg-blue-500 w-4' : 'bg-white/20'}`}
+                />
+              ))}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* ─── RIGHT: Form Panel ─── */}
-      <div className="w-full lg:w-[45%] xl:w-[42%] min-h-screen flex items-center justify-center bg-white px-6 py-12 sm:px-10 relative">
-        {/* Subtle accent glow */}
-        <div className="absolute top-0 right-0 w-96 h-96 rounded-full opacity-30 blur-[120px] pointer-events-none" style={{ background: config.accentGlow }} />
+      {/* ─── RIGHT: Clean Form Panel ─── */}
+      <div className="w-full lg:w-[48%] min-h-screen flex items-center justify-center bg-white px-6 py-12 sm:px-10 relative">
+        {/* Subtle top accent line */}
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 via-blue-400 to-blue-600" />
 
-        <div className="w-full max-w-[420px] relative z-10">
-
+        <div className="w-full max-w-[400px] relative z-10">
           {/* Mobile Logo */}
           <div className="lg:hidden flex flex-col items-center mb-10">
-            <div className="w-18 h-18 rounded-2xl p-1.5 mb-3 flex items-center justify-center" style={{ background: config.accentLight }}>
+            <div className="w-14 h-14 rounded-xl bg-slate-900 p-1.5 mb-3 flex items-center justify-center">
               <img src="/logo.png" alt="QRBag" className="w-full h-full object-contain" />
             </div>
-            <span className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide uppercase mt-2`} style={{ background: config.accentLight, color: config.accentColor }}>
-              <BadgeIcon className="w-3.5 h-3.5" />
+            <span className="text-slate-900 font-bold text-lg tracking-tight">QRBag</span>
+          </div>
+
+          {/* Badge */}
+          <div className="flex items-center gap-2 mb-6">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-slate-900 text-white">
+              <BadgeIcon className="w-3 h-3" />
               {config.badgeText}
             </span>
           </div>
 
           {/* Header */}
           <div className="mb-8">
-            <div className="hidden lg:flex items-center gap-2 mb-6">
-              <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold tracking-wide uppercase`} style={{ background: config.accentLight, color: config.accentColor }}>
-                <BadgeIcon className="w-3.5 h-3.5" />
-                {config.badgeText}
-              </span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight mb-2">
+            <h1 className="text-3xl font-bold text-slate-900 tracking-tight mb-2">
               {config.title}
             </h1>
-            <p className="text-slate-500 text-sm">{config.subtitle}</p>
+            <p className="text-slate-500 text-sm leading-relaxed">{config.subtitle}</p>
           </div>
 
           {/* Error */}
           {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-100 text-red-700 rounded-2xl text-sm flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center shrink-0">
-                <span className="text-red-500 text-sm">!</span>
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm flex items-center gap-3">
+              <div className="w-6 h-6 rounded-full bg-red-500 flex items-center justify-center shrink-0">
+                <span className="text-white text-xs font-bold">!</span>
               </div>
               {error}
             </div>
@@ -285,11 +324,13 @@ export default function LoginPage({ variant }: { variant: LoginVariant }) {
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Email Field */}
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Adresse email
+              <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">
+                Email
               </label>
-              <div className={`relative flex items-center rounded-xl border-2 transition-all duration-200 ${
-                focusedField === 'email' ? 'border-slate-900 bg-white shadow-sm' : 'border-slate-200 bg-slate-50/50 hover:border-slate-300'
+              <div className={`relative flex items-center rounded-xl border transition-all duration-200 ${
+                focusedField === 'email'
+                  ? 'border-slate-900 bg-white ring-4 ring-slate-900/5'
+                  : 'border-slate-200 bg-slate-50 hover:border-slate-300'
               }`}>
                 <div className={`pl-4 transition-colors ${focusedField === 'email' ? 'text-slate-900' : 'text-slate-400'}`}>
                   <Mail className="w-[18px] h-[18px]" />
@@ -309,11 +350,13 @@ export default function LoginPage({ variant }: { variant: LoginVariant }) {
 
             {/* Password Field */}
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">
                 Mot de passe
               </label>
-              <div className={`relative flex items-center rounded-xl border-2 transition-all duration-200 ${
-                focusedField === 'password' ? 'border-slate-900 bg-white shadow-sm' : 'border-slate-200 bg-slate-50/50 hover:border-slate-300'
+              <div className={`relative flex items-center rounded-xl border transition-all duration-200 ${
+                focusedField === 'password'
+                  ? 'border-slate-900 bg-white ring-4 ring-slate-900/5'
+                  : 'border-slate-200 bg-slate-50 hover:border-slate-300'
               }`}>
                 <div className={`pl-4 transition-colors ${focusedField === 'password' ? 'text-slate-900' : 'text-slate-400'}`}>
                   <Lock className="w-[18px] h-[18px]" />
@@ -341,26 +384,18 @@ export default function LoginPage({ variant }: { variant: LoginVariant }) {
 
             {/* Remember / Forgot */}
             <div className="flex items-center justify-between">
-              <label className="flex items-center cursor-pointer gap-2.5 group">
-                <div className="relative">
-                  <input
-                    type="checkbox"
-                    checked={rememberMe}
-                    onChange={(e) => setRememberMe(e.target.checked)}
-                    className="sr-only peer"
-                  />
-                  <div className="w-4.5 h-4.5 w-[18px] h-[18px] rounded-md border-2 border-slate-300 peer-checked:border-transparent transition-colors group-hover:border-slate-400 peer-hover:border-slate-400" style={{ borderColor: rememberMe ? config.accentColor : undefined }}>
-                  </div>
-                  {rememberMe && (
-                    <CheckCircle className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white" style={{ color: config.accentColor }} />
-                  )}
-                </div>
-                <span className="text-sm text-slate-500">Se souvenir de moi</span>
+              <label className="flex items-center cursor-pointer gap-2 group">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="w-4 h-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900/20 cursor-pointer"
+                />
+                <span className="text-sm text-slate-500 group-hover:text-slate-700 transition-colors">Se souvenir de moi</span>
               </label>
               <Link
                 href="/forgot-password"
-                className="text-sm font-medium transition-colors hover:underline"
-                style={{ color: config.accentColor }}
+                className="text-sm font-medium text-slate-900 hover:underline transition-colors"
               >
                 Mot de passe oublié ?
               </Link>
@@ -370,11 +405,7 @@ export default function LoginPage({ variant }: { variant: LoginVariant }) {
             <button
               type="submit"
               disabled={loading}
-              className="w-full text-white font-semibold py-3.5 px-4 rounded-xl transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2.5 text-sm shadow-lg hover:shadow-xl hover:scale-[1.01] active:scale-[0.99]"
-              style={{
-                background: `linear-gradient(135deg, ${config.accentColor}, ${config.accentHover})`,
-                boxShadow: `0 8px 24px ${config.accentColor}33`,
-              }}
+              className="w-full text-white font-semibold py-3.5 px-4 rounded-xl transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm bg-slate-900 hover:bg-slate-800 active:scale-[0.98] shadow-xl shadow-slate-900/20"
             >
               {loading ? (
                 <>
@@ -383,7 +414,6 @@ export default function LoginPage({ variant }: { variant: LoginVariant }) {
                 </>
               ) : (
                 <>
-                  <KeyRound className="w-4 h-4" />
                   Se connecter
                   <ArrowRight className="w-4 h-4" />
                 </>
@@ -391,36 +421,25 @@ export default function LoginPage({ variant }: { variant: LoginVariant }) {
             </button>
           </form>
 
-          {/* Divider */}
-          <div className="my-8 flex items-center gap-4">
-            <div className="flex-1 h-px bg-slate-200" />
-            <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">ou</span>
-            <div className="flex-1 h-px bg-slate-200" />
-          </div>
-
-          {/* Demo Account */}
-          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                <Fingerprint className="w-3.5 h-3.5" />
-                Compte de démonstration
-              </h3>
+          {/* Demo Account Card */}
+          <div className="mt-6 p-4 rounded-xl bg-slate-50 border border-slate-100">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center">
+                  <Fingerprint className="w-4 h-4 text-white" />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-slate-700">Compte démo</p>
+                  <p className="text-[10px] text-slate-400 font-mono">{config.demoEmail} / {config.demoPassword}</p>
+                </div>
+              </div>
               <button
                 type="button"
                 onClick={fillDemo}
-                className="text-xs font-semibold transition-colors px-3 py-1 rounded-lg hover:opacity-80"
-                style={{ color: config.accentColor, background: config.accentLight }}
+                className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-900 text-white hover:bg-slate-800 transition-colors"
               >
                 Remplir
               </button>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold" style={{ background: config.accentLight, color: config.accentColor }}>
-                {config.demoLabel}
-              </span>
-              <span className="text-xs text-slate-400 font-mono">
-                {config.demoEmail} / {config.demoPassword}
-              </span>
             </div>
           </div>
 
@@ -429,11 +448,19 @@ export default function LoginPage({ variant }: { variant: LoginVariant }) {
             {config.switchText}{' '}
             <Link
               href={config.switchHref}
-              className="font-semibold transition-colors hover:underline"
-              style={{ color: config.accentColor }}
+              className="font-semibold text-slate-900 hover:underline transition-colors"
             >
               {config.switchLink}
             </Link>
+          </div>
+
+          {/* Bottom links */}
+          <div className="mt-6 flex items-center justify-center gap-4 text-xs text-slate-400">
+            <Link href="/cgu" className="hover:text-slate-600 transition-colors">CGU</Link>
+            <span>•</span>
+            <Link href="/confidentialite" className="hover:text-slate-600 transition-colors">Confidentialité</Link>
+            <span>•</span>
+            <Link href="/contact" className="hover:text-slate-600 transition-colors">Aide</Link>
           </div>
         </div>
       </div>
