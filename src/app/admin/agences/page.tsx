@@ -62,6 +62,8 @@ export default function AgencesPage() {
     email: '',
     phone: '',
     active: true,
+    newPassword: '',
+    confirmPassword: '',
   });
 
   const [agencyForm, setAgencyForm] = useState({
@@ -186,6 +188,8 @@ export default function AgencesPage() {
       email: agency.email || '',
       phone: agency.phone || '',
       active: agency.active,
+      newPassword: '',
+      confirmPassword: '',
     });
     setEditError('');
     setEditSuccess('');
@@ -203,12 +207,32 @@ export default function AgencesPage() {
       setEditError('Le slug est obligatoire');
       return;
     }
+    // Validate new password if provided
+    if (editForm.newPassword) {
+      if (editForm.newPassword.length < 8) {
+        setEditError('Le mot de passe doit contenir au moins 8 caractères');
+        return;
+      }
+      if (!/[A-Z]/.test(editForm.newPassword)) {
+        setEditError('Le mot de passe doit contenir au moins une majuscule');
+        return;
+      }
+      if (!/\d/.test(editForm.newPassword)) {
+        setEditError('Le mot de passe doit contenir au moins un chiffre');
+        return;
+      }
+      if (editForm.newPassword !== editForm.confirmPassword) {
+        setEditError('Les mots de passe ne correspondent pas');
+        return;
+      }
+    }
 
     setEditSaving(true);
     setEditError('');
     setEditSuccess('');
 
     try {
+      // Update agency info
       const response = await fetch('/api/admin/agencies', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -218,10 +242,37 @@ export default function AgencesPage() {
           slug: editForm.slug,
           email: editForm.email,
           phone: editForm.phone,
+          active: editForm.active,
         }),
       });
 
       if (response.ok) {
+        // Update password if a new one was provided
+        if (editForm.newPassword) {
+          try {
+            // Find the agency user to get their user ID
+            const usersRes = await fetch('/api/admin/users');
+            if (usersRes.ok) {
+              const usersData = await usersRes.json();
+              const agencyUser = (usersData.users || []).find(
+                (u: { agencyId: string | null; role: string }) => u.agencyId === editAgencyId && u.role === 'agency'
+              );
+              if (agencyUser) {
+                await fetch('/api/admin/users', {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    id: agencyUser.id,
+                    password: editForm.newPassword,
+                  }),
+                });
+              }
+            }
+          } catch (pwdErr) {
+            console.error('Error updating password:', pwdErr);
+          }
+        }
+
         setEditSuccess('Agence modifiée avec succès !');
         fetchAgencies();
         setTimeout(() => {
@@ -457,6 +508,62 @@ export default function AgencesPage() {
                 {editForm.active ? 'Active' : 'Inactive'}
               </span>
             </div>
+
+            {/* Password section */}
+            <div className="pt-4 border-t border-slate-100 dark:border-slate-700">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-6 h-6 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                  <svg className="w-3.5 h-3.5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                </div>
+                <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Changer le mot de passe</h4>
+              </div>
+              <p className="text-xs text-slate-400 mb-3">Laissez vide pour ne pas modifier le mot de passe actuel.</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-slate-700 dark:text-slate-300">Nouveau mot de passe</Label>
+                  <Input
+                    type="password"
+                    placeholder="Min 8 car., 1 maj, 1 chiffre"
+                    value={editForm.newPassword}
+                    onChange={(e) => setEditForm({ ...editForm, newPassword: e.target.value })}
+                    className="bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-800 dark:text-white"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-slate-700 dark:text-slate-300">Confirmer le mot de passe</Label>
+                  <Input
+                    type="password"
+                    placeholder="Confirmer le nouveau mot de passe"
+                    value={editForm.confirmPassword}
+                    onChange={(e) => setEditForm({ ...editForm, confirmPassword: e.target.value })}
+                    className="bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-800 dark:text-white"
+                  />
+                </div>
+              </div>
+              {editForm.newPassword && editForm.newPassword.length > 0 && (
+                <div className="mt-3 space-y-1">
+                  <div className={`flex items-center gap-1.5 text-xs ${editForm.newPassword.length >= 8 ? 'text-emerald-500' : 'text-red-400'}`}>
+                    <div className={`w-1.5 h-1.5 rounded-full ${editForm.newPassword.length >= 8 ? 'bg-emerald-500' : 'bg-red-400'}`} />
+                    Au moins 8 caractères
+                  </div>
+                  <div className={`flex items-center gap-1.5 text-xs ${/[A-Z]/.test(editForm.newPassword) ? 'text-emerald-500' : 'text-red-400'}`}>
+                    <div className={`w-1.5 h-1.5 rounded-full ${/[A-Z]/.test(editForm.newPassword) ? 'bg-emerald-500' : 'bg-red-400'}`} />
+                    Au moins une majuscule
+                  </div>
+                  <div className={`flex items-center gap-1.5 text-xs ${/\d/.test(editForm.newPassword) ? 'text-emerald-500' : 'text-red-400'}`}>
+                    <div className={`w-1.5 h-1.5 rounded-full ${/\d/.test(editForm.newPassword) ? 'bg-emerald-500' : 'bg-red-400'}`} />
+                    Au moins un chiffre
+                  </div>
+                  {editForm.confirmPassword && (
+                    <div className={`flex items-center gap-1.5 text-xs ${editForm.newPassword === editForm.confirmPassword ? 'text-emerald-500' : 'text-red-400'}`}>
+                      <div className={`w-1.5 h-1.5 rounded-full ${editForm.newPassword === editForm.confirmPassword ? 'bg-emerald-500' : 'bg-red-400'}`} />
+                      Les mots de passe correspondent
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
             <Button
               className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl"
               onClick={handleSaveEdit}
