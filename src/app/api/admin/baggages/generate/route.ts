@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { generateReference, generateSetId, calculateExpirationDate } from '@/lib/qr';
+import { generateReference, generateReferencesBulk, generateSetId, calculateExpirationDate } from '@/lib/qr';
 import { db } from '@/lib/db';
 
 // Schema for individual generation
@@ -51,22 +51,18 @@ export async function POST(request: NextRequest) {
         references
       });
     } else {
-      // Generate for agency
-      const allReferences: string[] = [];
-
-      for (let i = 0; i < validatedData.travelerCount; i++) {
-        const references = await generateBaggages({
-          type: validatedData.type,
-          agencyId: validatedData.agencyId,
-          count: validatedData.type === 'hajj' ? 3 : validatedData.count as 1 | 3
-        });
-        allReferences.push(...references);
-      }
+      // Generate for agency - use batch insert for performance
+      const result = await generateBaggagesBatch({
+        type: validatedData.type,
+        agencyId: validatedData.agencyId,
+        travelerCount: validatedData.travelerCount,
+        count: validatedData.type === 'hajj' ? 3 : validatedData.count as 1 | 3,
+      });
 
       return NextResponse.json({
         success: true,
-        generated: allReferences.length,
-        references: allReferences
+        generated: result.length,
+        references: result
       });
     }
   } catch (error) {
@@ -98,70 +94,97 @@ async function generateBaggagesWithTraveler(options: {
   baggageCount: 1 | 3;
 }): Promise<string[]> {
   const { type, firstName, lastName, whatsapp, duration, baggageCount } = options;
-  const references: string[] = [];
-
-  // Generate a unique set ID for this batch
+  
   const setId = generateSetId(type);
+  const expiresAt = calculateExpirationDate(type, duration === '1y' ? 'tag' : 'sticker');
 
+  // Generate all references upfront
+  const references: string[] = [];
   for (let i = 0; i < baggageCount; i++) {
-    const reference = await generateReference(type);
-    const expiresAt = calculateExpirationDate(type, duration === '1y' ? 'tag' : 'sticker');
-    
-    await db.baggage.create({
-      data: {
-        reference,
-        type,
-        setId,
-        agencyId: null,
-        travelerFirstName: firstName,
-        travelerLastName: lastName,
-        whatsappOwner: whatsapp,
-        baggageIndex: i + 1,
-        baggageType: i === 0 ? 'cabine' : 'soute',
-        status: 'active', // Already active for individual
-        expiresAt,
-      }
-    });
-
-    references.push(reference);
+    references.push(await generateReference(type));
   }
+
+  // Batch create all baggages at once
+  await db.baggage.createMany({
+    data: references.map((reference, i) => ({
+      reference,
+      type,
+      setId,
+      agencyId: null,
+      travelerFirstName: firstName,
+      travelerLastName: lastName,
+      whatsappOwner: whatsapp,
+      baggageIndex: i + 1,
+      baggageType: i === 0 ? 'cabine' : 'soute',
+      status: 'active',
+      expiresAt,
+    })),
+  });
 
   return references;
 }
 
 /**
- * Generate baggages for agency (no traveler info, needs activation)
+ * Generate baggages for agency using BATCH INSERT for high performance.
+ * Uses bulk reference generation and createMany to avoid thousands of sequential DB calls.
  */
-async function generateBaggages(options: {
+async function generateBaggagesBatch(options: {
   type: 'hajj' | 'voyageur';
-  agencyId?: string;
+  agencyId: string;
+  travelerCount: number;
   count: 1 | 3;
 }): Promise<string[]> {
-  const { type, agencyId, count } = options;
-  const references: string[] = [];
+  const { type, agencyId, travelerCount, count } = options;
+  const totalBaggages = travelerCount * count;
+  
+  console.log(`[GENERATE] Starting bulk generation: ${travelerCount} travelers × ${count} bags = ${totalBaggages} QR codes`);
 
-  // Generate a unique set ID for this batch
-  const setId = generateSetId(type);
-
-  for (let i = 0; i < count; i++) {
-    const reference = await generateReference(type);
-    
-    await db.baggage.create({
-      data: {
-        reference,
-        type,
-        setId,
-        agencyId: agencyId || null,
-        baggageIndex: i + 1,
-        baggageType: i === 0 ? 'cabine' : 'soute',
-        status: 'pending_activation', // Needs activation by agency
-      }
-    });
-
-    references.push(reference);
+  // Pre-generate all set IDs (no DB calls needed)
+  const setIds: string[] = [];
+  for (let t = 0; t < travelerCount; t++) {
+    setIds.push(generateSetId(type));
   }
 
-  return references;
+  // Generate ALL references in bulk (1-2 DB queries instead of 1800)
+  const allReferences = await generateReferencesBulk(type, totalBaggages);
+
+  // Build all baggage data
+  const allData: Array<{
+    reference: string;
+    type: string;
+    setId: string;
+    agencyId: string | null;
+    baggageIndex: number;
+    baggageType: string;
+    status: string;
+  }> = [];
+
+  let refIndex = 0;
+  for (let t = 0; t < travelerCount; t++) {
+    const setId = setIds[t];
+    for (let i = 0; i < count; i++) {
+      allData.push({
+        reference: allReferences[refIndex++],
+        type,
+        setId,
+        agencyId,
+        baggageIndex: i + 1,
+        baggageType: i === 0 ? 'cabine' : 'soute',
+        status: 'pending_activation',
+      });
+    }
+  }
+
+  // Batch insert in chunks of 200 for memory efficiency
+  const BATCH_SIZE = 200;
+  for (let i = 0; i < allData.length; i += BATCH_SIZE) {
+    const batch = allData.slice(i, i + BATCH_SIZE);
+    await db.baggage.createMany({ data: batch });
+    console.log(`[GENERATE] Inserted batch ${Math.floor(i / BATCH_SIZE) + 1}: ${batch.length} baggages (total: ${Math.min(i + BATCH_SIZE, allData.length)}/${allData.length})`);
+  }
+
+  console.log(`[GENERATE] Complete: ${totalBaggages} QR codes generated for ${travelerCount} travelers`);
+  return allReferences;
 }
 
 // GET - Get all baggages (for QR codes list)

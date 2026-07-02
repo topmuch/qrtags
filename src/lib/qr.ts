@@ -10,7 +10,7 @@ export function generateRandomCode(length: number = 6): string {
   return result;
 }
 
-// Generate unique reference
+// Generate unique reference (single - for individual use)
 export async function generateReference(type: 'hajj' | 'voyageur'): Promise<string> {
   const year = new Date().getFullYear().toString().slice(-2);
   const prefix = type === 'hajj' ? 'HAJJ' : 'VOL';
@@ -33,6 +33,50 @@ export async function generateReference(type: 'hajj' | 'voyageur'): Promise<stri
   }
   
   throw new Error('Failed to generate unique reference');
+}
+
+/**
+ * Generate multiple unique references in bulk - MUCH faster than calling generateReference one-by-one.
+ * Generates all candidates, then checks uniqueness in a single DB query.
+ * Replaces any duplicates and re-checks until all are unique.
+ */
+export async function generateReferencesBulk(type: 'hajj' | 'voyageur', count: number): Promise<string[]> {
+  const year = new Date().getFullYear().toString().slice(-2);
+  const prefix = type === 'hajj' ? 'HAJJ' : 'VOL';
+  const uniqueRefs = new Set<string>();
+  let iterations = 0;
+  const maxIterations = 10; // Safety limit
+
+  while (uniqueRefs.size < count && iterations < maxIterations) {
+    // Generate candidates to fill the remaining slots
+    const needed = count - uniqueRefs.size;
+    const candidates: string[] = [];
+    for (let i = 0; i < needed; i++) {
+      candidates.push(`${prefix}${year}-${generateRandomCode(6)}`);
+    }
+
+    // Check which ones already exist in DB (single query for all)
+    const existing = await db.baggage.findMany({
+      where: { reference: { in: candidates } },
+      select: { reference: true },
+    });
+    const existingSet = new Set(existing.map(b => b.reference));
+
+    // Add non-existing candidates
+    for (const candidate of candidates) {
+      if (!existingSet.has(candidate) && !uniqueRefs.has(candidate)) {
+        uniqueRefs.add(candidate);
+      }
+    }
+
+    iterations++;
+  }
+
+  if (uniqueRefs.size < count) {
+    throw new Error(`Failed to generate ${count} unique references (only got ${uniqueRefs.size})`);
+  }
+
+  return Array.from(uniqueRefs);
 }
 
 // Generate multiple baggages for a traveler
@@ -60,33 +104,31 @@ export function generateSetId(type: 'hajj' | 'voyageur'): string {
   return `${prefix}-${year}-${random}`;
 }
 
+/**
+ * @deprecated Use bulk generation from the API route instead for large batches.
+ * This function is kept for backwards compatibility with small individual generations.
+ */
 export async function generateBaggages(options: GenerateBaggageOptions): Promise<string[]> {
   const { type, agencyId, count } = options;
-  const references: string[] = [];
 
   // Generate a unique set ID for this batch
   const setId = generateSetId(type);
 
-  // For Hajj, always 3 bags (1 cabine + 2 soutes)
-  // For Voyageur, user choice (1 or 3)
+  // Use bulk reference generation for efficiency
+  const references = await generateReferencesBulk(type, count);
 
-  for (let i = 0; i < count; i++) {
-    const reference = await generateReference(type);
-
-    await db.baggage.create({
-      data: {
-        reference,
-        type,
-        setId,
-        agencyId: agencyId || null,
-        baggageIndex: i + 1,
-        baggageType: i === 0 ? 'cabine' : 'soute',
-        status: 'pending_activation',
-      }
-    });
-
-    references.push(reference);
-  }
+  // Batch create all baggages at once
+  await db.baggage.createMany({
+    data: references.map((reference, i) => ({
+      reference,
+      type,
+      setId,
+      agencyId: agencyId || null,
+      baggageIndex: i + 1,
+      baggageType: i === 0 ? 'cabine' : 'soute',
+      status: 'pending_activation',
+    })),
+  });
 
   return references;
 }
