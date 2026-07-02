@@ -441,23 +441,82 @@ function HeroSection() {
         </div>
       </div>
 
-      {/* Feature pills strip - Multicolor buttons */}
-      <div className="bg-white border-t border-slate-100 py-8 mt-4">
+      {/* Feature cards with real images */}
+      <div className="bg-white border-t border-slate-100 py-10 mt-4">
         <div className="max-w-7xl mx-auto px-5 sm:px-6">
-          <div className="flex flex-wrap justify-center gap-4 sm:gap-5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-5">
             {[
-              { icon: Smartphone, text: 'Sans application', gradient: 'from-violet-500 to-purple-600', shadow: 'shadow-violet-500/30', hoverGradient: 'hover:from-violet-600 hover:to-purple-700' },
-              { icon: Zap, text: 'Sans batterie', gradient: 'from-amber-400 to-orange-500', shadow: 'shadow-amber-500/30', hoverGradient: 'hover:from-amber-500 hover:to-orange-600' },
-              { icon: MapPin, text: 'Géolocalisation temps réel', gradient: 'from-emerald-400 to-teal-600', shadow: 'shadow-emerald-500/30', hoverGradient: 'hover:from-emerald-500 hover:to-teal-700' },
-              { icon: Lock, text: 'Sécurisé RGPD', gradient: 'from-blue-500 to-indigo-600', shadow: 'shadow-blue-500/30', hoverGradient: 'hover:from-blue-600 hover:to-indigo-700' },
-              { icon: MessageCircle, text: 'Alertes WhatsApp', gradient: 'from-green-500 to-emerald-600', shadow: 'shadow-green-500/30', hoverGradient: 'hover:from-green-600 hover:to-emerald-700' },
+              {
+                image: '/images/landing-v2/features/sans-app.jpg',
+                icon: Smartphone,
+                title: 'Sans application',
+                subtitle: 'Un scan suffit',
+                accent: 'bg-violet-50 border-violet-100',
+                iconBg: 'bg-violet-500',
+                titleColor: 'text-violet-700',
+              },
+              {
+                image: '/images/landing-v2/features/sans-batterie.jpg',
+                icon: Zap,
+                title: 'Sans batterie',
+                subtitle: 'Autonome à 100%',
+                accent: 'bg-amber-50 border-amber-100',
+                iconBg: 'bg-amber-500',
+                titleColor: 'text-amber-700',
+              },
+              {
+                image: '/images/landing-v2/features/geolocalisation.jpg',
+                icon: MapPin,
+                title: 'Géolocalisation',
+                subtitle: 'Temps réel',
+                accent: 'bg-emerald-50 border-emerald-100',
+                iconBg: 'bg-emerald-500',
+                titleColor: 'text-emerald-700',
+              },
+              {
+                image: '/images/landing-v2/features/securise-rgpd.jpg',
+                icon: Lock,
+                title: 'Sécurisé RGPD',
+                subtitle: 'Données protégées',
+                accent: 'bg-blue-50 border-blue-100',
+                iconBg: 'bg-blue-500',
+                titleColor: 'text-blue-700',
+              },
+              {
+                image: '/images/landing-v2/features/alertes-whatsapp.jpg',
+                icon: MessageCircle,
+                title: 'Alertes WhatsApp',
+                subtitle: 'Notification instantanée',
+                accent: 'bg-green-50 border-green-100',
+                iconBg: 'bg-green-500',
+                titleColor: 'text-green-700',
+              },
             ].map((item, idx) => (
               <div
-                key={item.text}
-                className={`flex items-center gap-3 px-6 py-3.5 rounded-2xl bg-gradient-to-r ${item.gradient} ${item.hoverGradient} text-white shadow-lg ${item.shadow} transition-all duration-300 hover:scale-105 hover:shadow-xl cursor-default`}
+                key={item.title}
+                className={`group relative rounded-2xl border ${item.accent} overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-xl cursor-default`}
               >
-                <item.icon className="w-5 h-5 shrink-0" />
-                <span className="text-sm font-bold whitespace-nowrap">{item.text}</span>
+                {/* Image section */}
+                <div className="relative h-28 sm:h-32 overflow-hidden">
+                  <Image
+                    src={item.image}
+                    alt={item.title}
+                    fill
+                    className="object-cover transition-transform duration-500 group-hover:scale-110"
+                    sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+                  />
+                  {/* Gradient overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                  {/* Icon badge */}
+                  <div className={`absolute bottom-2 left-3 w-8 h-8 rounded-xl ${item.iconBg} flex items-center justify-center shadow-lg`}>
+                    <item.icon className="w-4 h-4 text-white" />
+                  </div>
+                </div>
+                {/* Text section */}
+                <div className="px-3 py-3">
+                  <p className={`text-sm font-bold ${item.titleColor} leading-tight`}>{item.title}</p>
+                  <p className="text-[11px] text-slate-500 mt-0.5 leading-tight">{item.subtitle}</p>
+                </div>
               </div>
             ))}
           </div>
