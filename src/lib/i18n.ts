@@ -193,7 +193,7 @@ export async function loadTranslations(lang: Language): Promise<Record<string, s
   }
 
   try {
-    const response = await fetch(`/locales/${lang}.json`);
+    const response = await fetch(`/locales/${lang}.json`, { cache: 'no-store' });
     if (!response.ok) {
       throw new Error(`Failed to load ${lang} translations`);
     }

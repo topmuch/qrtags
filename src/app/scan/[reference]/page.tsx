@@ -9,11 +9,9 @@ import {
   AlertCircle,
   Clock,
   Shield,
-  Navigation,
   CheckCircle,
   ArrowRight,
   Sparkles,
-  AlertTriangle,
   Globe,
   Phone,
   MessageCircle,
@@ -326,16 +324,14 @@ export default function ScanPage() {
   // UI State
   const [showForm, setShowForm] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [locationText, setLocationText] = useState('');
-  const [geoError, setGeoError] = useState<string | null>(null);
 
   // Finder form state
   const [finderName, setFinderName] = useState('');
   const [finderPhone, setFinderPhone] = useState('');
   const [finderPhoneCountry, setFinderPhoneCountry] = useState(countryCode);
   const [otherLocation, setOtherLocation] = useState('');
-  const [sharedPosition, setSharedPosition] = useState<{ lat: number; lng: number } | null>(null);
-  const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+  // GPS is now captured INLINE inside handleWhatsApp (no separate button/state).
+  const [isLocating, setIsLocating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // SuccessOverlay state
@@ -367,110 +363,129 @@ export default function ScanPage() {
     }
   }, [baggageData?.baggage?.reference]);
 
-  // GPS Location Handler - iOS Optimized
-  const handleShareLocation = useCallback(async () => {
-    if (!navigator.geolocation) {
-      setGeoError(t('errors.geolocation_not_supported'));
-      return;
-    }
+  // NOTE: GPS sharing now happens inline inside handleWhatsApp (silent fallback to manual location).
+  // The dedicated "Partager ma position GPS" button was removed per refonte-6 brief.
 
-    setIsLoadingLocation(true);
-    setGeoError(null);
-
-    try {
-      const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(
-          resolve,
-          (error) => {
-            console.error('Geolocation error:', error.code, error.message);
-            reject(error);
-          },
-          {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 0
-          }
-        );
-      });
-
-      setSharedPosition({
-        lat: pos.coords.latitude,
-        lng: pos.coords.longitude
-      });
-      setLocationText(`${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`);
-      setGeoError(null);
-    } catch (error) {
-      const geoErr = error as GeolocationPositionError;
-      let errorMessage = '';
-
-      if (geoErr.code === 1) {
-        errorMessage = t('errors.location_permission_denied');
-      } else if (geoErr.code === 2) {
-        errorMessage = t('errors.location_unavailable');
-      } else if (geoErr.code === 3) {
-        errorMessage = t('errors.location_timeout');
-      } else {
-        errorMessage = t('errors.location_failed');
-      }
-
-      setGeoError(errorMessage);
-    } finally {
-      setIsLoadingLocation(false);
-    }
-  }, [t]);
-
-  // Generate WhatsApp message (i18n-ready)
-  const generateWhatsAppMessage = useCallback((finderName: string, finderPhone: string, locationText: string, mapLink: string) => {
+  // Generate WhatsApp message — new template (refonte-7): friendly notification to the owner
+  const generateWhatsAppMessage = useCallback((
+    finderName: string,
+    finderPhone: string,
+    locationText: string,
+    mapLink: string,
+    travelerName: string,
+    baggageType: string
+  ) => {
     const trackingUrl = `${typeof window !== 'undefined' ? window.location.origin : 'https://qrbags.com'}/suivi/${reference}`;
+
+    // Extract owner's first name from full name
+    const firstName = travelerName.split(' ')[0] || travelerName || '';
+
+    // Baggage type label (voyageur/hajj) — i18n-aware
+    const typeLabel = baggageType === 'hajj'
+      ? t('common.hajj_label')
+      : t('common.voyageur_label');
+
+    // [Lieu] = where the bag was found (manual text, GPS coords, or fallback label)
+    const location = locationText || t('whatsapp.gps_shared_label');
+
+    // [Adresse] = current precise address (Google Maps link if GPS, else same as location, else fallback)
+    const address = mapLink.startsWith('http')
+      ? mapLink
+      : (locationText || t('whatsapp.location_not_shared'));
+
+    // Build message using the template (refonte-7)
     return encodeURIComponent(
-      `${t('whatsapp.baggage_found')}\n\n` +
-      `${t('whatsapp.reference')} ${reference}\n` +
-      `${t('whatsapp.location')} ${locationText}\n` +
-      `${t('whatsapp.map')} ${mapLink}\n\n` +
-      `${t('whatsapp.found_by')} ${finderName}\n` +
-      `${t('whatsapp.contact')} ${finderPhone}\n\n` +
-      `🔗 ${t('whatsapp.tracking_link')}\n${trackingUrl}\n\n` +
-      `${t('whatsapp.pickup_message')}\n` +
-      `${t('whatsapp.signature')}`
+      t('whatsapp.found_message', {
+        firstName,
+        type: typeLabel,
+        location,
+        address,
+        name: finderName,
+        phone: finderPhone,
+        url: trackingUrl,
+      })
     );
   }, [reference, t]);
 
-  // Log scan to API (shared by WhatsApp + Phone flows)
-  const logScan = useCallback(async () => {
+  // Log scan to API (shared by WhatsApp + Phone flows).
+  // sharedPos/locText are passed as params (no longer state) — GPS is captured inline in handleWhatsApp.
+  const logScan = useCallback(async (
+    sharedPos?: { lat: number; lng: number } | null,
+    locText?: string
+  ) => {
     try {
       await fetch(`/api/scan/${reference}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          location: otherLocation.trim() || locationText || t('finder.not_specified'),
+          location: otherLocation.trim() || locText || t('finder.not_specified'),
           finderName: finderName.trim(),
           finderPhone: finderPhone.trim(),
           message: '',
-          latitude: sharedPosition?.lat,
-          longitude: sharedPosition?.lng,
+          latitude: sharedPos?.lat,
+          longitude: sharedPos?.lng,
         }),
       });
     } catch (e) {
       // Continue with contact even if logging fails
       console.error('Log scan failed:', e);
     }
-  }, [reference, otherLocation, locationText, finderName, finderPhone, sharedPosition, t]);
+  }, [reference, otherLocation, finderName, finderPhone, t]);
 
-  // Handle WhatsApp contact — opens wa.me/${phone}?text=${message}
+  // Handle WhatsApp contact — GPS is captured INLINE with silent fallback to manual location.
+  // Flow: validate name+phone → try GPS (10s timeout, silent fail) → log scan → open wa.me
   const handleWhatsApp = useCallback(async () => {
+    // Inline validation (name + phone required; location optional since GPS is auto)
+    if (!finderName.trim() || !finderPhone.trim()) {
+      toast({ title: t('finder.fill_info'), variant: 'destructive' });
+      return;
+    }
+
+    // Step 1: try to get GPS automatically (silent fallback if it fails)
+    setIsLocating(true);
+    let sharedPos: { lat: number; lng: number } | null = null;
+    let locText = '';
+
+    if (navigator.geolocation) {
+      try {
+        const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0,
+          });
+        });
+        sharedPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        locText = `${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`;
+      } catch {
+        // Silent fallback — use manual location or "not specified"
+        toast({ title: t('finder.gps_fallback_toast') });
+      }
+    }
+
+    setIsLocating(false);
     setIsSubmitting(true);
 
     try {
-      await logScan();
+      await logScan(sharedPos, locText);
 
-      const finalLocationText = otherLocation.trim() || locationText || t('finder.not_specified');
-      const mapLink = sharedPosition
-        ? `https://maps.app.goo.gl/?link=https://www.google.com/maps?q=${sharedPosition.lat},${sharedPosition.lng}`
+      const finalLocationText = locText || otherLocation.trim() || t('finder.not_specified');
+      const mapLink = sharedPos
+        ? `https://maps.app.goo.gl/?link=https://www.google.com/maps?q=${sharedPos.lat},${sharedPos.lng}`
         : t('whatsapp.location_not_shared');
 
-      const message = generateWhatsAppMessage(finderName, finderPhone, finalLocationText, mapLink);
+      const message = generateWhatsAppMessage(
+        finderName,
+        finderPhone,
+        finalLocationText,
+        mapLink,
+        baggageData?.baggage?.travelerName || '',
+        baggageData?.baggage?.type || 'voyageur'
+      );
       const ownerNumber = baggageData?.baggage?.whatsappOwner?.replace(/\D/g, '') || FALLBACK_PHONE;
-      const url = `https://wa.me/${ownerNumber}?text=${message}`;
+      // Use api.whatsapp.com directly instead of wa.me — wa.me corrupts 4-byte UTF-8 emojis (🎉📍👤📞💬👉💪)
+      // during its redirect to api.whatsapp.com (replaces them with U+FFFD replacement character).
+      const url = `https://api.whatsapp.com/send/?phone=${ownerNumber}&text=${message}`;
 
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
@@ -492,15 +507,21 @@ export default function ScanPage() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [logScan, otherLocation, locationText, finderName, finderPhone, sharedPosition, baggageData, t, generateWhatsAppMessage]);
+  }, [finderName, finderPhone, t, logScan, otherLocation, baggageData, generateWhatsAppMessage]);
 
-  // Handle phone call — opens tel:${phone}
+  // Handle phone call — opens tel:${phone}. No GPS (no message to embed it in).
   const handlePhoneCall = useCallback(async () => {
-    await logScan();
+    // Inline validation (same as WhatsApp: name + phone required)
+    if (!finderName.trim() || !finderPhone.trim()) {
+      toast({ title: t('finder.fill_info'), variant: 'destructive' });
+      return;
+    }
+
+    await logScan(null, '');
 
     const phoneNumber = baggageData?.baggage?.whatsappOwner || FALLBACK_PHONE;
     window.location.href = `tel:${phoneNumber}`;
-  }, [logScan, baggageData]);
+  }, [finderName, finderPhone, t, logScan, baggageData]);
 
   // Format date for display
   const formatDate = (dateStr?: string | null) => {
@@ -513,18 +534,8 @@ export default function ScanPage() {
     });
   };
 
-  // Validate finder form before contacting
-  const validateFinderForm = (): boolean => {
-    if (!sharedPosition && !otherLocation.trim()) {
-      setGeoError(t('finder.please_enter_location'));
-      return false;
-    }
-    if (!finderName.trim() || !finderPhone.trim()) {
-      toast({ title: t('finder.fill_info'), variant: 'destructive' });
-      return false;
-    }
-    return true;
-  };
+  // NOTE: validateFinderForm was removed — validation is now inlined in handleWhatsApp/handlePhoneCall.
+  // Location is no longer required (GPS is auto-captured inside handleWhatsApp).
 
   // ─── Loading state ───
   if (loading) {
@@ -842,52 +853,10 @@ export default function ScanPage() {
           {showForm && (
             <div className="space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-300">
 
-              {/* GPS Success indicator */}
-              {sharedPosition && !geoError && (
-                <div className="p-3 bg-white/60 border-2 border-[#1a1a1a] rounded-xl flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-[#1a1a1a] flex-shrink-0" />
-                  <span className="text-[#1a1a1a] text-sm font-medium truncate">
-                    ✓ {locationText}
-                  </span>
-                </div>
-              )}
+              {/* GPS Success/Error indicators + dedicated GPS button REMOVED per refonte-6 brief.
+                  GPS is now captured automatically inside the WhatsApp button click (silent fallback to manual location). */}
 
-              {/* GPS Error */}
-              {geoError && (
-                <div className="p-3 bg-white/60 border-2 border-[#1a1a1a] rounded-xl">
-                  <div className="flex items-start gap-2">
-                    <AlertTriangle className="w-5 h-5 text-[#1a1a1a] flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-[#1a1a1a] text-sm font-medium">{t('finder.gps_unavailable')}</p>
-                      <p className="text-[#1a1a1a]/80 text-sm mt-0.5">{geoError}</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* ─── 2. "📍 Partager ma position GPS" button (SECOND) ─── */}
-              <button
-                onClick={handleShareLocation}
-                disabled={isLoadingLocation}
-                className="w-full py-3.5 px-5 bg-[#1a1a1a] hover:bg-black disabled:bg-[#1a1a1a]/60 text-white rounded-xl font-bold text-base md:text-lg transition-colors flex items-center justify-center gap-2 min-h-[52px]"
-              >
-                {isLoadingLocation ? (
-                  <>
-                    <svg className="animate-spin h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    <span>{t('finder.locating')}</span>
-                  </>
-                ) : (
-                  <>
-                    <Navigation className="w-5 h-5" />
-                    <span>📍 {t('finder.share_gps')}</span>
-                  </>
-                )}
-              </button>
-
-              {/* ─── 3. Form fields (THIRD): prénom, téléphone, lieu ─── */}
+              {/* ─── Form fields: prénom, téléphone, lieu ─── */}
 
               {/* First name */}
               <input
@@ -913,44 +882,61 @@ export default function ScanPage() {
               <div>
                 <input
                   type="text"
-                  placeholder={sharedPosition ? t('finder.location_optional_placeholder') : t('finder.location_placeholder')}
+                  placeholder={t('finder.location_placeholder')}
                   value={otherLocation}
                   onChange={(e) => setOtherLocation(e.target.value)}
-                  className={`w-full px-4 py-3 bg-white border-2 border-[#1a1a1a] rounded-xl text-[#1a1a1a] text-base placeholder:text-[#1a1a1a]/40 focus:outline-none focus:ring-2 focus:ring-[#1a1a1a] focus:border-transparent transition-all min-h-[48px] ${sharedPosition ? 'opacity-80' : ''}`}
+                  className="w-full px-4 py-3 bg-white border-2 border-[#1a1a1a] rounded-xl text-[#1a1a1a] text-base placeholder:text-[#1a1a1a]/40 focus:outline-none focus:ring-2 focus:ring-[#1a1a1a] focus:border-transparent transition-all min-h-[48px]"
                 />
               </div>
 
-              {/* ─── Contact choice: WhatsApp + Phone call ─── */}
+              {/* ─── Contact choice: WhatsApp (GREEN + GPS auto) + Phone (YELLOW) ─── */}
               <div className="pt-1">
                 <h3 className="text-[#1a1a1a] text-xs font-bold uppercase tracking-widest text-center mb-2.5">
                   {t('finder.contact_choice')}
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  {/* WhatsApp Button — wa.me/${phone}?text=${message} */}
+                  {/* WhatsApp Button — GREEN #25D366 + GPS auto-captured on click */}
                   <button
-                    onClick={() => {
-                      if (!validateFinderForm()) return;
-                      handleWhatsApp();
-                    }}
-                    disabled={isSubmitting}
-                    className="py-3.5 px-4 bg-[#1a1a1a] hover:bg-black text-white rounded-xl font-bold transition-colors flex items-center justify-center gap-2 text-base min-h-[52px] disabled:opacity-60"
+                    onClick={handleWhatsApp}
+                    disabled={isLocating || isSubmitting}
+                    className="py-3.5 px-4 bg-[#25D366] hover:bg-[#1ebe5d] disabled:opacity-70 text-white rounded-xl font-bold transition-colors flex items-center justify-center gap-2 text-base min-h-[52px]"
                   >
-                    <MessageCircle className="w-5 h-5 text-[#25D366]" />
-                    {t('finder.by_whatsapp')}
+                    {isLocating ? (
+                      <>
+                        <svg className="animate-spin h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span>{t('finder.locating')}</span>
+                      </>
+                    ) : isSubmitting ? (
+                      <>
+                        <svg className="animate-spin h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span>{t('finder.sending')}</span>
+                      </>
+                    ) : (
+                      <>
+                        <MessageCircle className="w-5 h-5" />
+                        {t('finder.by_whatsapp')}
+                      </>
+                    )}
                   </button>
-                  {/* Phone Button — tel:${phone} */}
+                  {/* Phone Button — YELLOW #FFD700 + ink black text */}
                   <button
-                    onClick={() => {
-                      if (!validateFinderForm()) return;
-                      handlePhoneCall();
-                    }}
-                    disabled={isSubmitting}
-                    className="py-3.5 px-4 bg-white border-2 border-[#1a1a1a] hover:bg-[#1a1a1a] hover:text-white text-[#1a1a1a] rounded-xl font-bold transition-colors flex items-center justify-center gap-2 text-base min-h-[52px] disabled:opacity-60"
+                    onClick={handlePhoneCall}
+                    disabled={isLocating || isSubmitting}
+                    className="py-3.5 px-4 bg-[#FFD700] hover:bg-[#e6c200] disabled:opacity-70 text-[#1a1a1a] rounded-xl font-bold transition-colors flex items-center justify-center gap-2 text-base min-h-[52px]"
                   >
                     <Phone className="w-5 h-5" />
                     {t('finder.by_phone')}
                   </button>
                 </div>
+                <p className="text-[#1a1a1a]/70 text-xs text-center mt-2.5 leading-relaxed">
+                  {t('finder.gps_auto_shared')}
+                </p>
               </div>
             </div>
           )}
@@ -969,7 +955,7 @@ export default function ScanPage() {
           reference={reference}
           baggageContext={{
             destination: baggage.destination || undefined,
-            city: locationText || undefined,
+            city: otherLocation || undefined,
             agency: baggage.agency || undefined,
             status: baggage.status,
             transportMode: baggage.transportMode || undefined,

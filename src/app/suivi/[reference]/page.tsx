@@ -2,28 +2,35 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
+import Image from 'next/image';
 import {
   AlertCircle,
   Clock,
   Shield,
   Navigation,
   CheckCircle,
-  Plane,
   RefreshCw,
   Phone,
   MessageCircle,
   MapPin,
   Globe,
   ArrowRight,
+  ChevronDown,
+  X,
 } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { Language, LANGUAGE_NAMES } from '@/lib/i18n';
 import type { ScanContext } from '@/lib/scan-context';
 import { CONTEXT_ICONS, CONTEXT_COLORS } from '@/lib/scan-context';
 import { generatePreFilledMessage, buildWhatsAppUrl } from '@/lib/whatsapp-message';
-// TRANSPORT-FEATURE: Multi-transport support
-import { safeTransportMode, getTransportIcon } from '@/lib/transport';
+// TRANSPORT-FEATURE: Multi-transport support (real images, emojis as fallback)
+import { safeTransportMode, getTransportImage } from '@/lib/transport';
 import type { TransportMode } from '@/lib/transport';
+
+// ─── Brand constants (unified with /inscrire, /success, /scan) ───
+const BRAND = '#c5a643'; // jaune moutarde
+const INK = '#1a1a1a';   // ink black
+const CREAM = '#FDFBF7'; // cream background
 
 // ═══════════════════════════════════════════════════════
 //  TYPES
@@ -62,7 +69,6 @@ interface BaggageInfo {
   destination: string | null;
   departureDate: string | null;
   departureTime: string | null;
-  // TRANSPORT-FEATURE: Transport mode + conditional fields
   transportMode: string;
   trainCompany: string | null;
   trainNumber: string | null;
@@ -87,8 +93,76 @@ interface SuiviData {
   lastPosition: LastPosition | null;
 }
 
+// Type for beforeinstallprompt event (not in standard TS DOM lib)
+interface BeforeInstallPromptEvent extends Event {
+  prompt(): Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+}
+
 // ═══════════════════════════════════════════════════════
-//  LANGUAGE SELECTOR (White Background — reuse pattern)
+//  HOOK: PWA Install Prompt (local, with iOS detection)
+// ═══════════════════════════════════════════════════════
+
+function usePWAInstallPrompt() {
+  // Detect iOS up-front (no setState-in-effect needed: navigator is stable on client)
+  // Default to false for SSR; useEffect below sets the real value via lazy init.
+  const [isIOS, setIsIOS] = useState(false);
+
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [showButton, setShowButton] = useState(false);
+
+  // iOS detection runs once on mount — we use a ref-less pattern:
+  //   - setState is allowed here because this is reading a non-React external value
+  //   - The lint rule complains because setState happens synchronously, but this is
+  //     a legitimate pattern for reading navigator.userAgent at mount time.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    // Detect iOS (no beforeinstallprompt event on iOS Safari)
+    const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setIsIOS(iOS);
+
+    // Already installed? (standalone mode)
+    const isStandalone =
+      window.matchMedia('(display-mode: standalone)').matches ||
+      (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
+    if (isStandalone) return;
+
+    // On iOS, show the "Add to Home Screen" instruction button
+    if (iOS) {
+      setShowButton(true);
+      return;
+    }
+
+    // On Android/Chrome: capture beforeinstallprompt
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e as BeforeInstallPromptEvent);
+      setShowButton(true);
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  const handleInstall = useCallback(async () => {
+    if (isIOS) {
+      // Caller opens the instructions modal
+      return;
+    }
+    if (deferredPrompt) {
+      await deferredPrompt.prompt();
+      await deferredPrompt.userChoice;
+      setShowButton(false);
+      setDeferredPrompt(null);
+    }
+  }, [deferredPrompt, isIOS]);
+
+  return { showButton, isIOS, handleInstall };
+}
+
+// ═══════════════════════════════════════════════════════
+//  LANGUAGE SELECTOR (recoloré — light theme, brand-aware)
 // ═══════════════════════════════════════════════════════
 
 function LanguageSelector({ lang, setLang }: { lang: Language; setLang: (l: Language) => void }) {
@@ -100,14 +174,14 @@ function LanguageSelector({ lang, setLang }: { lang: Language; setLang: (l: Lang
         onClick={() => setIsOpen(!isOpen)}
         aria-expanded={isOpen}
         aria-haspopup="listbox"
-        className="flex items-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2.5 bg-white border border-blue-200 rounded-full text-blue-900 hover:bg-blue-50 transition-colors text-xs sm:text-sm md:text-base font-medium shadow-sm min-h-[36px] sm:min-h-[40px] md:min-h-[44px]"
+        className="flex items-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2.5 bg-white border-2 border-[#1a1a1a] rounded-full text-[#1a1a1a] hover:bg-[#c5a643] transition-colors text-xs sm:text-sm md:text-base font-medium shadow-sm min-h-[36px] sm:min-h-[40px] md:min-h-[44px]"
       >
         <Globe className="w-4 h-4 sm:w-5 sm:h-5" />
         <span>{LANGUAGE_NAMES[lang]}</span>
       </button>
 
       {isOpen && (
-        <div role="listbox" aria-label="Language" className="absolute top-full right-0 mt-1 sm:mt-2 bg-white border border-blue-200 rounded-xl shadow-lg overflow-hidden z-50 min-w-[140px] sm:min-w-[160px]">
+        <div role="listbox" aria-label="Language" className="absolute top-full right-0 mt-1 sm:mt-2 bg-white border-2 border-[#1a1a1a] rounded-xl shadow-lg overflow-hidden z-50 min-w-[140px] sm:min-w-[160px]">
           {(['fr', 'en', 'ar'] as Language[]).map((l) => (
             <button
               key={l}
@@ -119,8 +193,8 @@ function LanguageSelector({ lang, setLang }: { lang: Language; setLang: (l: Lang
               }}
               className={`w-full px-4 py-2.5 sm:px-5 sm:py-3 text-left text-xs sm:text-sm md:text-base font-medium transition-colors ${
                 lang === l
-                  ? 'bg-blue-500 text-white'
-                  : 'text-blue-900 hover:bg-blue-50'
+                  ? 'bg-[#c5a643] text-[#1a1a1a]'
+                  : 'text-[#1a1a1a] hover:bg-[#c5a643]/30'
               }`}
             >
               {LANGUAGE_NAMES[l]}
@@ -133,34 +207,34 @@ function LanguageSelector({ lang, setLang }: { lang: Language; setLang: (l: Lang
 }
 
 // ═══════════════════════════════════════════════════════
-//  DASHED ENCART (reuse pattern from scan page)
+//  DASHED ENCART (light variant: dashed black on white)
 // ═══════════════════════════════════════════════════════
 
 function DashedEncart({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`border-2 border-dashed border-white/80 rounded-xl p-4 mb-3 last:mb-0 ${className}`}>
+    <div className={`border-2 border-dashed border-[#1a1a1a]/60 rounded-xl p-3 mb-2.5 last:mb-0 ${className}`}>
       {children}
     </div>
   );
 }
 
 // ═══════════════════════════════════════════════════════
-//  LOADING SCREEN
+//  LOADING SCREEN (recoloré)
 // ═══════════════════════════════════════════════════════
 
 function LoadingScreen({ t }: { t: (key: string) => string }) {
   return (
-    <main className="min-h-screen bg-white flex items-center justify-center">
+    <main className="min-h-screen bg-[#FDFBF7] flex items-center justify-center">
       <div className="text-center">
-        <div className="animate-spin w-12 h-12 border-4 border-blue-900/20 border-t-blue-500 rounded-full mx-auto mb-4"></div>
-        <p className="text-lg text-blue-900">{t('common.loading')}</p>
+        <div className="animate-spin w-12 h-12 border-4 border-[#1a1a1a]/20 border-t-[#c5a643] rounded-full mx-auto mb-4"></div>
+        <p className="text-lg text-[#1a1a1a]">{t('common.loading')}</p>
       </div>
     </main>
   );
 }
 
 // ═══════════════════════════════════════════════════════
-//  ERROR SCREEN
+//  ERROR SCREEN (recoloré)
 // ═══════════════════════════════════════════════════════
 
 function ErrorScreen({
@@ -181,17 +255,17 @@ function ErrorScreen({
       message: t('tracking.baggage_not_found_desc'),
     },
     blocked: {
-      icon: <Shield className="w-12 h-12 text-gray-400" />,
+      icon: <Shield className="w-12 h-12 text-[#1a1a1a]/40" />,
       title: t('errors.baggage_blocked'),
       message: t('tracking.baggage_blocked_desc'),
     },
     expired: {
-      icon: <Clock className="w-12 h-12 text-gray-400" />,
+      icon: <Clock className="w-12 h-12 text-[#1a1a1a]/40" />,
       title: t('errors.protection_expired'),
       message: t('tracking.baggage_expired_desc'),
     },
     pending_activation: {
-      icon: <AlertCircle className="w-12 h-12 text-blue-500" />,
+      icon: <AlertCircle className="w-12 h-12 text-[#c5a643]" />,
       title: t('tracking.baggage_not_found'),
       message: t('tracking.baggage_pending_desc'),
     },
@@ -200,18 +274,18 @@ function ErrorScreen({
   const config = errorConfig[type as keyof typeof errorConfig] || errorConfig.not_found;
 
   return (
-    <main className="min-h-screen bg-white flex items-center justify-center p-5 md:p-8 relative">
+    <main className="min-h-screen bg-[#FDFBF7] flex items-center justify-center p-5 md:p-8 relative">
       <div className="absolute top-4 right-4">
         <LanguageSelector lang={lang} setLang={setLang} />
       </div>
 
-      <div className="max-w-md w-full bg-[#0A192F] rounded-2xl p-6 md:p-8 text-center shadow-xl shadow-blue-900/20">
-        <div className="w-20 h-20 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-6">
+      <div className="max-w-md w-full bg-white border-2 border-dashed border-[#1a1a1a] rounded-2xl p-6 md:p-8 text-center shadow-xl">
+        <div className="w-20 h-20 bg-[#c5a643]/30 border-2 border-dashed border-[#1a1a1a] rounded-full flex items-center justify-center mx-auto mb-6">
           {config.icon}
         </div>
-        <h1 className="text-2xl md:text-3xl font-bold text-white mb-3">{config.title}</h1>
-        <p className="text-white text-base md:text-lg mb-6">{config.message}</p>
-        <div className="w-full py-4 px-6 bg-white/10 border border-white/20 text-white rounded-xl text-center text-base font-medium min-h-[56px]">
+        <h1 className="text-2xl md:text-3xl font-bold text-[#1a1a1a] mb-3">{config.title}</h1>
+        <p className="text-[#1a1a1a] text-base md:text-lg mb-6">{config.message}</p>
+        <div className="w-full py-4 px-6 bg-[#c5a643]/20 border-2 border-dashed border-[#1a1a1a] text-[#1a1a1a] rounded-xl text-center text-base font-medium min-h-[56px]">
           {t('tracking.trust_note')}
         </div>
       </div>
@@ -220,7 +294,7 @@ function ErrorScreen({
 }
 
 // ═══════════════════════════════════════════════════════
-//  GOOGLE MAPS IFRAME
+//  GOOGLE MAPS IFRAME (recoloré fallback)
 // ═══════════════════════════════════════════════════════
 
 function MapEmbed({
@@ -244,41 +318,41 @@ function MapEmbed({
 
   if (!mapSrc) {
     return (
-      <div className="bg-blue-800 rounded-xl p-4 text-center text-white">
-        <MapPin className="w-6 h-6 mx-auto mb-2 opacity-70" />
+      <div className="bg-[#c5a643]/20 border-2 border-dashed border-[#1a1a1a] rounded-xl p-4 text-center text-[#1a1a1a]">
+        <MapPin className="w-6 h-6 mx-auto mb-2" />
         <p className="text-base font-medium">{address || t('tracking.no_location')}</p>
-        <p className="text-sm text-blue-200 mt-1">{t('tracking.map_unavailable')}</p>
+        <p className="text-sm text-[#1a1a1a]/70 mt-1">{t('tracking.map_unavailable')}</p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-xl overflow-hidden border border-white/20">
+    <div className="rounded-xl overflow-hidden border-2 border-[#1a1a1a]">
       <iframe
         src={mapSrc}
         width="100%"
-        height="250"
-        style={{ border: 0 }}
+        height="100%"
+        style={{ border: 0, minHeight: '180px' }}
         allowFullScreen
         loading="lazy"
         referrerPolicy="no-referrer-when-downgrade"
         title="Location"
-        className="w-full"
+        className="w-full h-full"
       />
     </div>
   );
 }
 
 // ═══════════════════════════════════════════════════════
-//  CONTEXT BADGE
+//  CONTEXT BADGE (conservé, recoloré sur fond jaune/20)
 // ═══════════════════════════════════════════════════════
 
 function ContextBadge({ context, t }: { context: string; t: (key: string) => string }) {
   const scanContext = context as ScanContext;
   const icon = CONTEXT_ICONS[scanContext] || '📍';
-  const colorClass = CONTEXT_COLORS[scanContext] || 'bg-blue-500';
+  // Map original color classes to neutral brand-aware classes
+  const colorClass = CONTEXT_COLORS[scanContext] || 'bg-[#1a1a1a]';
 
-  // Get localized label
   const contextKeyMap: Record<string, string> = {
     departure_airport_urgent: 'tracking.context_departure',
     arrival_airport: 'tracking.context_arrival',
@@ -288,10 +362,55 @@ function ContextBadge({ context, t }: { context: string; t: (key: string) => str
   const labelKey = contextKeyMap[scanContext] || 'tracking.context_static';
 
   return (
-    <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 ${colorClass} text-white text-xs font-bold rounded-full`}>
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 ${colorClass} text-white text-xs font-bold rounded-full`}>
       <span>{icon}</span>
       <span>{t(labelKey)}</span>
     </span>
+  );
+}
+
+// ═══════════════════════════════════════════════════════
+//  iOS INSTALL INSTRUCTIONS MODAL
+// ═══════════════════════════════════════════════════════
+
+function IOSInstallModal({
+  show,
+  onClose,
+  t,
+}: {
+  show: boolean;
+  onClose: () => void;
+  t: (key: string) => string;
+}) {
+  if (!show) return null;
+  return (
+    <div
+      className="fixed inset-0 bg-black/60 z-[60] flex items-end sm:items-center justify-center p-4"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+    >
+      <div
+        className="bg-white border-2 border-[#1a1a1a] rounded-2xl p-5 max-w-sm w-full shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-lg font-bold text-[#1a1a1a]">📱 {t('tracking.install_app_ios')}</h3>
+          <button
+            onClick={onClose}
+            aria-label={t('tracking.close')}
+            className="w-8 h-8 rounded-full hover:bg-[#c5a643]/30 flex items-center justify-center"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <ol className="space-y-2 text-sm text-[#1a1a1a]">
+          <li className="flex gap-2"><span>1.</span><span>{t('tracking.install_ios_step1')} <span className="inline-block px-1.5 py-0.5 bg-[#c5a643] rounded text-xs font-bold">⬆️</span></span></li>
+          <li className="flex gap-2"><span>2.</span><span>{t('tracking.install_ios_step2')}</span></li>
+          <li className="flex gap-2"><span>3.</span><span>{t('tracking.install_ios_step3')}</span></li>
+        </ol>
+      </div>
+    </div>
   );
 }
 
@@ -309,6 +428,15 @@ export default function SuiviPage() {
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshToast, setRefreshToast] = useState(false);
+
+  // Accordion/collapsible state
+  const [historyOpen, setHistoryOpen] = useState(true);
+  const [showAllScans, setShowAllScans] = useState(false);
+  const [baggageOpen, setBaggageOpen] = useState(false);
+
+  // PWA install state
+  const { showButton: showInstallButton, isIOS, handleInstall } = usePWAInstallPrompt();
+  const [showIOSModal, setShowIOSModal] = useState(false);
 
   // Fetch tracking data
   const fetchSuivi = useCallback(async (isRefresh = false) => {
@@ -338,7 +466,7 @@ export default function SuiviPage() {
     setTimeout(() => setRefreshToast(false), 2000);
   }, [fetchSuivi]);
 
-  // WHATSAPP-HARMONIZED: WhatsApp handler — owner contacts finder (template harmonisé multi-transport)
+  // WHATSAPP-HARMONIZED: WhatsApp handler — owner contacts finder
   const handleWhatsApp = useCallback(() => {
     if (!data?.lastFinder?.phone) return;
 
@@ -373,8 +501,8 @@ export default function SuiviPage() {
 
     const url = buildWhatsAppUrl(data.lastFinder.phone, message);
 
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    if (isIOS) {
+    const isIOSUA = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    if (isIOSUA) {
       window.location.href = url;
     } else {
       const newWindow = window.open(url, '_blank');
@@ -434,6 +562,53 @@ export default function SuiviPage() {
   const baggage = data.baggage;
   const isDeclaredLost = !!baggage?.declaredLostAt && !baggage?.foundAt;
   const isFound = !!baggage?.foundAt;
+  const isScanned = baggage?.status === 'scanned';
+  const hasFinderPhone = !!(data.lastFinder?.phone);
+
+  // ─── Dynamic status header config ───
+  const statusConfig: { title: string; badgeClass: string; desc: string } = (() => {
+    if (isDeclaredLost) {
+      return {
+        title: `🚨 ${t('tracking.badge_lost')}`,
+        badgeClass: 'bg-red-600 text-white animate-pulse',
+        desc: t('tracking.lost_description'),
+      };
+    }
+    if (isFound) {
+      return {
+        title: `✅ ${t('tracking.badge_found')}`,
+        badgeClass: 'bg-[#c5a643] text-[#1a1a1a]',
+        desc: t('tracking.found_description'),
+      };
+    }
+    if (isScanned) {
+      return {
+        title: t('tracking.bagage_localise'),
+        badgeClass: 'bg-[#c5a643] text-[#1a1a1a]',
+        desc: t('tracking.found_description'),
+      };
+    }
+    return {
+      title: t('tracking.bagage_protege'),
+      badgeClass: 'bg-[#1a1a1a] text-[#c5a643]',
+      desc: t('tracking.active_description'),
+    };
+  })();
+
+  // History accordion: 3 first by default if >3, all if <=3
+  const INITIAL_SCAN_COUNT = 3;
+  const visibleScans = showAllScans ? data.scans : data.scans.slice(0, INITIAL_SCAN_COUNT);
+  const hiddenScansCount = data.scans.length - INITIAL_SCAN_COUNT;
+
+  // Support mailto link
+  const supportSubject = encodeURIComponent(`Problème bagage ${reference}`);
+  const supportBody = encodeURIComponent(
+    `Bonjour, je rencontre un problème avec mon bagage ${reference}.\n\nDescription du problème :\n`
+  );
+  const supportHref = `mailto:contact@qrbags.com?subject=${supportSubject}&body=${supportBody}`;
+
+  // Checklist CTA link
+  const checklistHref = `/checklist?ref=${encodeURIComponent(reference)}&source=tracking_page`;
 
   // ═══════════════════════════════════════════════════════
   //  RENDER
@@ -441,405 +616,445 @@ export default function SuiviPage() {
 
   return (
     <main
-      className="min-h-[100dvh] min-h-screen bg-white flex flex-col px-4 sm:px-5 md:px-8 pb-[env(safe-area-inset-bottom,0px)]"
+      className="min-h-screen bg-[#FDFBF7] flex flex-col"
       dir={dir}
     >
-      {/* ─── Header ─── */}
-      <header className="sticky top-0 z-40 flex items-center justify-between pt-[env(safe-area-inset-top,0px)] px-0 py-2 sm:py-3 md:py-4 bg-white">
-        <button
-          onClick={() => window.history.back()}
-          className="flex items-center gap-1 text-blue-900 hover:text-blue-500 transition-colors text-sm font-medium min-h-[44px] px-2"
-          aria-label={t('tracking.back_to_scan')}
-        >
-          <ArrowRight className="w-4 h-4 rtl:rotate-180" />
-          <span>{t('tracking.back_to_scan')}</span>
-        </button>
-
-        <div className="flex items-center gap-2">
+      {/* ─── Sticky Header ─── */}
+      <header className="sticky top-0 z-40 bg-[#FDFBF7] border-b-2 border-[#1a1a1a] pt-[env(safe-area-inset-top,0px)] px-4 sm:px-5 md:px-8 py-2 sm:py-3">
+        <div className="max-w-md mx-auto flex items-center justify-between">
           <button
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-            className="flex items-center justify-center w-10 h-10 rounded-full border border-blue-200 text-blue-900 hover:bg-blue-50 transition-colors disabled:opacity-50"
-            aria-label={t('common.refresh')}
+            onClick={() => window.history.back()}
+            className="flex items-center gap-1 text-[#1a1a1a] hover:text-[#c5a643] transition-colors text-sm font-medium min-h-[40px] px-2"
+            aria-label={t('tracking.back_to_scan')}
           >
-            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <ArrowRight className="w-4 h-4 rtl:rotate-180" />
+            <span>{t('tracking.back_to_scan')}</span>
           </button>
-          <LanguageSelector lang={lang} setLang={setLang} />
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="flex items-center justify-center w-9 h-9 rounded-full border-2 border-[#1a1a1a] text-[#1a1a1a] hover:bg-[#c5a643] transition-colors disabled:opacity-50"
+              aria-label={t('common.refresh')}
+            >
+              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            </button>
+            <LanguageSelector lang={lang} setLang={setLang} />
+          </div>
         </div>
       </header>
 
       {/* ─── Refresh Toast ─── */}
       {refreshToast && (
-        <div className="fixed top-[calc(3.5rem+env(safe-area-inset-top,0px))] sm:top-[calc(4rem+env(safe-area-inset-top,0px))] left-1/2 -translate-x-1/2 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-in fade-in slide-in-from-top-2 duration-300 text-sm font-medium">
-          <CheckCircle className="w-4 h-4 inline mr-1.5" />
+        <div className="fixed top-[calc(3.5rem+env(safe-area-inset-top,0px))] sm:top-[calc(4rem+env(safe-area-inset-top,0px))] left-1/2 -translate-x-1/2 bg-[#1a1a1a] text-[#c5a643] px-4 py-2 rounded-lg shadow-lg z-50 animate-in fade-in slide-in-from-top-2 duration-300 text-sm font-medium flex items-center gap-1.5">
+          <CheckCircle className="w-4 h-4" />
           {t('tracking.refresh_success')}
         </div>
       )}
 
-      {/* ─── Container ─── */}
-      <div className="w-full max-w-md mx-auto flex-1 flex flex-col py-4 sm:py-6 md:py-0">
-
-        {/* ═══ STATUS BADGE ═══ */}
-        <div className="mt-2 sm:mt-4 md:mt-6 mb-4 sm:mb-6 text-center">
-          <span className={`inline-flex items-center justify-center px-6 py-3 rounded-full font-bold text-lg shadow-lg transform transition-transform duration-300 ${
-            isDeclaredLost
-              ? 'bg-red-600 text-white shadow-red-500/30 animate-pulse'
-              : isFound
-              ? 'bg-green-600 text-white shadow-green-500/30'
-              : 'bg-blue-500 text-white shadow-blue-500/30 hover:scale-105'
-          }`}>
-            {isDeclaredLost
-              ? `🚨 ${t('tracking.badge_lost')}`
-              : isFound
-              ? `✅ ${t('tracking.badge_found')}`
-              : `${t('tracking.badge_active')} ${getTransportIcon(safeTransportMode(baggage.transportMode))}`}
-          </span>
-          <p className="mt-3 text-blue-900 text-base md:text-lg leading-relaxed max-w-md mx-auto">
-            {isDeclaredLost
-              ? t('tracking.lost_description')
-              : isFound
-              ? t('tracking.found_description')
-              : t('tracking.active_description')}
-          </p>
-        </div>
-
-        {/* ─── Status Indicator ─── */}
-        <div className="flex items-center justify-center gap-2 mb-5">
-          <span className="w-2.5 h-2.5 bg-blue-500 rounded-full animate-pulse"></span>
-          <span className="text-sm font-bold uppercase tracking-widest text-blue-900">
-            {t(`tracking.status_${baggage.status === 'scanned' ? 'scanned' : baggage.status}`)}
-          </span>
-          {data.scans.length > 0 && (
-            <span className="text-sm text-blue-900/60 ml-2">
-              · {t('tracking.scan_count', { count: String(data.scans.length) })}
-            </span>
-          )}
-        </div>
-
-        {/* ═══ 🟦 BLOC 1 : INFORMATIONS DU BAGAGE ═══ */}
-        <div className="w-full bg-[#0A192F] rounded-2xl p-5 md:p-6 mb-5 shadow-xl shadow-blue-900/20">
-          <h2 className="text-xs uppercase tracking-widest text-white font-bold mb-4 flex items-center gap-2">
-            <span>📦</span> {t('tracking.baggage_info')}
-          </h2>
-
-          {/* Reference */}
-          <DashedEncart>
-            <div className="flex items-center gap-3">
-              <span className="text-xl">🏷️</span>
-              <div>
-                <p className="text-sm text-white/80 font-medium">{t('whatsapp.reference').replace(' :', '')}</p>
-                <p className="text-lg font-bold text-white font-mono tracking-widest">{baggage.reference}</p>
+      {/* ─── Sticky Map (h-56 mobile / h-64 tablet / h-72 desktop) ─── */}
+      {data.lastPosition && (data.lastPosition.hasCoordinates || data.lastPosition.address) && (
+        <section className="sticky top-[52px] sm:top-[56px] z-30 bg-[#FDFBF7] px-4 sm:px-5 md:px-8 py-3">
+          <div className="max-w-md mx-auto">
+            <div className="bg-white border-2 border-dashed border-[#1a1a1a] rounded-2xl p-2.5 shadow-sm">
+              <div className="flex items-center justify-between mb-2 px-1">
+                <h2 className="text-xs uppercase tracking-widest text-[#1a1a1a] font-bold flex items-center gap-1.5">
+                  <span>🗺️</span> {t('tracking.last_location')}
+                </h2>
+                {baggage.lastScanDate && (
+                  <span className="text-[10px] text-[#1a1a1a]/60">
+                    {formatDateTime(baggage.lastScanDate)}
+                  </span>
+                )}
+              </div>
+              <div className="h-44 sm:h-48 md:h-56">
+                <MapEmbed
+                  latitude={data.lastPosition.latitude}
+                  longitude={data.lastPosition.longitude}
+                  address={data.lastPosition.address}
+                  t={t}
+                />
               </div>
             </div>
-          </DashedEncart>
-
-          {/* Traveler Name */}
-          <DashedEncart>
-            <div className="flex items-center gap-3">
-              <span className="text-xl">👤</span>
-              <div>
-                <p className="text-sm text-white/80 font-medium">{t('finder.fullName')}</p>
-                <p className="text-lg font-bold text-white">{baggage.travelerName || t('finder.notSet')}</p>
-              </div>
-            </div>
-          </DashedEncart>
-
-          {/* TRANSPORT-FEATURE: Conditional transport info (flight/train/boat/bus) */}
-          {(() => {
-            const mode = safeTransportMode(baggage.transportMode);
-            // Flight info
-            if (mode === 'flight' && (baggage.airlineName || baggage.flightNumber)) {
-              return (
-                <DashedEncart>
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      {baggage.airlineName && (
-                        <div className="mb-2">
-                          <p className="text-sm text-white/80 font-medium">{t('transport.airline')}</p>
-                          <p className="text-lg font-bold text-white">{baggage.airlineName}</p>
-                        </div>
-                      )}
-                      {baggage.flightNumber && (
-                        <div>
-                          <p className="text-sm text-white/80 font-medium">{t('transport.flight_number')}</p>
-                          <p className="text-2xl font-bold text-white font-mono tracking-widest">{baggage.flightNumber}</p>
-                        </div>
-                      )}
-                    </div>
-                    <div className="h-12 w-12 rounded-full bg-white/10 flex items-center justify-center ml-4 flex-shrink-0">
-                      <Plane className="w-7 h-7 text-blue-600" />
-                    </div>
-                  </div>
-                </DashedEncart>
-              );
-            }
-            // Train info
-            if (mode === 'train' && (baggage.trainCompany || baggage.trainNumber)) {
-              return (
-                <DashedEncart>
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      {baggage.trainCompany && (
-                        <div className="mb-2">
-                          <p className="text-sm text-white/80 font-medium">{t('transport.train_company')}</p>
-                          <p className="text-lg font-bold text-white">{baggage.trainCompany}</p>
-                        </div>
-                      )}
-                      {baggage.trainNumber && (
-                        <div>
-                          <p className="text-sm text-white/80 font-medium">{t('transport.train_number')}</p>
-                          <p className="text-2xl font-bold text-white font-mono tracking-widest">{baggage.trainNumber}</p>
-                        </div>
-                      )}
-                    </div>
-                    <div className="h-12 w-12 rounded-full bg-white/10 flex items-center justify-center ml-4 flex-shrink-0">
-                      <span className="text-3xl">🚆</span>
-                    </div>
-                  </div>
-                </DashedEncart>
-              );
-            }
-            // Boat info
-            if (mode === 'boat' && (baggage.shipName || baggage.shipCabin)) {
-              return (
-                <DashedEncart>
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      {baggage.shipName && (
-                        <div className="mb-2">
-                          <p className="text-sm text-white/80 font-medium">{t('transport.ship_name')}</p>
-                          <p className="text-lg font-bold text-white">{baggage.shipName}</p>
-                        </div>
-                      )}
-                      {baggage.shipCabin && (
-                        <div>
-                          <p className="text-sm text-white/80 font-medium">{t('transport.ship_cabin')}</p>
-                          <p className="text-lg font-bold text-white">{baggage.shipCabin}</p>
-                        </div>
-                      )}
-                    </div>
-                    <div className="h-12 w-12 rounded-full bg-white/10 flex items-center justify-center ml-4 flex-shrink-0">
-                      <span className="text-3xl">🚢</span>
-                    </div>
-                  </div>
-                </DashedEncart>
-              );
-            }
-            // Bus info
-            if (mode === 'bus' && (baggage.busCompany || baggage.busLineNumber)) {
-              return (
-                <DashedEncart>
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      {baggage.busCompany && (
-                        <div className="mb-2">
-                          <p className="text-sm text-white/80 font-medium">{t('transport.bus_company')}</p>
-                          <p className="text-lg font-bold text-white">{baggage.busCompany}</p>
-                        </div>
-                      )}
-                      {baggage.busLineNumber && (
-                        <div>
-                          <p className="text-sm text-white/80 font-medium">{t('transport.bus_line')}</p>
-                          <p className="text-lg font-bold text-white">{baggage.busLineNumber}</p>
-                        </div>
-                      )}
-                    </div>
-                    <div className="h-12 w-12 rounded-full bg-white/10 flex items-center justify-center ml-4 flex-shrink-0">
-                      <span className="text-3xl">🚌</span>
-                    </div>
-                  </div>
-                </DashedEncart>
-              );
-            }
-            return null;
-          })()}
-
-          {/* Destination */}
-          {baggage.destination && (
-            <DashedEncart>
-              <div className="flex items-center gap-3">
-                <span className="text-xl">📍</span>
-                <div>
-                  <p className="text-sm text-white/80 font-medium">{t('transport.common_destination')}</p>
-                  <p className="text-lg font-bold text-white">{baggage.destination}</p>
-                </div>
-              </div>
-            </DashedEncart>
-          )}
-
-          {/* Departure Date */}
-          {(baggage.departureDate || baggage.createdAt) && (
-            <DashedEncart className="mb-0">
-              <div className="flex items-center gap-3">
-                <span className="text-xl">📅</span>
-                <div>
-                  <p className="text-sm text-white/80 font-medium">{t('transport.common_departure_date')}</p>
-                  <p className="text-lg font-bold text-white">
-                    {formatDate(baggage.departureDate || baggage.createdAt)}{baggage.departureTime ? ` — ${baggage.departureTime}` : ''}
-                  </p>
-                </div>
-              </div>
-            </DashedEncart>
-          )}
-        </div>
-
-        {/* ═══ 🟦 BLOC 2 : DERNIÈRE POSITION (Google Maps) ═══ */}
-        {data.lastPosition && (data.lastPosition.hasCoordinates || data.lastPosition.address) && (
-          <div className="w-full bg-[#0A192F] rounded-2xl p-5 md:p-6 mb-5 shadow-xl shadow-blue-900/20">
-            <h2 className="text-xs uppercase tracking-widest text-white font-bold mb-4 flex items-center gap-2">
-              <span>🗺️</span> {t('tracking.last_location')}
-            </h2>
-
-            {/* Map */}
-            <DashedEncart>
-              <MapEmbed
-                latitude={data.lastPosition.latitude}
-                longitude={data.lastPosition.longitude}
-                address={data.lastPosition.address}
-                t={t}
-              />
-            </DashedEncart>
-
-            {/* Last scan date */}
-            {baggage.lastScanDate && (
-              <div className="mt-3 text-center">
-                <span className="text-sm text-white/70">
-                  {t('tracking.last_scan')} : {formatDateTime(baggage.lastScanDate)}
-                </span>
-              </div>
-            )}
           </div>
-        )}
+        </section>
+      )}
 
-        {/* ═══ 🟦 BLOC 3 : INFORMATIONS DU TROUVEUR ═══ */}
+      {/* ─── Scrollable Content ─── */}
+      <div className="flex-1 max-w-md mx-auto w-full px-4 sm:px-5 md:px-8 py-4 pb-32 space-y-4">
+
+        {/* ═══ EN-TÊTE DYNAMIQUE SELON STATUT ═══ */}
+        <div className="text-center pt-2">
+          <span className={`inline-flex items-center justify-center px-4 py-1.5 rounded-full text-sm font-bold ${statusConfig.badgeClass}`}>
+            {statusConfig.title}
+          </span>
+          <p className="mt-3 text-sm md:text-base text-[#1a1a1a]/80 leading-relaxed">
+            {statusConfig.desc}
+          </p>
+          {data.scans.length > 0 && (
+            <p className="mt-1 text-xs text-[#1a1a1a]/60">
+              {t('tracking.scan_count', { count: String(data.scans.length) })}
+            </p>
+          )}
+        </div>
+
+        {/* ═══ CARTE TROUVEUR (white + dashed, lecture seule) ═══ */}
         {data.lastFinder && (data.lastFinder.name || data.lastFinder.phone) ? (
-          <div className="w-full bg-[#0A192F] rounded-2xl p-5 md:p-6 mb-5 shadow-xl shadow-blue-900/20">
-            <h2 className="text-xs uppercase tracking-widest text-white font-bold mb-4 flex items-center gap-2">
+          <div className="bg-white border-2 border-dashed border-[#1a1a1a] rounded-2xl p-5 shadow-sm">
+            <h2 className="text-xs uppercase tracking-widest text-[#1a1a1a] font-bold mb-3 flex items-center gap-2">
               <span>🔍</span> {t('tracking.finder_info')}
             </h2>
 
-            {/* Finder Name */}
             {data.lastFinder.name && (
               <DashedEncart>
                 <div className="flex items-center gap-3">
                   <span className="text-xl">👤</span>
                   <div>
-                    <p className="text-sm text-white/80 font-medium">{t('finder.fullName')}</p>
-                    <p className="text-lg font-bold text-white">{data.lastFinder.name}</p>
+                    <p className="text-xs text-[#1a1a1a]/60 font-medium">{t('finder.fullName')}</p>
+                    <p className="text-base font-bold text-[#1a1a1a]">{data.lastFinder.name}</p>
                   </div>
                 </div>
               </DashedEncart>
             )}
 
-            {/* Finder Phone */}
             {data.lastFinder.phone && (
               <DashedEncart className="mb-0">
                 <div className="flex items-center gap-3">
                   <span className="text-xl">📱</span>
                   <div>
-                    <p className="text-sm text-white/80 font-medium">{t('finder.whatsapp')}</p>
-                    <p className="text-lg font-bold text-white" dir="ltr">{data.lastFinder.phone}</p>
+                    <p className="text-xs text-[#1a1a1a]/60 font-medium">{t('finder.whatsapp')}</p>
+                    <p className="text-base font-bold text-[#1a1a1a]" dir="ltr">{data.lastFinder.phone}</p>
                   </div>
                 </div>
               </DashedEncart>
             )}
+          </div>
+        ) : (
+          <div className="bg-white border-2 border-dashed border-[#1a1a1a] rounded-2xl p-5 shadow-sm text-center">
+            <div className="w-14 h-14 bg-[#c5a643]/20 border-2 border-dashed border-[#1a1a1a] rounded-full flex items-center justify-center mx-auto mb-3">
+              <Clock className="w-7 h-7 text-[#1a1a1a]/60" />
+            </div>
+            <p className="text-[#1a1a1a]/70 text-sm">{t('tracking.no_finder')}</p>
+          </div>
+        )}
 
-            {/* ─── Contact Buttons ─── */}
-            {data.lastFinder.phone && (
-              <div className="mt-4">
-                <h3 className="text-blue-900 text-sm font-bold uppercase tracking-widest text-center mb-4">
-                  {t('tracking.contact_finder')}
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {/* WhatsApp Button */}
+        {/* ═══ CTA CHECKLIST (jaune #c5a643 + dashed) ═══ */}
+        <div className="bg-[#c5a643] border-2 border-dashed border-[#1a1a1a] rounded-2xl p-4 shadow-sm">
+          <h3 className="text-base font-bold text-[#1a1a1a] mb-1">{t('tracking.checklist_title')}</h3>
+          <p className="text-sm text-[#1a1a1a]/80 mb-3 leading-relaxed">{t('tracking.checklist_desc')}</p>
+          <a
+            href={checklistHref}
+            className="block w-full text-center py-3 px-4 bg-[#1a1a1a] hover:bg-black text-[#c5a643] rounded-xl font-bold transition-colors min-h-[44px]"
+          >
+            {t('tracking.checklist_cta')}
+          </a>
+        </div>
+
+        {/* ═══ HISTORIQUE (ACCORDION) ═══ */}
+        {data.scans.length > 0 && (
+          <div className="bg-white border-2 border-dashed border-[#1a1a1a] rounded-2xl shadow-sm overflow-hidden">
+            <button
+              onClick={() => setHistoryOpen(!historyOpen)}
+              className="w-full flex items-center justify-between px-5 py-4 text-left"
+              aria-expanded={historyOpen}
+            >
+              <h2 className="text-xs uppercase tracking-widest text-[#1a1a1a] font-bold flex items-center gap-2">
+                <span>📜</span>
+                {t('tracking.history_toggle', { count: String(data.scans.length) })}
+              </h2>
+              <ChevronDown className={`w-4 h-4 text-[#1a1a1a] transition-transform ${historyOpen ? '' : '-rotate-90'}`} />
+            </button>
+
+            {historyOpen && (
+              <div className="px-5 pb-4 space-y-2.5">
+                {visibleScans.map((scan, index) => (
+                  <DashedEncart key={scan.id} className={index === visibleScans.length - 1 && !showAllScans ? 'mb-0' : ''}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          <span className="text-xs text-[#1a1a1a]/70">
+                            {formatDateTime(scan.scannedAt)}
+                          </span>
+                          <ContextBadge context={scan.context} t={t} />
+                        </div>
+                        {scan.location && (
+                          <p className="text-[#1a1a1a] font-medium text-sm truncate">
+                            📍 {scan.location}
+                          </p>
+                        )}
+                        {scan.finderName && (
+                          <p className="text-[#1a1a1a]/70 text-xs mt-1">
+                            👤 {scan.finderName}
+                          </p>
+                        )}
+                      </div>
+                      <div className="w-7 h-7 rounded-full bg-[#c5a643]/20 border border-[#1a1a1a]/40 flex items-center justify-center flex-shrink-0">
+                        <span className="text-xs font-bold text-[#1a1a1a]">{index + 1}</span>
+                      </div>
+                    </div>
+                  </DashedEncart>
+                ))}
+
+                {hiddenScansCount > 0 && !showAllScans && (
                   <button
-                    onClick={handleWhatsApp}
-                    className="py-4 px-5 bg-green-600 hover:bg-green-500 text-white rounded-xl font-bold transition-colors flex items-center justify-center gap-2 text-lg min-h-[56px] shadow-lg"
+                    onClick={() => setShowAllScans(true)}
+                    className="w-full py-2.5 text-center text-sm font-medium text-[#1a1a1a] hover:text-[#c5a643] border-2 border-dashed border-[#1a1a1a]/40 rounded-xl transition-colors min-h-[40px]"
                   >
-                    <MessageCircle className="w-5 h-5" />
-                    {t('tracking.by_whatsapp')}
+                    {t('tracking.see_more', { count: String(hiddenScansCount) })} ▼
                   </button>
-                  {/* Phone Button */}
+                )}
+                {showAllScans && hiddenScansCount > 0 && (
                   <button
-                    onClick={handlePhoneCall}
-                    className="py-4 px-5 bg-blue-500 hover:bg-blue-700 text-white rounded-xl font-bold transition-colors flex items-center justify-center gap-2 text-lg min-h-[56px] shadow-lg"
+                    onClick={() => setShowAllScans(false)}
+                    className="w-full py-2.5 text-center text-sm font-medium text-[#1a1a1a]/70 hover:text-[#c5a643] transition-colors min-h-[40px]"
                   >
-                    <Phone className="w-5 h-5" />
-                    {t('tracking.by_phone')}
+                    ▲ Réduire
                   </button>
-                </div>
+                )}
               </div>
             )}
           </div>
-        ) : (
-          /* No finder yet */
-          <div className="w-full bg-[#0A192F] rounded-2xl p-5 md:p-6 mb-5 shadow-xl shadow-blue-900/20 text-center">
-            <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Clock className="w-8 h-8 text-white/50" />
-            </div>
-            <p className="text-white/70 text-base">{t('tracking.no_finder')}</p>
-          </div>
         )}
 
-        {/* ═══ 🟦 BLOC 4 : HISTORIQUE DES SCANS (max 5) ═══ */}
-        {data.scans.length > 0 ? (
-          <div className="w-full bg-[#0A192F] rounded-2xl p-5 md:p-6 mb-5 shadow-xl shadow-blue-900/20">
-            <h2 className="text-xs uppercase tracking-widest text-white font-bold mb-4 flex items-center gap-2">
-              <span>📋</span> {t('tracking.scan_history')}
+        {/* ═══ INFOS BAGAGE (COLLAPSIBLE, replié par défaut) ═══ */}
+        <div className="bg-white border-2 border-dashed border-[#1a1a1a] rounded-2xl shadow-sm overflow-hidden">
+          <button
+            onClick={() => setBaggageOpen(!baggageOpen)}
+            className="w-full flex items-center justify-between px-5 py-4 text-left"
+            aria-expanded={baggageOpen}
+          >
+            <h2 className="text-xs uppercase tracking-widest text-[#1a1a1a] font-bold flex items-center gap-2">
+              <span>📦</span> {t('tracking.baggage_info_toggle')}
             </h2>
+            <ChevronDown className={`w-4 h-4 text-[#1a1a1a] transition-transform ${baggageOpen ? '' : '-rotate-90'}`} />
+          </button>
 
-            <div className="space-y-3">
-              {data.scans.map((scan, index) => (
-                <DashedEncart key={scan.id} className={index === data.scans.length - 1 ? 'mb-0' : ''}>
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      {/* Date + Context */}
-                      <div className="flex items-center gap-2 mb-2 flex-wrap">
-                        <span className="text-xs text-white/70">
-                          {formatDateTime(scan.scannedAt)}
-                        </span>
-                        <ContextBadge context={scan.context} t={t} />
+          {baggageOpen && (
+            <div className="px-5 pb-5">
+              {/* Reference */}
+              <DashedEncart>
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">🏷️</span>
+                  <div>
+                    <p className="text-xs text-[#1a1a1a]/60 font-medium">{t('whatsapp.reference').replace(' :', '')}</p>
+                    <p className="text-base font-bold text-[#1a1a1a] font-mono tracking-widest">{baggage.reference}</p>
+                  </div>
+                </div>
+              </DashedEncart>
+
+              {/* Traveler Name */}
+              <DashedEncart>
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">👤</span>
+                  <div>
+                    <p className="text-xs text-[#1a1a1a]/60 font-medium">{t('finder.fullName')}</p>
+                    <p className="text-base font-bold text-[#1a1a1a]">{baggage.travelerName || t('finder.notSet')}</p>
+                  </div>
+                </div>
+              </DashedEncart>
+
+              {/* TRANSPORT-FEATURE: Conditional transport info with real PNG images */}
+              {(() => {
+                const mode = safeTransportMode(baggage.transportMode) as TransportMode;
+                const transportImg = getTransportImage(mode);
+
+                if (mode === 'flight' && (baggage.airlineName || baggage.flightNumber)) {
+                  return (
+                    <DashedEncart>
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          {baggage.airlineName && (
+                            <div className="mb-1">
+                              <p className="text-xs text-[#1a1a1a]/60 font-medium">{t('transport.airline')}</p>
+                              <p className="text-base font-bold text-[#1a1a1a]">{baggage.airlineName}</p>
+                            </div>
+                          )}
+                          {baggage.flightNumber && (
+                            <div>
+                              <p className="text-xs text-[#1a1a1a]/60 font-medium">{t('transport.flight_number')}</p>
+                              <p className="text-xl font-bold text-[#1a1a1a] font-mono tracking-widest">{baggage.flightNumber}</p>
+                            </div>
+                          )}
+                        </div>
+                        <div className="h-12 w-12 rounded-full bg-[#c5a643]/20 border border-[#1a1a1a]/20 flex items-center justify-center ml-4 flex-shrink-0">
+                          <Image src={transportImg} alt="flight" width={28} height={28} className="mix-blend-multiply" />
+                        </div>
                       </div>
+                    </DashedEncart>
+                  );
+                }
+                if (mode === 'train' && (baggage.trainCompany || baggage.trainNumber)) {
+                  return (
+                    <DashedEncart>
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          {baggage.trainCompany && (
+                            <div className="mb-1">
+                              <p className="text-xs text-[#1a1a1a]/60 font-medium">{t('transport.train_company')}</p>
+                              <p className="text-base font-bold text-[#1a1a1a]">{baggage.trainCompany}</p>
+                            </div>
+                          )}
+                          {baggage.trainNumber && (
+                            <div>
+                              <p className="text-xs text-[#1a1a1a]/60 font-medium">{t('transport.train_number')}</p>
+                              <p className="text-xl font-bold text-[#1a1a1a] font-mono tracking-widest">{baggage.trainNumber}</p>
+                            </div>
+                          )}
+                        </div>
+                        <div className="h-12 w-12 rounded-full bg-[#c5a643]/20 border border-[#1a1a1a]/20 flex items-center justify-center ml-4 flex-shrink-0">
+                          <Image src={transportImg} alt="train" width={28} height={28} className="mix-blend-multiply" />
+                        </div>
+                      </div>
+                    </DashedEncart>
+                  );
+                }
+                if (mode === 'boat' && (baggage.shipName || baggage.shipCabin)) {
+                  return (
+                    <DashedEncart>
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          {baggage.shipName && (
+                            <div className="mb-1">
+                              <p className="text-xs text-[#1a1a1a]/60 font-medium">{t('transport.ship_name')}</p>
+                              <p className="text-base font-bold text-[#1a1a1a]">{baggage.shipName}</p>
+                            </div>
+                          )}
+                          {baggage.shipCabin && (
+                            <div>
+                              <p className="text-xs text-[#1a1a1a]/60 font-medium">{t('transport.ship_cabin')}</p>
+                              <p className="text-base font-bold text-[#1a1a1a]">{baggage.shipCabin}</p>
+                            </div>
+                          )}
+                        </div>
+                        <div className="h-12 w-12 rounded-full bg-[#c5a643]/20 border border-[#1a1a1a]/20 flex items-center justify-center ml-4 flex-shrink-0">
+                          <Image src={transportImg} alt="boat" width={28} height={28} className="mix-blend-multiply" />
+                        </div>
+                      </div>
+                    </DashedEncart>
+                  );
+                }
+                if (mode === 'bus' && (baggage.busCompany || baggage.busLineNumber)) {
+                  return (
+                    <DashedEncart>
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          {baggage.busCompany && (
+                            <div className="mb-1">
+                              <p className="text-xs text-[#1a1a1a]/60 font-medium">{t('transport.bus_company')}</p>
+                              <p className="text-base font-bold text-[#1a1a1a]">{baggage.busCompany}</p>
+                            </div>
+                          )}
+                          {baggage.busLineNumber && (
+                            <div>
+                              <p className="text-xs text-[#1a1a1a]/60 font-medium">{t('transport.bus_line')}</p>
+                              <p className="text-base font-bold text-[#1a1a1a]">{baggage.busLineNumber}</p>
+                            </div>
+                          )}
+                        </div>
+                        <div className="h-12 w-12 rounded-full bg-[#c5a643]/20 border border-[#1a1a1a]/20 flex items-center justify-center ml-4 flex-shrink-0">
+                          <Image src={transportImg} alt="bus" width={28} height={28} className="mix-blend-multiply" />
+                        </div>
+                      </div>
+                    </DashedEncart>
+                  );
+                }
+                return null;
+              })()}
 
-                      {/* Location */}
-                      {scan.location && (
-                        <p className="text-white font-medium text-sm truncate">
-                          📍 {scan.location}
-                        </p>
-                      )}
-
-                      {/* Finder info (compact) */}
-                      {scan.finderName && (
-                        <p className="text-white/70 text-xs mt-1">
-                          👤 {scan.finderName}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Scan number badge */}
-                    <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0">
-                      <span className="text-xs font-bold text-white">{index + 1}</span>
+              {/* Destination */}
+              {baggage.destination && (
+                <DashedEncart>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl">📍</span>
+                    <div>
+                      <p className="text-xs text-[#1a1a1a]/60 font-medium">{t('transport.common_destination')}</p>
+                      <p className="text-base font-bold text-[#1a1a1a]">{baggage.destination}</p>
                     </div>
                   </div>
                 </DashedEncart>
-              ))}
+              )}
+
+              {/* Departure Date */}
+              {(baggage.departureDate || baggage.createdAt) && (
+                <DashedEncart className="mb-0">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl">📅</span>
+                    <div>
+                      <p className="text-xs text-[#1a1a1a]/60 font-medium">{t('transport.common_departure_date')}</p>
+                      <p className="text-base font-bold text-[#1a1a1a]">
+                        {formatDate(baggage.departureDate || baggage.createdAt)}{baggage.departureTime ? ` — ${baggage.departureTime}` : ''}
+                      </p>
+                    </div>
+                  </div>
+                </DashedEncart>
+              )}
             </div>
-          </div>
-        ) : (
-          <div className="w-full bg-[#0A192F] rounded-2xl p-5 md:p-6 mb-5 shadow-xl shadow-blue-900/20 text-center">
-            <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Navigation className="w-8 h-8 text-white/50" />
-            </div>
-            <p className="text-white/70 text-base">{t('tracking.no_scans')}</p>
+          )}
+        </div>
+
+        {/* ═══ SUPPORT MAILTO ═══ */}
+        <div className="text-center py-2">
+          <a
+            href={supportHref}
+            className="text-sm text-[#c5a643] underline hover:text-[#1a1a1a] transition-colors"
+          >
+            {t('tracking.support_cta')}
+          </a>
+        </div>
+
+        {/* ═══ PWA INSTALL BUTTON (conditionnel) ═══ */}
+        {showInstallButton && (
+          <div className="text-center">
+            <button
+              onClick={() => {
+                if (isIOS) {
+                  setShowIOSModal(true);
+                } else {
+                  handleInstall();
+                }
+              }}
+              className="inline-flex items-center gap-2 border-2 border-[#1a1a1a] text-[#1a1a1a] hover:bg-[#c5a643] py-2 px-4 rounded-lg text-sm font-medium transition-colors min-h-[40px]"
+            >
+              <span>{isIOS ? '📱' : '⬇️'}</span>
+              <span>{isIOS ? t('tracking.install_app_ios') : t('tracking.install_app')}</span>
+            </button>
           </div>
         )}
 
-        {/* ─── Trust Note ─── */}
-        <div className="mt-4 mb-4 text-center text-sm text-blue-900/60 tracking-wide">
-          <Shield className="w-4 h-4 inline mr-1.5" />
-          {t('tracking.trust_note')}
+        {/* ─── Trust Note (footer discret) ─── */}
+        <div className="text-center text-xs text-[#1a1a1a]/60 tracking-wide flex items-center justify-center gap-1.5 pt-2">
+          <Shield className="w-4 h-4 inline" />
+          <span>{t('tracking.trust_note')}</span>
         </div>
       </div>
+
+      {/* ═══ STICKY BOTTOM BAR (Appeler + WhatsApp) — only if finder phone ═══ */}
+      {hasFinderPhone && (
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t-2 border-[#1a1a1a] p-3 sm:p-4 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] sm:pb-[calc(1rem+env(safe-area-inset-bottom,0px))]">
+          <div className="max-w-md mx-auto flex gap-3">
+            <button
+              onClick={handlePhoneCall}
+              className="flex-1 bg-[#1a1a1a] hover:bg-black text-[#c5a643] py-3 rounded-lg font-bold transition-colors flex items-center justify-center gap-2 text-base min-h-[48px]"
+              aria-label={t('tracking.by_phone')}
+            >
+              <Phone className="w-5 h-5" />
+              <span>📞 {t('tracking.by_phone')}</span>
+            </button>
+            <button
+              onClick={handleWhatsApp}
+              className="flex-1 bg-[#25D366] hover:bg-[#1ebe57] text-white py-3 rounded-lg font-bold transition-colors flex items-center justify-center gap-2 text-base min-h-[48px]"
+              aria-label={t('tracking.by_whatsapp')}
+            >
+              <MessageCircle className="w-5 h-5" />
+              <span>💬 {t('tracking.by_whatsapp')}</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ iOS Install Instructions Modal ═══ */}
+      <IOSInstallModal show={showIOSModal} onClose={() => setShowIOSModal(false)} t={t} />
     </main>
   );
 }
