@@ -131,13 +131,13 @@ export default function PhoneInput({
           {label}
         </p>
       )}
-      <div className="flex items-stretch gap-0">
+      <div className="flex items-stretch gap-0 min-w-0 overflow-hidden">
         {/* Country selector button */}
         <div ref={dropdownRef} className="relative">
           <button
             type="button"
             onClick={() => setIsOpen(!isOpen)}
-            className={`flex items-center gap-1 px-3 rounded-l-xl border-2 border-r-0 ${borderColor} ${bgColor} ${textColor} hover:bg-opacity-80 transition-colors min-h-[48px]`}
+            className={`flex items-center gap-1 px-2 sm:px-3 rounded-l-xl border-2 border-r-0 ${borderColor} ${bgColor} ${textColor} hover:bg-opacity-80 transition-colors min-h-[48px] flex-shrink-0`}
           >
             <span className="text-lg">{selected.flag}</span>
             <span className="text-sm font-semibold whitespace-nowrap">{selected.dial}</span>
@@ -146,7 +146,7 @@ export default function PhoneInput({
 
           {/* Dropdown */}
           {isOpen && (
-            <div className={`absolute top-full left-0 mt-1 w-72 max-h-72 overflow-hidden rounded-xl shadow-2xl z-50 border-2 ${dark ? 'border-white/20 bg-[#0A192F]' : 'border-blue-200 bg-white'}`}>
+            <div className={`absolute top-full left-0 mt-1 w-64 sm:w-72 max-h-72 overflow-hidden rounded-xl shadow-2xl z-50 border-2 ${dark ? 'border-white/20 bg-[#0A192F]' : 'border-blue-200 bg-white'}`}>
               {/* Search */}
               <div className={`p-2 border-b ${dark ? 'border-white/10' : 'border-blue-100'}`}>
                 <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-black/10">
@@ -198,7 +198,7 @@ export default function PhoneInput({
           placeholder={placeholder}
           value={localNumber ? formatLocalNumber(localNumber) : ''}
           onChange={handleLocalChange}
-          className={`flex-1 rounded-r-xl border-2 ${borderColor} ${bgColor} ${textColor} ${placeholderColor} ${focusRing} px-3 py-2.5 text-base min-h-[48px]`}
+          className={`flex-1 min-w-0 rounded-r-xl border-2 ${borderColor} ${bgColor} ${textColor} ${placeholderColor} ${focusRing} px-3 py-2.5 text-base min-h-[48px]`}
           required={required}
         />
       </div>

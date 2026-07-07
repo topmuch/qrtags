@@ -1075,3 +1075,28 @@ Stage Summary:
 - Textes marketing/UI Voyageur corrigés de 3→2 QR codes dans 5 fichiers (10 occurrences)
 - Code de génération déjà correct (max 2 pour Voyageur), aucun changement de logique nécessaire
 - Hajj entièrement préservé (3 QR/pèlerin)
+---
+Task ID: 10
+Agent: Main Agent
+Task: Mode Urgence Perdu sur page /suivi/[reference]
+
+Work Log:
+- Analysé le codebase existant: page suivi (1061 lignes), API suivi, Prisma schema, i18n
+- Identifié les champs DB existants: status, declaredLostAt, foundAt sur le modèle Baggage
+- Identifié les champs compagnie dynamiques: airlineName, trainCompany, shipName, busCompany
+- Découvert un conflit de slug Next.js: /api/baggage/[id] existait déjà
+- Créé /api/baggage-status/[reference]/route.ts (endpoint public dédié, hors conflit)
+- Ajouté 12 clés i18n dans fr.json, en.json, ar.json (urgent_title, urgent_step1/2, boutons, etc.)
+- Modifié page.tsx: handler handleStatusToggle, handleSupportWhatsApp, transportCompany dynamique
+- Ajouté panneau urgence (bg #FEF2F2, border #EF4444) avec instructions numérotées et 3 boutons
+- Ajouté bouton "Déclarer mon bagage perdu" rouge outline en mode normal
+- Conditionné la bottom bar (masquée en mode perdu, le panneau a ses propres boutons)
+- Ajouté toast vert de confirmation après toggle
+- Tests API: mark-lost → status=lost+declaredLostAt, mark-found → status=active+foundAt
+- Lint propre, push GitHub commit 318fa7c
+
+Stage Summary:
+- API: POST /api/baggage-status/[reference] avec rate limit 5 req/min
+- Page suivi: mode urgence complet (rouge) + bouton déclarer perdu (mode normal)
+- i18n: 12 nouvelles clés en FR/EN/AR
+- Flux complet testé et fonctionnel end-to-end
