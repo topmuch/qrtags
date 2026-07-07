@@ -236,7 +236,14 @@
     "declare_lost_confirm": "Are you sure you want to declare this baggage as lost?",
     "urgent_support_message": "URGENT: Baggage {ref} declared lost. Need assistance.",
     "status_updated": "Status updated successfully",
-    "urgent_fallback_company": "transport"
+    "urgent_fallback_company": "transport",
+    "audio_alert_banner_title": "Get an alert when your baggage is scanned",
+    "audio_alert_activate_btn": "Enable sound alerts",
+    "audio_alert_keep_open": "Keep this page open to receive the alert",
+    "audio_alert_enabled": "Alerts enabled",
+    "audio_alert_disabled": "Alerts disabled",
+    "audio_alert_toggle_aria": "Toggle sound alerts on or off",
+    "audio_alert_scanning": "Active monitoring…"
   },
   "scan": {
     "success": "Scan successful! ✓"

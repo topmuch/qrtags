@@ -125,23 +125,23 @@ export default function PhoneInput({
   const focusRing = 'focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent';
 
   return (
-    <div className={`w-full ${className}`}>
+    <div className={`w-full min-w-0 ${className}`}>
       {label && (
         <p className={`text-sm font-medium mb-1.5 ${dark ? 'text-white/80' : 'text-blue-700'}`}>
           {label}
         </p>
       )}
-      <div className="flex items-stretch gap-0 min-w-0 overflow-hidden">
+      <div className="flex items-stretch gap-0 min-w-0">
         {/* Country selector button */}
-        <div ref={dropdownRef} className="relative">
+        <div ref={dropdownRef} className="relative flex-shrink-0">
           <button
             type="button"
             onClick={() => setIsOpen(!isOpen)}
-            className={`flex items-center gap-1 px-2 sm:px-3 rounded-l-xl border-2 border-r-0 ${borderColor} ${bgColor} ${textColor} hover:bg-opacity-80 transition-colors min-h-[48px] flex-shrink-0`}
+            className={`flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-3 rounded-l-xl border-2 border-r-0 ${borderColor} ${bgColor} ${textColor} hover:bg-opacity-80 transition-colors min-h-[48px]`}
           >
-            <span className="text-lg">{selected.flag}</span>
-            <span className="text-sm font-semibold whitespace-nowrap">{selected.dial}</span>
-            <ChevronDown className={`w-3.5 h-3.5 opacity-60 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+            <span className="text-base sm:text-lg leading-none">{selected.flag}</span>
+            <span className="text-xs sm:text-sm font-semibold whitespace-nowrap">{selected.dial}</span>
+            <ChevronDown className={`w-3 h-3 sm:w-3.5 sm:h-3.5 opacity-60 transition-transform flex-shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
           </button>
 
           {/* Dropdown */}
@@ -198,7 +198,7 @@ export default function PhoneInput({
           placeholder={placeholder}
           value={localNumber ? formatLocalNumber(localNumber) : ''}
           onChange={handleLocalChange}
-          className={`flex-1 min-w-0 rounded-r-xl border-2 ${borderColor} ${bgColor} ${textColor} ${placeholderColor} ${focusRing} px-3 py-2.5 text-base min-h-[48px]`}
+          className={`flex-1 min-w-0 rounded-r-xl border-2 ${borderColor} ${bgColor} ${textColor} ${placeholderColor} ${focusRing} px-2 sm:px-3 py-2.5 text-sm sm:text-base min-h-[48px] w-0`}
           required={required}
         />
       </div>

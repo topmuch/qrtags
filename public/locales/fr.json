@@ -236,7 +236,14 @@
     "declare_lost_confirm": "Êtes-vous sûr de vouloir déclarer ce bagage comme perdu ?",
     "urgent_support_message": "URGENT : Bagage {ref} déclaré perdu. Besoin d'assistance.",
     "status_updated": "Statut mis à jour avec succès",
-    "urgent_fallback_company": "de transport"
+    "urgent_fallback_company": "de transport",
+    "audio_alert_banner_title": "Recevez une alerte quand votre bagage sera scanné",
+    "audio_alert_activate_btn": "Activer les alertes sonores",
+    "audio_alert_keep_open": "Gardez cette page ouverte pour recevoir l'alerte",
+    "audio_alert_enabled": "Alertes activées",
+    "audio_alert_disabled": "Alertes désactivées",
+    "audio_alert_toggle_aria": "Activer ou désactiver les alertes sonores",
+    "audio_alert_scanning": "Surveillance active…"
   },
   "scan": {
     "success": "Scan réussi ! ✓"

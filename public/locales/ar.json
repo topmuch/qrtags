@@ -236,7 +236,14 @@
     "declare_lost_confirm": "هل أنت متأكد أنك تريد تسجيل هذه الأمتعة كمفقودة؟",
     "urgent_support_message": "طوارئ: أمتعة {ref} مسجلة كمفقودة. أحتاج مساعدة.",
     "status_updated": "تم تحديث الحالة بنجاح",
-    "urgent_fallback_company": "النقل"
+    "urgent_fallback_company": "النقل",
+    "audio_alert_banner_title": "احصل على تنبيه عندما يتم مسح أمتعتك",
+    "audio_alert_activate_btn": "تفعيل التنبيهات الصوتية",
+    "audio_alert_keep_open": "أبقِ هذه الصفحة مفتوحة لاستقبال التنبيه",
+    "audio_alert_enabled": "تم تفعيل التنبيهات",
+    "audio_alert_disabled": "تم إيقاف التنبيهات",
+    "audio_alert_toggle_aria": "تفعيل أو إيقاف التنبيهات الصوتية",
+    "audio_alert_scanning": "مراقبة نشطة…"
   },
   "scan": {
     "success": "تم المسح بنجاح! ✓"

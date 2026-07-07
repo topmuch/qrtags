@@ -18,15 +18,17 @@ import {
   ChevronDown,
   X,
   AlertTriangle,
+  Volume2,
+  VolumeX,
 } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { Language, LANGUAGE_NAMES } from '@/lib/i18n';
 import type { ScanContext } from '@/lib/scan-context';
 import { CONTEXT_ICONS, CONTEXT_COLORS } from '@/lib/scan-context';
 import { generatePreFilledMessage, buildWhatsAppUrl } from '@/lib/whatsapp-message';
-// TRANSPORT-FEATURE: Multi-transport support (real images, emojis as fallback)
 import { safeTransportMode, getTransportImage } from '@/lib/transport';
 import type { TransportMode } from '@/lib/transport';
+import { useAudioAlert, POLL_INTERVAL_MS } from '@/hooks/useAudioAlert';
 
 // ─── Brand constants (unified with /inscrire, /success, /scan) ───
 const BRAND = '#c5a643'; // jaune moutarde
@@ -446,9 +448,12 @@ export default function SuiviPage() {
   const [statusToast, setStatusToast] = useState(false);
   const [isTogglingStatus, setIsTogglingStatus] = useState(false);
 
+  // Audio alert system
+  const { audioEnabled, enableAudio, toggleAudio, checkAndNotify } = useAudioAlert(lang);
+
   // Fetch tracking data
-  const fetchSuivi = useCallback(async (isRefresh = false) => {
-    if (isRefresh) setIsRefreshing(true);
+  const fetchSuivi = useCallback(async (isRefresh = false, isSilent = false) => {
+    if (isRefresh && !isSilent) setIsRefreshing(true);
 
     try {
       const response = await fetch(`/api/suivi/${reference}`);
@@ -459,13 +464,31 @@ export default function SuiviPage() {
       setData({ status: 'error', baggage: null as unknown as BaggageInfo, lastFinder: null, scans: [], lastPosition: null });
     } finally {
       setLoading(false);
-      setIsRefreshing(false);
+      if (!isSilent) setIsRefreshing(false);
     }
   }, [reference]);
 
+  // Initial fetch
   useEffect(() => {
     fetchSuivi(false);
   }, [fetchSuivi]);
+
+  // ─── Polling: auto-refresh when audio alerts are enabled ───
+  useEffect(() => {
+    if (!audioEnabled) return;
+
+    const interval = setInterval(() => {
+      fetchSuivi(false, true); // silent refresh
+    }, POLL_INTERVAL_MS);
+
+    return () => clearInterval(interval);
+  }, [audioEnabled, fetchSuivi]);
+
+  // ─── Audio notification: check when data changes ───
+  useEffect(() => {
+    if (!data || data.status === 'error' || data.status === 'not_found') return;
+    checkAndNotify(data.baggage, data.scans);
+  }, [data, checkAndNotify]);
 
   // Refresh handler
   const handleRefresh = useCallback(async () => {
@@ -693,6 +716,19 @@ export default function SuiviPage() {
           </button>
 
           <div className="flex items-center gap-2">
+            {/* Audio alert toggle */}
+            <button
+              onClick={toggleAudio}
+              className={`flex items-center justify-center w-9 h-9 rounded-full border-2 transition-colors min-h-[40px] ${
+                audioEnabled
+                  ? 'border-[#c5a643] bg-[#c5a643] text-[#1a1a1a]'
+                  : 'border-[#1a1a1a] text-[#1a1a1a] hover:bg-[#c5a643]'
+              }`}
+              aria-label={t('tracking.audio_alert_toggle_aria')}
+              title={audioEnabled ? t('tracking.audio_alert_enabled') : t('tracking.audio_alert_disabled')}
+            >
+              {audioEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+            </button>
             <button
               onClick={handleRefresh}
               disabled={isRefreshing}
@@ -719,6 +755,41 @@ export default function SuiviPage() {
         <div className="fixed top-[calc(5.5rem+env(safe-area-inset-top,0px))] sm:top-[calc(6rem+env(safe-area-inset-top,0px))] left-1/2 -translate-x-1/2 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-in fade-in slide-in-from-top-2 duration-300 text-sm font-medium flex items-center gap-1.5">
           <CheckCircle className="w-4 h-4" />
           {t('tracking.status_updated')}
+        </div>
+      )}
+
+      {/* ─── Audio Alert Banner (show when not enabled AND baggage not yet scanned) ─── */}
+      {!audioEnabled && data && data.scans.length === 0 && (
+        <div className="sticky top-[52px] sm:top-[56px] z-30 bg-[#FDFBF7] px-4 sm:px-5 md:px-8 py-2">
+          <div className="max-w-md mx-auto">
+            <div className="bg-[#c5a643] border-2 border-[#1a1a1a] rounded-2xl p-4 text-center">
+              <p className="font-bold text-[#1a1a1a] text-base mb-2">
+                🔔 {t('tracking.audio_alert_banner_title')}
+              </p>
+              <button
+                onClick={enableAudio}
+                className="bg-[#1a1a1a] hover:bg-black text-[#c5a643] py-2.5 px-6 rounded-xl font-bold transition-colors text-sm min-h-[44px] inline-flex items-center gap-2"
+              >
+                <Volume2 className="w-4 h-4" />
+                {t('tracking.audio_alert_activate_btn')}
+              </button>
+              <p className="text-xs text-[#1a1a1a]/70 mt-2">
+                {t('tracking.audio_alert_keep_open')}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Scanning indicator (show when audio is enabled AND no scans yet) ─── */}
+      {audioEnabled && data && data.scans.length === 0 && (
+        <div className="sticky top-[52px] sm:top-[56px] z-30 bg-[#FDFBF7] px-4 sm:px-5 md:px-8 py-2">
+          <div className="max-w-md mx-auto">
+            <div className="bg-[#c5a643]/20 border-2 border-dashed border-[#c5a643] rounded-xl px-4 py-2.5 flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-[#c5a643] animate-pulse flex-shrink-0" />
+              <span className="text-sm font-medium text-[#1a1a1a]">{t('tracking.audio_alert_scanning')}</span>
+            </div>
+          </div>
         </div>
       )}
 
