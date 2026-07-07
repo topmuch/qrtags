@@ -54,7 +54,7 @@ interface HistoryItem {
 }
 
 export default function ChecklistViewPage() {
-  const { t, lang, dir } = useTranslation();
+  const { t, lang, setLang, dir } = useTranslation();
   const params = useParams();
   const code = (params?.code as string || '').toUpperCase();
 
@@ -188,7 +188,7 @@ export default function ChecklistViewPage() {
             <span className="text-2xl">🎒</span>
             <span className="font-bold text-[#1a1a1a] text-lg">QRBag</span>
           </Link>
-          <LanguageSelector />
+          <LanguageSelector lang={lang} setLang={setLang} />
         </div>
       </header>
 

@@ -337,6 +337,14 @@
     "view_history_email": "Votre email",
     "view_history_search": "Rechercher",
     "view_history_empty": "Aucune attestation trouvée pour cet email.",
-    "view_history_count": "{count} attestation(s) trouvée(s)"
+    "view_history_count": "{count} attestation(s) trouvée(s)",
+    "header_generate_pdf": "Générer PDF",
+    "photo_upload_title": "Photo du contenu de la valise",
+    "photo_upload_hint": "Cliquez pour ajouter une photo",
+    "photo_upload_optional": "(optionnel)",
+    "item_color": "Couleur",
+    "item_brand": "Marque",
+    "item_qty": "Qté",
+    "items_in_category": "{count} articles"
   }
 }

@@ -337,6 +337,14 @@
     "view_history_email": "Your email",
     "view_history_search": "Search",
     "view_history_empty": "No certificate found for this email.",
-    "view_history_count": "{count} certificate(s) found"
+    "view_history_count": "{count} certificate(s) found",
+    "header_generate_pdf": "Generate PDF",
+    "photo_upload_title": "Photo of suitcase contents",
+    "photo_upload_hint": "Click to add a photo",
+    "photo_upload_optional": "(optional)",
+    "item_color": "Color",
+    "item_brand": "Brand",
+    "item_qty": "Qty",
+    "items_in_category": "{count} items"
   }
 }

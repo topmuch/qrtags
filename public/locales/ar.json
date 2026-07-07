@@ -337,6 +337,14 @@
     "view_history_email": "بريدك الإلكتروني",
     "view_history_search": "بحث",
     "view_history_empty": "لم يتم العثور على شهادة لهذا البريد الإلكتروني.",
-    "view_history_count": "تم العثور على {count} شهادة"
+    "view_history_count": "تم العثور على {count} شهادة",
+    "header_generate_pdf": "إنشاء PDF",
+    "photo_upload_title": "صورة محتويات الحقيبة",
+    "photo_upload_hint": "انقر لإضافة صورة",
+    "photo_upload_optional": "(اختياري)",
+    "item_color": "اللون",
+    "item_brand": "العلامة التجارية",
+    "item_qty": "الكمية",
+    "items_in_category": "{count} عناصر"
   }
 }
