@@ -9,8 +9,8 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { toast } from '@/hooks/use-toast';
 
 // ─── Brand constants (unifié avec /inscrire) ───
-const BRAND = '#c5a643'; // jaune moutarde
-const INK = '#1a1a1a'; // noir
+const BRAND = '#FFDE21';
+const INK = '#000000';
 
 interface ActivationData {
   reference: string;
@@ -109,10 +109,10 @@ function SuccessContent() {
   // ─── Empty state : pas d'activation data ───
   if (!activationData) {
     return (
-      <main className="min-h-screen bg-[#f5f5f5] flex items-center justify-center p-4">
+      <main className="min-h-screen bg-[#0147d5] flex items-center justify-center p-4">
         <div className="max-w-md w-full">
-          <div className="bg-[#c5a643] border-2 border-dashed border-[#1a1a1a] rounded-2xl p-8 text-center">
-            <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-[#1a1a1a]">
+          <div className="bg-[#FFDE21] border-2 border-dashed border-[#000000] rounded-2xl p-8 text-center">
+            <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-[#000000]">
               <CheckCircle className="w-8 h-8" style={{ color: INK }} />
             </div>
             <h1 className="text-2xl font-bold mb-2" style={{ color: INK }}>
@@ -135,7 +135,7 @@ function SuccessContent() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f5f5f5] flex items-center justify-center p-4">
+    <main className="min-h-screen bg-[#0147d5] flex items-center justify-center p-4">
       {/* SuccessOverlay — feedback premium d'activation (indépendant du thème) */}
       <SuccessOverlay show={activationConfirmed} messageKey="activation.success" t={t} />
 
@@ -145,19 +145,19 @@ function SuccessContent() {
           <div className="relative inline-block mb-3">
             <div
               className="w-20 h-20 bg-white rounded-full flex items-center justify-center border-2"
-              style={{ borderColor: INK }}
+              style={{ borderColor: '#FFFFFF' }}
             >
-              <CheckCircle className="w-10 h-10" style={{ color: INK }} />
+              <CheckCircle className="w-10 h-10" style={{ color: '#FFFFFF' }} />
             </div>
             <div
               className="absolute inset-0 w-20 h-20 rounded-full animate-ping"
               style={{ backgroundColor: BRAND, opacity: 0.3 }}
             />
           </div>
-          <h1 className="text-2xl font-bold mb-1" style={{ color: INK }}>
+          <h1 className="text-2xl font-bold mb-1" style={{ color: '#FFFFFF' }}>
             ✅ Activation réussie !
           </h1>
-          <p style={{ color: INK, opacity: 0.7 }}>Votre bagage est maintenant protégé</p>
+          <p style={{ color: '#FFFFFF', opacity: 0.7 }}>Votre bagage est maintenant protégé</p>
         </div>
 
         {/* ═══ 2. Carte QR Code (fond jaune moutarde + bordure dashed noire) ═══ */}
@@ -216,14 +216,14 @@ function SuccessContent() {
             rel="noopener noreferrer"
             aria-label="Suivre mon bagage dans un nouvel onglet"
             className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl font-bold transition-colors min-h-[52px] border-2"
-            style={{ backgroundColor: INK, color: BRAND, borderColor: INK }}
+            style={{ backgroundColor: '#0147d5', color: '#FFFFFF', borderColor: '#0147d5' }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = BRAND;
-              e.currentTarget.style.color = INK;
+              e.currentTarget.style.backgroundColor = '#FFDE21';
+              e.currentTarget.style.color = '#000000';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = INK;
-              e.currentTarget.style.color = BRAND;
+              e.currentTarget.style.backgroundColor = '#0147d5';
+              e.currentTarget.style.color = '#FFFFFF';
             }}
           >
             📍 Suivre mon bagage
@@ -234,14 +234,14 @@ function SuccessContent() {
             onClick={handleShare}
             aria-label="Partager le lien de suivi"
             className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl font-bold transition-colors min-h-[52px] border-2 cursor-pointer"
-            style={{ backgroundColor: INK, color: BRAND, borderColor: INK }}
+            style={{ backgroundColor: '#0147d5', color: '#FFFFFF', borderColor: '#0147d5' }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = BRAND;
-              e.currentTarget.style.color = INK;
+              e.currentTarget.style.backgroundColor = '#FFDE21';
+              e.currentTarget.style.color = '#000000';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = INK;
-              e.currentTarget.style.color = BRAND;
+              e.currentTarget.style.backgroundColor = '#0147d5';
+              e.currentTarget.style.color = '#FFFFFF';
             }}
           >
             📤 Partager
@@ -262,7 +262,7 @@ function SuccessContent() {
           <Link
             href="/checklist"
             className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-bold transition-colors min-h-[48px]"
-            style={{ backgroundColor: INK, color: BRAND }}
+            style={{ backgroundColor: '#0147d5', color: '#FFFFFF' }}
           >
             Créer ma checklist gratuite →
           </Link>

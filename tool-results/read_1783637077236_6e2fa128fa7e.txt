@@ -1,0 +1,1282 @@
+     1→     1→'use client';
+     2→     2→
+     3→     3→import { useEffect, useState, useCallback } from 'react';
+     4→     4→import { useParams } from 'next/navigation';
+     5→     5→import Image from 'next/image';
+     6→     6→import {
+     7→     7→  AlertCircle,
+     8→     8→  Clock,
+     9→     9→  Shield,
+    10→    10→  Navigation,
+    11→    11→  CheckCircle,
+    12→    12→  RefreshCw,
+    13→    13→  Phone,
+    14→    14→  MessageCircle,
+    15→    15→  MapPin,
+    16→    16→  Globe,
+    17→    17→  ArrowRight,
+    18→    18→  ChevronDown,
+    19→    19→  X,
+    20→    20→  AlertTriangle,
+    21→    21→  Volume2,
+    22→    22→  VolumeX,
+    23→    23→} from 'lucide-react';
+    24→    24→import { useTranslation } from '@/hooks/useTranslation';
+    25→    25→import { Language, LANGUAGE_NAMES } from '@/lib/i18n';
+    26→    26→import type { ScanContext } from '@/lib/scan-context';
+    27→    27→import { CONTEXT_ICONS, CONTEXT_COLORS } from '@/lib/scan-context';
+    28→    28→import { generatePreFilledMessage, buildWhatsAppUrl } from '@/lib/whatsapp-message';
+    29→    29→import { safeTransportMode, getTransportImage } from '@/lib/transport';
+    30→    30→import type { TransportMode } from '@/lib/transport';
+    31→    31→import { useAudioAlert, POLL_INTERVAL_MS } from '@/hooks/useAudioAlert';
+    32→    32→
+    33→    33→// ─── Brand constants (unified with /inscrire, /success, /scan) ───
+    34→    34→const BRAND = '#c5a643'; // jaune moutarde
+    35→    35→const INK = '#1a1a1a';   // ink black
+    36→    36→const CREAM = '#FDFBF7'; // cream background
+    37→    37→const URGENT_RED = '#EF4444';
+    38→    38→const URGENT_BG = '#FEF2F2';
+    39→    39→const QRBAG_SUPPORT_PHONE = '+33745349339';
+    40→    40→
+    41→    41→// ═══════════════════════════════════════════════════════
+    42→    42→//  TYPES
+    43→    43→// ═══════════════════════════════════════════════════════
+    44→    44→
+    45→    45→interface ScanEntry {
+    46→    46→  id: string;
+    47→    47→  location: string | null;
+    48→    48→  city: string | null;
+    49→    49→  country: string | null;
+    50→    50→  context: string;
+    51→    51→  finderName: string | null;
+    52→    52→  finderPhone: string | null;
+    53→    53→  message: string | null;
+    54→    54→  hasMap: boolean;
+    55→    55→  scannedAt: string;
+    56→    56→  whatsappStatus: string | null;
+    57→    57→}
+    58→    58→
+    59→    59→interface LastPosition {
+    60→    60→  latitude: number | null;
+    61→    61→  longitude: number | null;
+    62→    62→  address: string | null;
+    63→    63→  hasCoordinates: boolean;
+    64→    64→}
+    65→    65→
+    66→    66→interface BaggageInfo {
+    67→    67→  reference: string;
+    68→    68→  type: string;
+    69→    69→  travelerName: string;
+    70→    70→  baggageIndex: number;
+    71→    71→  baggageType: string;
+    72→    72→  status: string;
+    73→    73→  airlineName: string | null;
+    74→    74→  flightNumber: string | null;
+    75→    75→  destination: string | null;
+    76→    76→  departureDate: string | null;
+    77→    77→  departureTime: string | null;
+    78→    78→  transportMode: string;
+    79→    79→  trainCompany: string | null;
+    80→    80→  trainNumber: string | null;
+    81→    81→  shipName: string | null;
+    82→    82→  shipCabin: string | null;
+    83→    83→  busCompany: string | null;
+    84→    84→  busLineNumber: string | null;
+    85→    85→  agency: string | null;
+    86→    86→  createdAt: string | null;
+    87→    87→  lastScanDate: string | null;
+    88→    88→  lastLocation: string | null;
+    89→    89→  declaredLostAt: string | null;
+    90→    90→  foundAt: string | null;
+    91→    91→  expiresAt: string | null;
+    92→    92→}
+    93→    93→
+    94→    94→interface SuiviData {
+    95→    95→  status: string;
+    96→    96→  baggage: BaggageInfo;
+    97→    97→  lastFinder: { name: string | null; phone: string | null } | null;
+    98→    98→  scans: ScanEntry[];
+    99→    99→  lastPosition: LastPosition | null;
+   100→   100→}
+   101→   101→
+   102→   102→// Type for beforeinstallprompt event (not in standard TS DOM lib)
+   103→   103→interface BeforeInstallPromptEvent extends Event {
+   104→   104→  prompt(): Promise<void>;
+   105→   105→  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+   106→   106→}
+   107→   107→
+   108→   108→// ═══════════════════════════════════════════════════════
+   109→   109→//  HOOK: PWA Install Prompt (local, with iOS detection)
+   110→   110→// ═══════════════════════════════════════════════════════
+   111→   111→
+   112→   112→function usePWAInstallPrompt() {
+   113→   113→  // Detect iOS up-front (no setState-in-effect needed: navigator is stable on client)
+   114→   114→  // Default to false for SSR; useEffect below sets the real value via lazy init.
+   115→   115→  const [isIOS, setIsIOS] = useState(false);
+   116→   116→
+   117→   117→  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+   118→   118→  const [showButton, setShowButton] = useState(false);
+   119→   119→
+   120→   120→  // iOS detection runs once on mount — we use a ref-less pattern:
+   121→   121→  //   - setState is allowed here because this is reading a non-React external value
+   122→   122→  //   - The lint rule complains because setState happens synchronously, but this is
+   123→   123→  //     a legitimate pattern for reading navigator.userAgent at mount time.
+   124→   124→  useEffect(() => {
+   125→   125→    if (typeof window === 'undefined') return;
+   126→   126→
+   127→   127→    // Detect iOS (no beforeinstallprompt event on iOS Safari)
+   128→   128→    const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+   129→   129→    // eslint-disable-next-line react-hooks/set-state-in-effect
+   130→   130→    setIsIOS(iOS);
+   131→   131→
+   132→   132→    // Already installed? (standalone mode)
+   133→   133→    const isStandalone =
+   134→   134→      window.matchMedia('(display-mode: standalone)').matches ||
+   135→   135→      (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
+   136→   136→    if (isStandalone) return;
+   137→   137→
+   138→   138→    // On iOS, show the "Add to Home Screen" instruction button
+   139→   139→    if (iOS) {
+   140→   140→      setShowButton(true);
+   141→   141→      return;
+   142→   142→    }
+   143→   143→
+   144→   144→    // On Android/Chrome: capture beforeinstallprompt
+   145→   145→    const handler = (e: Event) => {
+   146→   146→      e.preventDefault();
+   147→   147→      setDeferredPrompt(e as BeforeInstallPromptEvent);
+   148→   148→      setShowButton(true);
+   149→   149→    };
+   150→   150→    window.addEventListener('beforeinstallprompt', handler);
+   151→   151→    return () => window.removeEventListener('beforeinstallprompt', handler);
+   152→   152→  }, []);
+   153→   153→
+   154→   154→  const handleInstall = useCallback(async () => {
+   155→   155→    if (isIOS) {
+   156→   156→      // Caller opens the instructions modal
+   157→   157→      return;
+   158→   158→    }
+   159→   159→    if (deferredPrompt) {
+   160→   160→      await deferredPrompt.prompt();
+   161→   161→      await deferredPrompt.userChoice;
+   162→   162→      setShowButton(false);
+   163→   163→      setDeferredPrompt(null);
+   164→   164→    }
+   165→   165→  }, [deferredPrompt, isIOS]);
+   166→   166→
+   167→   167→  return { showButton, isIOS, handleInstall };
+   168→   168→}
+   169→   169→
+   170→   170→// ═══════════════════════════════════════════════════════
+   171→   171→//  LANGUAGE SELECTOR (recoloré — light theme, brand-aware)
+   172→   172→// ═══════════════════════════════════════════════════════
+   173→   173→
+   174→   174→function LanguageSelector({ lang, setLang }: { lang: Language; setLang: (l: Language) => void }) {
+   175→   175→  const [isOpen, setIsOpen] = useState(false);
+   176→   176→
+   177→   177→  return (
+   178→   178→    <div className="relative">
+   179→   179→      <button
+   180→   180→        onClick={() => setIsOpen(!isOpen)}
+   181→   181→        aria-expanded={isOpen}
+   182→   182→        aria-haspopup="listbox"
+   183→   183→        className="flex items-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2.5 bg-white border-2 border-[#1a1a1a] rounded-full text-[#1a1a1a] hover:bg-[#c5a643] transition-colors text-xs sm:text-sm md:text-base font-medium shadow-sm min-h-[36px] sm:min-h-[40px] md:min-h-[44px]"
+   184→   184→      >
+   185→   185→        <Globe className="w-4 h-4 sm:w-5 sm:h-5" />
+   186→   186→        <span>{LANGUAGE_NAMES[lang]}</span>
+   187→   187→      </button>
+   188→   188→
+   189→   189→      {isOpen && (
+   190→   190→        <div role="listbox" aria-label="Language" className="absolute top-full right-0 mt-1 sm:mt-2 bg-white border-2 border-[#1a1a1a] rounded-xl shadow-lg overflow-hidden z-50 min-w-[140px] sm:min-w-[160px]">
+   191→   191→          {(['fr', 'en', 'ar'] as Language[]).map((l) => (
+   192→   192→            <button
+   193→   193→              key={l}
+   194→   194→              role="option"
+   195→   195→              aria-selected={lang === l}
+   196→   196→              onClick={() => {
+   197→   197→                setLang(l);
+   198→   198→                setIsOpen(false);
+   199→   199→              }}
+   200→   200→              className={`w-full px-4 py-2.5 sm:px-5 sm:py-3 text-left text-xs sm:text-sm md:text-base font-medium transition-colors ${
+   201→   201→                lang === l
+   202→   202→                  ? 'bg-[#c5a643] text-[#1a1a1a]'
+   203→   203→                  : 'text-[#1a1a1a] hover:bg-[#c5a643]/30'
+   204→   204→              }`}
+   205→   205→            >
+   206→   206→              {LANGUAGE_NAMES[l]}
+   207→   207→            </button>
+   208→   208→          ))}
+   209→   209→        </div>
+   210→   210→      )}
+   211→   211→    </div>
+   212→   212→  );
+   213→   213→}
+   214→   214→
+   215→   215→// ═══════════════════════════════════════════════════════
+   216→   216→//  DASHED ENCART (light variant: dashed black on white)
+   217→   217→// ═══════════════════════════════════════════════════════
+   218→   218→
+   219→   219→function DashedEncart({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+   220→   220→  return (
+   221→   221→    <div className={`border-2 border-dashed border-[#1a1a1a]/60 rounded-xl p-3 mb-2.5 last:mb-0 ${className}`}>
+   222→   222→      {children}
+   223→   223→    </div>
+   224→   224→  );
+   225→   225→}
+   226→   226→
+   227→   227→// ═══════════════════════════════════════════════════════
+   228→   228→//  LOADING SCREEN (recoloré)
+   229→   229→// ═══════════════════════════════════════════════════════
+   230→   230→
+   231→   231→function LoadingScreen({ t }: { t: (key: string) => string }) {
+   232→   232→  return (
+   233→   233→    <main className="min-h-screen bg-[#FDFBF7] flex items-center justify-center">
+   234→   234→      <div className="text-center">
+   235→   235→        <div className="animate-spin w-12 h-12 border-4 border-[#1a1a1a]/20 border-t-[#c5a643] rounded-full mx-auto mb-4"></div>
+   236→   236→        <p className="text-lg text-[#1a1a1a]">{t('common.loading')}</p>
+   237→   237→      </div>
+   238→   238→    </main>
+   239→   239→  );
+   240→   240→}
+   241→   241→
+   242→   242→// ═══════════════════════════════════════════════════════
+   243→   243→//  ERROR SCREEN (recoloré)
+   244→   244→// ═══════════════════════════════════════════════════════
+   245→   245→
+   246→   246→function ErrorScreen({
+   247→   247→  type,
+   248→   248→  t,
+   249→   249→  lang,
+   250→   250→  setLang,
+   251→   251→}: {
+   252→   252→  type: string;
+   253→   253→  t: (key: string) => string;
+   254→   254→  lang: Language;
+   255→   255→  setLang: (l: Language) => void;
+   256→   256→}) {
+   257→   257→  const errorConfig = {
+   258→   258→    not_found: {
+   259→   259→      icon: <AlertCircle className="w-12 h-12 text-red-500" />,
+   260→   260→      title: t('tracking.baggage_not_found'),
+   261→   261→      message: t('tracking.baggage_not_found_desc'),
+   262→   262→    },
+   263→   263→    blocked: {
+   264→   264→      icon: <Shield className="w-12 h-12 text-[#1a1a1a]/40" />,
+   265→   265→      title: t('errors.baggage_blocked'),
+   266→   266→      message: t('tracking.baggage_blocked_desc'),
+   267→   267→    },
+   268→   268→    expired: {
+   269→   269→      icon: <Clock className="w-12 h-12 text-[#1a1a1a]/40" />,
+   270→   270→      title: t('errors.protection_expired'),
+   271→   271→      message: t('tracking.baggage_expired_desc'),
+   272→   272→    },
+   273→   273→    pending_activation: {
+   274→   274→      icon: <AlertCircle className="w-12 h-12 text-[#c5a643]" />,
+   275→   275→      title: t('tracking.baggage_not_found'),
+   276→   276→      message: t('tracking.baggage_pending_desc'),
+   277→   277→    },
+   278→   278→  };
+   279→   279→
+   280→   280→  const config = errorConfig[type as keyof typeof errorConfig] || errorConfig.not_found;
+   281→   281→
+   282→   282→  return (
+   283→   283→    <main className="min-h-screen bg-[#FDFBF7] flex items-center justify-center p-5 md:p-8 relative">
+   284→   284→      <div className="absolute top-4 right-4">
+   285→   285→        <LanguageSelector lang={lang} setLang={setLang} />
+   286→   286→      </div>
+   287→   287→
+   288→   288→      <div className="max-w-md w-full bg-white border-2 border-dashed border-[#1a1a1a] rounded-2xl p-6 md:p-8 text-center shadow-xl">
+   289→   289→        <div className="w-20 h-20 bg-[#c5a643]/30 border-2 border-dashed border-[#1a1a1a] rounded-full flex items-center justify-center mx-auto mb-6">
+   290→   290→          {config.icon}
+   291→   291→        </div>
+   292→   292→        <h1 className="text-2xl md:text-3xl font-bold text-[#1a1a1a] mb-3">{config.title}</h1>
+   293→   293→        <p className="text-[#1a1a1a] text-base md:text-lg mb-6">{config.message}</p>
+   294→   294→        <div className="w-full py-4 px-6 bg-[#c5a643]/20 border-2 border-dashed border-[#1a1a1a] text-[#1a1a1a] rounded-xl text-center text-base font-medium min-h-[56px]">
+   295→   295→          {t('tracking.trust_note')}
+   296→   296→        </div>
+   297→   297→      </div>
+   298→   298→    </main>
+   299→   299→  );
+   300→   300→}
+   301→   301→
+   302→   302→// ═══════════════════════════════════════════════════════
+   303→   303→//  GOOGLE MAPS IFRAME (recoloré fallback)
+   304→   304→// ═══════════════════════════════════════════════════════
+   305→   305→
+   306→   306→function MapEmbed({
+   307→   307→  latitude,
+   308→   308→  longitude,
+   309→   309→  address,
+   310→   310→  t,
+   311→   311→}: {
+   312→   312→  latitude: number | null;
+   313→   313→  longitude: number | null;
+   314→   314→  address: string | null;
+   315→   315→  t: (key: string) => string;
+   316→   316→}) {
+   317→   317→  let mapSrc: string | null = null;
+   318→   318→
+   319→   319→  if (latitude && longitude) {
+   320→   320→    mapSrc = `https://maps.google.com/maps?q=${latitude},${longitude}&z=15&output=embed`;
+   321→   321→  } else if (address) {
+   322→   322→    mapSrc = `https://maps.google.com/maps?q=${encodeURIComponent(address)}&z=13&output=embed`;
+   323→   323→  }
+   324→   324→
+   325→   325→  if (!mapSrc) {
+   326→   326→    return (
+   327→   327→      <div className="bg-[#c5a643]/20 border-2 border-dashed border-[#1a1a1a] rounded-xl p-4 text-center text-[#1a1a1a]">
+   328→   328→        <MapPin className="w-6 h-6 mx-auto mb-2" />
+   329→   329→        <p className="text-base font-medium">{address || t('tracking.no_location')}</p>
+   330→   330→        <p className="text-sm text-[#1a1a1a]/70 mt-1">{t('tracking.map_unavailable')}</p>
+   331→   331→      </div>
+   332→   332→    );
+   333→   333→  }
+   334→   334→
+   335→   335→  return (
+   336→   336→    <div className="rounded-xl overflow-hidden border-2 border-[#1a1a1a]">
+   337→   337→      <iframe
+   338→   338→        src={mapSrc}
+   339→   339→        width="100%"
+   340→   340→        height="100%"
+   341→   341→        style={{ border: 0, minHeight: '180px' }}
+   342→   342→        allowFullScreen
+   343→   343→        loading="lazy"
+   344→   344→        referrerPolicy="no-referrer-when-downgrade"
+   345→   345→        title="Location"
+   346→   346→        className="w-full h-full"
+   347→   347→      />
+   348→   348→    </div>
+   349→   349→  );
+   350→   350→}
+   351→   351→
+   352→   352→// ═══════════════════════════════════════════════════════
+   353→   353→//  CONTEXT BADGE (conservé, recoloré sur fond jaune/20)
+   354→   354→// ═══════════════════════════════════════════════════════
+   355→   355→
+   356→   356→function ContextBadge({ context, t }: { context: string; t: (key: string) => string }) {
+   357→   357→  const scanContext = context as ScanContext;
+   358→   358→  const icon = CONTEXT_ICONS[scanContext] || '📍';
+   359→   359→  // Map original color classes to neutral brand-aware classes
+   360→   360→  const colorClass = CONTEXT_COLORS[scanContext] || 'bg-[#1a1a1a]';
+   361→   361→
+   362→   362→  const contextKeyMap: Record<string, string> = {
+   363→   363→    departure_airport_urgent: 'tracking.context_departure',
+   364→   364→    arrival_airport: 'tracking.context_arrival',
+   365→   365→    in_transit: 'tracking.context_transit',
+   366→   366→    static_location: 'tracking.context_static',
+   367→   367→  };
+   368→   368→  const labelKey = contextKeyMap[scanContext] || 'tracking.context_static';
+   369→   369→
+   370→   370→  return (
+   371→   371→    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 ${colorClass} text-white text-xs font-bold rounded-full`}>
+   372→   372→      <span>{icon}</span>
+   373→   373→      <span>{t(labelKey)}</span>
+   374→   374→    </span>
+   375→   375→  );
+   376→   376→}
+   377→   377→
+   378→   378→// ═══════════════════════════════════════════════════════
+   379→   379→//  iOS INSTALL INSTRUCTIONS MODAL
+   380→   380→// ═══════════════════════════════════════════════════════
+   381→   381→
+   382→   382→function IOSInstallModal({
+   383→   383→  show,
+   384→   384→  onClose,
+   385→   385→  t,
+   386→   386→}: {
+   387→   387→  show: boolean;
+   388→   388→  onClose: () => void;
+   389→   389→  t: (key: string) => string;
+   390→   390→}) {
+   391→   391→  if (!show) return null;
+   392→   392→  return (
+   393→   393→    <div
+   394→   394→      className="fixed inset-0 bg-black/60 z-[60] flex items-end sm:items-center justify-center p-4"
+   395→   395→      onClick={onClose}
+   396→   396→      role="dialog"
+   397→   397→      aria-modal="true"
+   398→   398→    >
+   399→   399→      <div
+   400→   400→        className="bg-white border-2 border-[#1a1a1a] rounded-2xl p-5 max-w-sm w-full shadow-2xl"
+   401→   401→        onClick={(e) => e.stopPropagation()}
+   402→   402→      >
+   403→   403→        <div className="flex items-center justify-between mb-3">
+   404→   404→          <h3 className="text-lg font-bold text-[#1a1a1a]">📱 {t('tracking.install_app_ios')}</h3>
+   405→   405→          <button
+   406→   406→            onClick={onClose}
+   407→   407→            aria-label={t('tracking.close')}
+   408→   408→            className="w-8 h-8 rounded-full hover:bg-[#c5a643]/30 flex items-center justify-center"
+   409→   409→          >
+   410→   410→            <X className="w-4 h-4" />
+   411→   411→          </button>
+   412→   412→        </div>
+   413→   413→        <ol className="space-y-2 text-sm text-[#1a1a1a]">
+   414→   414→          <li className="flex gap-2"><span>1.</span><span>{t('tracking.install_ios_step1')} <span className="inline-block px-1.5 py-0.5 bg-[#c5a643] rounded text-xs font-bold">⬆️</span></span></li>
+   415→   415→          <li className="flex gap-2"><span>2.</span><span>{t('tracking.install_ios_step2')}</span></li>
+   416→   416→          <li className="flex gap-2"><span>3.</span><span>{t('tracking.install_ios_step3')}</span></li>
+   417→   417→        </ol>
+   418→   418→      </div>
+   419→   419→    </div>
+   420→   420→  );
+   421→   421→}
+   422→   422→
+   423→   423→// ═══════════════════════════════════════════════════════
+   424→   424→//  MAIN PAGE
+   425→   425→// ═══════════════════════════════════════════════════════
+   426→   426→
+   427→   427→export default function SuiviPage() {
+   428→   428→  const params = useParams();
+   429→   429→  const reference = params.reference as string;
+   430→   430→
+   431→   431→  const { t, lang, setLang, dir } = useTranslation();
+   432→   432→
+   433→   433→  const [data, setData] = useState<SuiviData | null>(null);
+   434→   434→  const [loading, setLoading] = useState(true);
+   435→   435→  const [isRefreshing, setIsRefreshing] = useState(false);
+   436→   436→  const [refreshToast, setRefreshToast] = useState(false);
+   437→   437→
+   438→   438→  // Accordion/collapsible state
+   439→   439→  const [historyOpen, setHistoryOpen] = useState(true);
+   440→   440→  const [showAllScans, setShowAllScans] = useState(false);
+   441→   441→  const [baggageOpen, setBaggageOpen] = useState(false);
+   442→   442→
+   443→   443→  // PWA install state
+   444→   444→  const { showButton: showInstallButton, isIOS, handleInstall } = usePWAInstallPrompt();
+   445→   445→  const [showIOSModal, setShowIOSModal] = useState(false);
+   446→   446→
+   447→   447→  // Status toggle state
+   448→   448→  const [statusToast, setStatusToast] = useState(false);
+   449→   449→  const [isTogglingStatus, setIsTogglingStatus] = useState(false);
+   450→   450→
+   451→   451→  // Audio alert system
+   452→   452→  const { audioEnabled, enableAudio, toggleAudio, checkAndNotify } = useAudioAlert(lang);
+   453→   453→
+   454→   454→  // Fetch tracking data
+   455→   455→  const fetchSuivi = useCallback(async (isRefresh = false, isSilent = false) => {
+   456→   456→    if (isRefresh && !isSilent) setIsRefreshing(true);
+   457→   457→
+   458→   458→    try {
+   459→   459→      const response = await fetch(`/api/suivi/${reference}`);
+   460→   460→      const result = await response.json();
+   461→   461→      setData(result);
+   462→   462→    } catch (error) {
+   463→   463→      console.error('Error fetching suivi:', error);
+   464→   464→      setData({ status: 'error', baggage: null as unknown as BaggageInfo, lastFinder: null, scans: [], lastPosition: null });
+   465→   465→    } finally {
+   466→   466→      setLoading(false);
+   467→   467→      if (!isSilent) setIsRefreshing(false);
+   468→   468→    }
+   469→   469→  }, [reference]);
+   470→   470→
+   471→   471→  // Initial fetch
+   472→   472→  useEffect(() => {
+   473→   473→    fetchSuivi(false);
+   474→   474→  }, [fetchSuivi]);
+   475→   475→
+   476→   476→  // ─── Polling: auto-refresh when audio alerts are enabled ───
+   477→   477→  useEffect(() => {
+   478→   478→    if (!audioEnabled) return;
+   479→   479→
+   480→   480→    const interval = setInterval(() => {
+   481→   481→      fetchSuivi(false, true); // silent refresh
+   482→   482→    }, POLL_INTERVAL_MS);
+   483→   483→
+   484→   484→    return () => clearInterval(interval);
+   485→   485→  }, [audioEnabled, fetchSuivi]);
+   486→   486→
+   487→   487→  // ─── Audio notification: check when data changes ───
+   488→   488→  useEffect(() => {
+   489→   489→    if (!data || data.status === 'error' || data.status === 'not_found') return;
+   490→   490→    checkAndNotify(data.baggage, data.scans);
+   491→   491→  }, [data, checkAndNotify]);
+   492→   492→
+   493→   493→  // Refresh handler
+   494→   494→  const handleRefresh = useCallback(async () => {
+   495→   495→    await fetchSuivi(true);
+   496→   496→    setRefreshToast(true);
+   497→   497→    setTimeout(() => setRefreshToast(false), 2000);
+   498→   498→  }, [fetchSuivi]);
+   499→   499→
+   500→   500→  // WHATSAPP-HARMONIZED: WhatsApp handler — owner contacts finder
+   501→   501→  const handleWhatsApp = useCallback(() => {
+   502→   502→    if (!data?.lastFinder?.phone) return;
+   503→   503→
+   504→   504→    const lastScan = data.scans[0];
+   505→   505→    const message = generatePreFilledMessage({
+   506→   506→      baggage: {
+   507→   507→        reference: data.baggage.reference,
+   508→   508→        bagType: data.baggage.baggageType || 'cabine',
+   509→   509→        transportMode: (data.baggage.transportMode || 'flight') as 'flight' | 'train' | 'boat' | 'bus',
+   510→   510→        airlineName: data.baggage.airlineName || undefined,
+   511→   511→        flightNumber: data.baggage.flightNumber || undefined,
+   512→   512→        trainCompany: data.baggage.trainCompany || undefined,
+   513→   513→        trainNumber: data.baggage.trainNumber || undefined,
+   514→   514→        shipName: data.baggage.shipName || undefined,
+   515→   515→        shipCabin: data.baggage.shipCabin || undefined,
+   516→   516→        busCompany: data.baggage.busCompany || undefined,
+   517→   517→        busLineNumber: data.baggage.busLineNumber || undefined,
+   518→   518→        destination: data.baggage.destination || undefined,
+   519→   519→      },
+   520→   520→      scanData: {
+   521→   521→        city: data.lastPosition?.address || data.baggage?.lastLocation || '',
+   522→   522→        address: data.lastPosition?.address || '',
+   523→   523→        context: (lastScan?.context || 'static_location') as ScanContext,
+   524→   524→      },
+   525→   525→      finder: {
+   526→   526→        name: data.lastFinder?.name || '',
+   527→   527→        whatsapp: data.lastFinder?.phone || '',
+   528→   528→      },
+   529→   529→      locale: lang,
+   530→   530→      ownerName: data.baggage?.travelerName || undefined,
+   531→   531→    });
+   532→   532→
+   533→   533→    const url = buildWhatsAppUrl(data.lastFinder.phone, message);
+   534→   534→
+   535→   535→    const isIOSUA = /iPad|iPhone|iPod/.test(navigator.userAgent);
+   536→   536→    if (isIOSUA) {
+   537→   537→      window.location.href = url;
+   538→   538→    } else {
+   539→   539→      const newWindow = window.open(url, '_blank');
+   540→   540→      if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+   541→   541→        window.location.href = url;
+   542→   542→      }
+   543→   543→    }
+   544→   544→  }, [data, reference, lang]);
+   545→   545→
+   546→   546→  // Phone call handler
+   547→   547→  const handlePhoneCall = useCallback(() => {
+   548→   548→    if (!data?.lastFinder?.phone) return;
+   549→   549→    window.location.href = `tel:${data.lastFinder.phone}`;
+   550→   550→  }, [data]);
+   551→   551→
+   552→   552→  // ─── Status toggle handler (mark-lost / mark-found) ───
+   553→   553→  const handleStatusToggle = useCallback(async (action: 'mark-lost' | 'mark-found') => {
+   554→   554→    if (isTogglingStatus) return;
+   555→   555→
+   556→   556→    if (action === 'mark-lost') {
+   557→   557→      const confirmed = window.confirm(t('tracking.declare_lost_confirm'));
+   558→   558→      if (!confirmed) return;
+   559→   559→    }
+   560→   560→
+   561→   561→    setIsTogglingStatus(true);
+   562→   562→    try {
+   563→   563→      const response = await fetch(`/api/baggage-status/${reference}`, {
+   564→   564→        method: 'POST',
+   565→   565→        headers: { 'Content-Type': 'application/json' },
+   566→   566→        body: JSON.stringify({ action }),
+   567→   567→      });
+   568→   568→      const result = await response.json();
+   569→   569→
+   570→   570→      if (result.success) {
+   571→   571→        // Refresh page data to reflect new status
+   572→   572→        await fetchSuivi(true);
+   573→   573→        setStatusToast(true);
+   574→   574→        setTimeout(() => setStatusToast(false), 3000);
+   575→   575→      }
+   576→   576→    } catch (error) {
+   577→   577→      console.error('Error toggling status:', error);
+   578→   578→    } finally {
+   579→   579→      setIsTogglingStatus(false);
+   580→   580→    }
+   581→   581→  }, [reference, isTogglingStatus, t, fetchSuivi]);
+   582→   582→
+   583→   583→  // ─── WhatsApp Support handler (emergency) ───
+   584→   584→  const handleSupportWhatsApp = useCallback(() => {
+   585→   585→    const message = t('tracking.urgent_support_message', { ref: reference });
+   586→   586→    const url = buildWhatsAppUrl(QRBAG_SUPPORT_PHONE, message);
+   587→   587→    const isIOSUA = /iPad|iPhone|iPod/.test(navigator.userAgent);
+   588→   588→    if (isIOSUA) {
+   589→   589→      window.location.href = url;
+   590→   590→    } else {
+   591→   591→      const newWindow = window.open(url, '_blank');
+   592→   592→      if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+   593→   593→        window.location.href = url;
+   594→   594→      }
+   595→   595→    }
+   596→   596→  }, [reference, t]);
+   597→   597→
+   598→   598→  // ─── Dynamic transport company name ───
+   599→   599→  const transportCompany = data?.baggage?.airlineName
+   600→   600→    || data?.baggage?.trainCompany
+   601→   601→    || data?.baggage?.shipName
+   602→   602→    || data?.baggage?.busCompany
+   603→   603→    || t('tracking.urgent_fallback_company');
+   604→   604→
+   605→   605→  // Format date for display
+   606→   606→  const formatDate = (dateStr?: string | null) => {
+   607→   607→    if (!dateStr) return null;
+   608→   608→    const locale = lang === 'ar' ? 'ar-SA' : lang === 'en' ? 'en-US' : 'fr-FR';
+   609→   609→    return new Date(dateStr).toLocaleDateString(locale, {
+   610→   610→      day: 'numeric',
+   611→   611→      month: 'long',
+   612→   612→      year: 'numeric',
+   613→   613→    });
+   614→   614→  };
+   615→   615→
+   616→   616→  const formatDateTime = (dateStr?: string | null) => {
+   617→   617→    if (!dateStr) return null;
+   618→   618→    const locale = lang === 'ar' ? 'ar-SA' : lang === 'en' ? 'en-US' : 'fr-FR';
+   619→   619→    return new Date(dateStr).toLocaleString(locale, {
+   620→   620→      day: 'numeric',
+   621→   621→      month: 'short',
+   622→   622→      hour: '2-digit',
+   623→   623→      minute: '2-digit',
+   624→   624→    });
+   625→   625→  };
+   626→   626→
+   627→   627→  // ─── Loading ───
+   628→   628→  if (loading) {
+   629→   629→    return <LoadingScreen t={t} />;
+   630→   630→  }
+   631→   631→
+   632→   632→  // ─── Error states ───
+   633→   633→  if (!data || data.status === 'not_found' || data.status === 'error') {
+   634→   634→    return <ErrorScreen type="not_found" t={t} lang={lang} setLang={setLang} />;
+   635→   635→  }
+   636→   636→  if (data.status === 'blocked') {
+   637→   637→    return <ErrorScreen type="blocked" t={t} lang={lang} setLang={setLang} />;
+   638→   638→  }
+   639→   639→  if (data.status === 'expired') {
+   640→   640→    return <ErrorScreen type="expired" t={t} lang={lang} setLang={setLang} />;
+   641→   641→  }
+   642→   642→  if (data.status === 'pending_activation') {
+   643→   643→    return <ErrorScreen type="pending_activation" t={t} lang={lang} setLang={setLang} />;
+   644→   644→  }
+   645→   645→
+   646→   646→  const baggage = data.baggage;
+   647→   647→  const isDeclaredLost = !!baggage?.declaredLostAt && !baggage?.foundAt;
+   648→   648→  const isFound = !!baggage?.foundAt;
+   649→   649→  const isScanned = baggage?.status === 'scanned';
+   650→   650→  const hasFinderPhone = !!(data.lastFinder?.phone);
+   651→   651→
+   652→   652→  // ─── Dynamic status header config ───
+   653→   653→  const statusConfig: { title: string; badgeClass: string; desc: string } = (() => {
+   654→   654→    if (isDeclaredLost) {
+   655→   655→      return {
+   656→   656→        title: `🚨 ${t('tracking.badge_lost')}`,
+   657→   657→        badgeClass: 'bg-red-600 text-white animate-pulse',
+   658→   658→        desc: t('tracking.lost_description'),
+   659→   659→      };
+   660→   660→    }
+   661→   661→    if (isFound) {
+   662→   662→      return {
+   663→   663→        title: `✅ ${t('tracking.badge_found')}`,
+   664→   664→        badgeClass: 'bg-[#c5a643] text-[#1a1a1a]',
+   665→   665→        desc: t('tracking.found_description'),
+   666→   666→      };
+   667→   667→    }
+   668→   668→    if (isScanned) {
+   669→   669→      return {
+   670→   670→        title: t('tracking.bagage_localise'),
+   671→   671→        badgeClass: 'bg-[#c5a643] text-[#1a1a1a]',
+   672→   672→        desc: t('tracking.found_description'),
+   673→   673→      };
+   674→   674→    }
+   675→   675→    return {
+   676→   676→      title: t('tracking.bagage_protege'),
+   677→   677→      badgeClass: 'bg-[#1a1a1a] text-[#c5a643]',
+   678→   678→      desc: t('tracking.active_description'),
+   679→   679→    };
+   680→   680→  })();
+   681→   681→
+   682→   682→  // History accordion: 3 first by default if >3, all if <=3
+   683→   683→  const INITIAL_SCAN_COUNT = 3;
+   684→   684→  const visibleScans = showAllScans ? data.scans : data.scans.slice(0, INITIAL_SCAN_COUNT);
+   685→   685→  const hiddenScansCount = data.scans.length - INITIAL_SCAN_COUNT;
+   686→   686→
+   687→   687→  // Support mailto link
+   688→   688→  const supportSubject = encodeURIComponent(`Problème bagage ${reference}`);
+   689→   689→  const supportBody = encodeURIComponent(
+   690→   690→    `Bonjour, je rencontre un problème avec mon bagage ${reference}.\n\nDescription du problème :\n`
+   691→   691→  );
+   692→   692→  const supportHref = `mailto:contact@qrbags.com?subject=${supportSubject}&body=${supportBody}`;
+   693→   693→
+   694→   694→  // Checklist CTA link
+   695→   695→  const checklistHref = `/checklist?ref=${encodeURIComponent(reference)}&source=tracking_page`;
+   696→   696→
+   697→   697→  // ═══════════════════════════════════════════════════════
+   698→   698→  //  RENDER
+   699→   699→  // ═══════════════════════════════════════════════════════
+   700→   700→
+   701→   701→  return (
+   702→   702→    <main
+   703→   703→      className="min-h-screen bg-[#FDFBF7] flex flex-col"
+   704→   704→      dir={dir}
+   705→   705→    >
+   706→   706→      {/* ─── Sticky Header ─── */}
+   707→   707→      <header className="sticky top-0 z-40 bg-[#FDFBF7] border-b-2 border-[#1a1a1a] pt-[env(safe-area-inset-top,0px)] px-4 sm:px-5 md:px-8 py-2 sm:py-3">
+   708→   708→        <div className="max-w-md mx-auto flex items-center justify-between">
+   709→   709→          <button
+   710→   710→            onClick={() => window.history.back()}
+   711→   711→            className="flex items-center gap-1 text-[#1a1a1a] hover:text-[#c5a643] transition-colors text-sm font-medium min-h-[40px] px-2"
+   712→   712→            aria-label={t('tracking.back_to_scan')}
+   713→   713→          >
+   714→   714→            <ArrowRight className="w-4 h-4 rtl:rotate-180" />
+   715→   715→            <span>{t('tracking.back_to_scan')}</span>
+   716→   716→          </button>
+   717→   717→
+   718→   718→          <div className="flex items-center gap-2">
+   719→   719→            {/* Audio alert toggle */}
+   720→   720→            <button
+   721→   721→              onClick={toggleAudio}
+   722→   722→              className={`flex items-center justify-center w-9 h-9 rounded-full border-2 transition-colors min-h-[40px] ${
+   723→   723→                audioEnabled
+   724→   724→                  ? 'border-[#c5a643] bg-[#c5a643] text-[#1a1a1a]'
+   725→   725→                  : 'border-[#1a1a1a] text-[#1a1a1a] hover:bg-[#c5a643]'
+   726→   726→              }`}
+   727→   727→              aria-label={t('tracking.audio_alert_toggle_aria')}
+   728→   728→              title={audioEnabled ? t('tracking.audio_alert_enabled') : t('tracking.audio_alert_disabled')}
+   729→   729→            >
+   730→   730→              {audioEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+   731→   731→            </button>
+   732→   732→            <button
+   733→   733→              onClick={handleRefresh}
+   734→   734→              disabled={isRefreshing}
+   735→   735→              className="flex items-center justify-center w-9 h-9 rounded-full border-2 border-[#1a1a1a] text-[#1a1a1a] hover:bg-[#c5a643] transition-colors disabled:opacity-50"
+   736→   736→              aria-label={t('common.refresh')}
+   737→   737→            >
+   738→   738→              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+   739→   739→            </button>
+   740→   740→            <LanguageSelector lang={lang} setLang={setLang} />
+   741→   741→          </div>
+   742→   742→        </div>
+   743→   743→      </header>
+   744→   744→
+   745→   745→      {/* ─── Refresh Toast ─── */}
+   746→   746→      {refreshToast && (
+   747→   747→        <div className="fixed top-[calc(3.5rem+env(safe-area-inset-top,0px))] sm:top-[calc(4rem+env(safe-area-inset-top,0px))] left-1/2 -translate-x-1/2 bg-[#1a1a1a] text-[#c5a643] px-4 py-2 rounded-lg shadow-lg z-50 animate-in fade-in slide-in-from-top-2 duration-300 text-sm font-medium flex items-center gap-1.5">
+   748→   748→          <CheckCircle className="w-4 h-4" />
+   749→   749→          {t('tracking.refresh_success')}
+   750→   750→        </div>
+   751→   751→      )}
+   752→   752→
+   753→   753→      {/* ─── Status Toast ─── */}
+   754→   754→      {statusToast && (
+   755→   755→        <div className="fixed top-[calc(5.5rem+env(safe-area-inset-top,0px))] sm:top-[calc(6rem+env(safe-area-inset-top,0px))] left-1/2 -translate-x-1/2 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-in fade-in slide-in-from-top-2 duration-300 text-sm font-medium flex items-center gap-1.5">
+   756→   756→          <CheckCircle className="w-4 h-4" />
+   757→   757→          {t('tracking.status_updated')}
+   758→   758→        </div>
+   759→   759→      )}
+   760→   760→
+   761→   761→      {/* ─── Audio Alert Banner (show when not enabled AND baggage not yet scanned) ─── */}
+   762→   762→      {!audioEnabled && data && data.scans.length === 0 && (
+   763→   763→        <div className="sticky top-[52px] sm:top-[56px] z-30 bg-[#FDFBF7] px-4 sm:px-5 md:px-8 py-2">
+   764→   764→          <div className="max-w-md mx-auto">
+   765→   765→            <div className="bg-[#c5a643] border-2 border-[#1a1a1a] rounded-2xl p-4 text-center">
+   766→   766→              <p className="font-bold text-[#1a1a1a] text-base mb-2">
+   767→   767→                🔔 {t('tracking.audio_alert_banner_title')}
+   768→   768→              </p>
+   769→   769→              <button
+   770→   770→                onClick={enableAudio}
+   771→   771→                className="bg-[#1a1a1a] hover:bg-black text-[#c5a643] py-2.5 px-6 rounded-xl font-bold transition-colors text-sm min-h-[44px] inline-flex items-center gap-2"
+   772→   772→              >
+   773→   773→                <Volume2 className="w-4 h-4" />
+   774→   774→                {t('tracking.audio_alert_activate_btn')}
+   775→   775→              </button>
+   776→   776→              <p className="text-xs text-[#1a1a1a]/70 mt-2">
+   777→   777→                {t('tracking.audio_alert_keep_open')}
+   778→   778→              </p>
+   779→   779→            </div>
+   780→   780→          </div>
+   781→   781→        </div>
+   782→   782→      )}
+   783→   783→
+   784→   784→      {/* ─── Scanning indicator (show when audio is enabled AND no scans yet) ─── */}
+   785→   785→      {audioEnabled && data && data.scans.length === 0 && (
+   786→   786→        <div className="sticky top-[52px] sm:top-[56px] z-30 bg-[#FDFBF7] px-4 sm:px-5 md:px-8 py-2">
+   787→   787→          <div className="max-w-md mx-auto">
+   788→   788→            <div className="bg-[#c5a643]/20 border-2 border-dashed border-[#c5a643] rounded-xl px-4 py-2.5 flex items-center gap-2">
+   789→   789→              <div className="w-2 h-2 rounded-full bg-[#c5a643] animate-pulse flex-shrink-0" />
+   790→   790→              <span className="text-sm font-medium text-[#1a1a1a]">{t('tracking.audio_alert_scanning')}</span>
+   791→   791→            </div>
+   792→   792→          </div>
+   793→   793→        </div>
+   794→   794→      )}
+   795→   795→
+   796→   796→      {/* ─── Sticky Map (h-56 mobile / h-64 tablet / h-72 desktop) ─── */}
+   797→   797→      {data.lastPosition && (data.lastPosition.hasCoordinates || data.lastPosition.address) && (
+   798→   798→        <section className="sticky top-[52px] sm:top-[56px] z-30 bg-[#FDFBF7] px-4 sm:px-5 md:px-8 py-3">
+   799→   799→          <div className="max-w-md mx-auto">
+   800→   800→            <div className="bg-white border-2 border-dashed border-[#1a1a1a] rounded-2xl p-2.5 shadow-sm">
+   801→   801→              <div className="flex items-center justify-between mb-2 px-1">
+   802→   802→                <h2 className="text-xs uppercase tracking-widest text-[#1a1a1a] font-bold flex items-center gap-1.5">
+   803→   803→                  <span>🗺️</span> {t('tracking.last_location')}
+   804→   804→                </h2>
+   805→   805→                {baggage.lastScanDate && (
+   806→   806→                  <span className="text-[10px] text-[#1a1a1a]/60">
+   807→   807→                    {formatDateTime(baggage.lastScanDate)}
+   808→   808→                  </span>
+   809→   809→                )}
+   810→   810→              </div>
+   811→   811→              <div className="h-44 sm:h-48 md:h-56">
+   812→   812→                <MapEmbed
+   813→   813→                  latitude={data.lastPosition.latitude}
+   814→   814→                  longitude={data.lastPosition.longitude}
+   815→   815→                  address={data.lastPosition.address}
+   816→   816→                  t={t}
+   817→   817→                />
+   818→   818→              </div>
+   819→   819→            </div>
+   820→   820→          </div>
+   821→   821→        </section>
+   822→   822→      )}
+   823→   823→
+   824→   824→      {/* ─── Scrollable Content ─── */}
+   825→   825→      <div className="flex-1 max-w-md mx-auto w-full px-4 sm:px-5 md:px-8 py-4 pb-32 space-y-4">
+   826→   826→
+   827→   827→        {/* ═══ EN-TÊTE DYNAMIQUE SELON STATUT ═══ */}
+   828→   828→        <div className="text-center pt-2">
+   829→   829→          <span className={`inline-flex items-center justify-center px-4 py-1.5 rounded-full text-sm font-bold ${statusConfig.badgeClass}`}>
+   830→   830→            {statusConfig.title}
+   831→   831→          </span>
+   832→   832→          <p className="mt-3 text-sm md:text-base text-[#1a1a1a]/80 leading-relaxed">
+   833→   833→            {statusConfig.desc}
+   834→   834→          </p>
+   835→   835→          {data.scans.length > 0 && (
+   836→   836→            <p className="mt-1 text-xs text-[#1a1a1a]/60">
+   837→   837→              {t('tracking.scan_count', { count: String(data.scans.length) })}
+   838→   838→            </p>
+   839→   839→          )}
+   840→   840→        </div>
+   841→   841→
+   842→   842→        {/* ═══ PANNEAU URGENCE (mode perdu uniquement) ═══ */}
+   843→   843→        {isDeclaredLost && (
+   844→   844→          <div
+   845→   845→            className="bg-[#FEF2F2] border-2 border-[#EF4444] rounded-2xl p-6 space-y-5"
+   846→   846→            role="alert"
+   847→   847→          >
+   848→   848→            {/* Titre */}
+   849→   849→            <div className="text-center">
+   850→   850→              <h2 className="text-xl md:text-2xl font-bold text-[#EF4444]">
+   851→   851→                {t('tracking.urgent_title')}
+   852→   852→              </h2>
+   853→   853→            </div>
+   854→   854→
+   855→   855→            {/* Instructions numérotées */}
+   856→   856→            <ol className="space-y-3">
+   857→   857→              <li className="flex gap-3 items-start">
+   858→   858→                <span className="flex-shrink-0 w-7 h-7 bg-[#EF4444] text-white rounded-full flex items-center justify-center text-sm font-bold mt-0.5">1</span>
+   859→   859→                <p className="text-sm md:text-base text-[#1a1a1a] leading-relaxed">
+   860→   860→                  {t('tracking.urgent_step1', { company: transportCompany })}
+   861→   861→                </p>
+   862→   862→              </li>
+   863→   863→              <li className="flex gap-3 items-start">
+   864→   864→                <span className="flex-shrink-0 w-7 h-7 bg-[#EF4444] text-white rounded-full flex items-center justify-center text-sm font-bold mt-0.5">2</span>
+   865→   865→                <p className="text-sm md:text-base text-[#1a1a1a] leading-relaxed">
+   866→   866→                  {t('tracking.urgent_step2')}
+   867→   867→                </p>
+   868→   868→              </li>
+   869→   869→            </ol>
+   870→   870→
+   871→   871→            {/* Boutons d'action urgence */}
+   872→   872→            <div className="space-y-3">
+   873→   873→              {hasFinderPhone && (
+   874→   874→                <button
+   875→   875→                  onClick={handleWhatsApp}
+   876→   876→                  className="w-full flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#1ebe57] text-white py-3.5 px-4 rounded-xl font-bold transition-colors text-base min-h-[48px]"
+   877→   877→                >
+   878→   878→                  <MessageCircle className="w-5 h-5" />
+   879→   879→                  {t('tracking.urgent_contact_finder')}
+   880→   880→                </button>
+   881→   881→              )}
+   882→   882→              <button
+   883→   883→                onClick={handleSupportWhatsApp}
+   884→   884→                className="w-full flex items-center justify-center gap-2 bg-[#EF4444] hover:bg-[#DC2626] text-white py-3.5 px-4 rounded-xl font-bold transition-colors text-base min-h-[48px]"
+   885→   885→              >
+   886→   886→                <AlertTriangle className="w-5 h-5" />
+   887→   887→                {t('tracking.urgent_support')}
+   888→   888→              </button>
+   889→   889→            </div>
+   890→   890→
+   891→   891→            {/* Bouton Retrouvé */}
+   892→   892→            <button
+   893→   893→              onClick={() => handleStatusToggle('mark-found')}
+   894→   894→              disabled={isTogglingStatus}
+   895→   895→              className="w-full flex items-center justify-center gap-2 bg-white border-2 border-green-600 text-green-700 hover:bg-green-50 py-3.5 px-4 rounded-xl font-bold transition-colors text-base min-h-[48px] disabled:opacity-50"
+   896→   896→            >
+   897→   897→              {isTogglingStatus ? (
+   898→   898→                <RefreshCw className="w-5 h-5 animate-spin" />
+   899→   899→              ) : (
+   900→   900→                <CheckCircle className="w-5 h-5" />
+   901→   901→              )}
+   902→   902→              {t('tracking.urgent_found_btn')}
+   903→   903→            </button>
+   904→   904→          </div>
+   905→   905→        )}
+   906→   906→
+   907→   907→        {/* ═══ CARTE TROUVEUR (white + dashed, lecture seule) ═══ */}
+   908→   908→        {data.lastFinder && (data.lastFinder.name || data.lastFinder.phone) ? (
+   909→   909→          <div className="bg-white border-2 border-dashed border-[#1a1a1a] rounded-2xl p-5 shadow-sm">
+   910→   910→            <h2 className="text-xs uppercase tracking-widest text-[#1a1a1a] font-bold mb-3 flex items-center gap-2">
+   911→   911→              <span>🔍</span> {t('tracking.finder_info')}
+   912→   912→            </h2>
+   913→   913→
+   914→   914→            {data.lastFinder.name && (
+   915→   915→              <DashedEncart>
+   916→   916→                <div className="flex items-center gap-3">
+   917→   917→                  <span className="text-xl">👤</span>
+   918→   918→                  <div>
+   919→   919→                    <p className="text-xs text-[#1a1a1a]/60 font-medium">{t('finder.fullName')}</p>
+   920→   920→                    <p className="text-base font-bold text-[#1a1a1a]">{data.lastFinder.name}</p>
+   921→   921→                  </div>
+   922→   922→                </div>
+   923→   923→              </DashedEncart>
+   924→   924→            )}
+   925→   925→
+   926→   926→            {data.lastFinder.phone && (
+   927→   927→              <DashedEncart className="mb-0">
+   928→   928→                <div className="flex items-center gap-3">
+   929→   929→                  <span className="text-xl">📱</span>
+   930→   930→                  <div>
+   931→   931→                    <p className="text-xs text-[#1a1a1a]/60 font-medium">{t('finder.whatsapp')}</p>
+   932→   932→                    <p className="text-base font-bold text-[#1a1a1a]" dir="ltr">{data.lastFinder.phone}</p>
+   933→   933→                  </div>
+   934→   934→                </div>
+   935→   935→              </DashedEncart>
+   936→   936→            )}
+   937→   937→          </div>
+   938→   938→        ) : (
+   939→   939→          <div className="bg-white border-2 border-dashed border-[#1a1a1a] rounded-2xl p-5 shadow-sm text-center">
+   940→   940→            <div className="w-14 h-14 bg-[#c5a643]/20 border-2 border-dashed border-[#1a1a1a] rounded-full flex items-center justify-center mx-auto mb-3">
+   941→   941→              <Clock className="w-7 h-7 text-[#1a1a1a]/60" />
+   942→   942→            </div>
+   943→   943→            <p className="text-[#1a1a1a]/70 text-sm">{t('tracking.no_finder')}</p>
+   944→   944→          </div>
+   945→   945→        )}
+   946→   946→
+   947→   947→        {/* ═══ CTA CHECKLIST (jaune #c5a643 + dashed) ═══ */}
+   948→   948→        <div className="bg-[#c5a643] border-2 border-dashed border-[#1a1a1a] rounded-2xl p-4 shadow-sm">
+   949→   949→          <h3 className="text-base font-bold text-[#1a1a1a] mb-1">{t('tracking.checklist_title')}</h3>
+   950→   950→          <p className="text-sm text-[#1a1a1a]/80 mb-3 leading-relaxed">{t('tracking.checklist_desc')}</p>
+   951→   951→          <a
+   952→   952→            href={checklistHref}
+   953→   953→            className="block w-full text-center py-3 px-4 bg-[#1a1a1a] hover:bg-black text-[#c5a643] rounded-xl font-bold transition-colors min-h-[44px]"
+   954→   954→          >
+   955→   955→            {t('tracking.checklist_cta')}
+   956→   956→          </a>
+   957→   957→        </div>
+   958→   958→
+   959→   959→        {/* ═══ HISTORIQUE (ACCORDION) ═══ */}
+   960→   960→        {data.scans.length > 0 && (
+   961→   961→          <div className="bg-white border-2 border-dashed border-[#1a1a1a] rounded-2xl shadow-sm overflow-hidden">
+   962→   962→            <button
+   963→   963→              onClick={() => setHistoryOpen(!historyOpen)}
+   964→   964→              className="w-full flex items-center justify-between px-5 py-4 text-left"
+   965→   965→              aria-expanded={historyOpen}
+   966→   966→            >
+   967→   967→              <h2 className="text-xs uppercase tracking-widest text-[#1a1a1a] font-bold flex items-center gap-2">
+   968→   968→                <span>📜</span>
+   969→   969→                {t('tracking.history_toggle', { count: String(data.scans.length) })}
+   970→   970→              </h2>
+   971→   971→              <ChevronDown className={`w-4 h-4 text-[#1a1a1a] transition-transform ${historyOpen ? '' : '-rotate-90'}`} />
+   972→   972→            </button>
+   973→   973→
+   974→   974→            {historyOpen && (
+   975→   975→              <div className="px-5 pb-4 space-y-2.5">
+   976→   976→                {visibleScans.map((scan, index) => (
+   977→   977→                  <DashedEncart key={scan.id} className={index === visibleScans.length - 1 && !showAllScans ? 'mb-0' : ''}>
+   978→   978→                    <div className="flex items-start justify-between gap-3">
+   979→   979→                      <div className="flex-1 min-w-0">
+   980→   980→                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+   981→   981→                          <span className="text-xs text-[#1a1a1a]/70">
+   982→   982→                            {formatDateTime(scan.scannedAt)}
+   983→   983→                          </span>
+   984→   984→                          <ContextBadge context={scan.context} t={t} />
+   985→   985→                        </div>
+   986→   986→                        {scan.location && (
+   987→   987→                          <p className="text-[#1a1a1a] font-medium text-sm truncate">
+   988→   988→                            📍 {scan.location}
+   989→   989→                          </p>
+   990→   990→                        )}
+   991→   991→                        {scan.finderName && (
+   992→   992→                          <p className="text-[#1a1a1a]/70 text-xs mt-1">
+   993→   993→                            👤 {scan.finderName}
+   994→   994→                          </p>
+   995→   995→                        )}
+   996→   996→                      </div>
+   997→   997→                      <div className="w-7 h-7 rounded-full bg-[#c5a643]/20 border border-[#1a1a1a]/40 flex items-center justify-center flex-shrink-0">
+   998→   998→                        <span className="text-xs font-bold text-[#1a1a1a]">{index + 1}</span>
+   999→   999→                      </div>
+  1000→  1000→                    </div>
+  1001→  1001→                  </DashedEncart>
+  1002→  1002→                ))}
+  1003→  1003→
+  1004→  1004→                {hiddenScansCount > 0 && !showAllScans && (
+  1005→  1005→                  <button
+  1006→  1006→                    onClick={() => setShowAllScans(true)}
+  1007→  1007→                    className="w-full py-2.5 text-center text-sm font-medium text-[#1a1a1a] hover:text-[#c5a643] border-2 border-dashed border-[#1a1a1a]/40 rounded-xl transition-colors min-h-[40px]"
+  1008→  1008→                  >
+  1009→  1009→                    {t('tracking.see_more', { count: String(hiddenScansCount) })} ▼
+  1010→  1010→                  </button>
+  1011→  1011→                )}
+  1012→  1012→                {showAllScans && hiddenScansCount > 0 && (
+  1013→  1013→                  <button
+  1014→  1014→                    onClick={() => setShowAllScans(false)}
+  1015→  1015→                    className="w-full py-2.5 text-center text-sm font-medium text-[#1a1a1a]/70 hover:text-[#c5a643] transition-colors min-h-[40px]"
+  1016→  1016→                  >
+  1017→  1017→                    ▲ Réduire
+  1018→  1018→                  </button>
+  1019→  1019→                )}
+  1020→  1020→              </div>
+  1021→  1021→            )}
+  1022→  1022→          </div>
+  1023→  1023→        )}
+  1024→  1024→
+  1025→  1025→        {/* ═══ INFOS BAGAGE (COLLAPSIBLE, replié par défaut) ═══ */}
+  1026→  1026→        <div className="bg-white border-2 border-dashed border-[#1a1a1a] rounded-2xl shadow-sm overflow-hidden">
+  1027→  1027→          <button
+  1028→  1028→            onClick={() => setBaggageOpen(!baggageOpen)}
+  1029→  1029→            className="w-full flex items-center justify-between px-5 py-4 text-left"
+  1030→  1030→            aria-expanded={baggageOpen}
+  1031→  1031→          >
+  1032→  1032→            <h2 className="text-xs uppercase tracking-widest text-[#1a1a1a] font-bold flex items-center gap-2">
+  1033→  1033→              <span>📦</span> {t('tracking.baggage_info_toggle')}
+  1034→  1034→            </h2>
+  1035→  1035→            <ChevronDown className={`w-4 h-4 text-[#1a1a1a] transition-transform ${baggageOpen ? '' : '-rotate-90'}`} />
+  1036→  1036→          </button>
+  1037→  1037→
+  1038→  1038→          {baggageOpen && (
+  1039→  1039→            <div className="px-5 pb-5">
+  1040→  1040→              {/* Reference */}
+  1041→  1041→              <DashedEncart>
+  1042→  1042→                <div className="flex items-center gap-3">
+  1043→  1043→                  <span className="text-xl">🏷️</span>
+  1044→  1044→                  <div>
+  1045→  1045→                    <p className="text-xs text-[#1a1a1a]/60 font-medium">{t('whatsapp.reference').replace(' :', '')}</p>
+  1046→  1046→                    <p className="text-base font-bold text-[#1a1a1a] font-mono tracking-widest">{baggage.reference}</p>
+  1047→  1047→                  </div>
+  1048→  1048→                </div>
+  1049→  1049→              </DashedEncart>
+  1050→  1050→
+  1051→  1051→              {/* Traveler Name */}
+  1052→  1052→              <DashedEncart>
+  1053→  1053→                <div className="flex items-center gap-3">
+  1054→  1054→                  <span className="text-xl">👤</span>
+  1055→  1055→                  <div>
+  1056→  1056→                    <p className="text-xs text-[#1a1a1a]/60 font-medium">{t('finder.fullName')}</p>
+  1057→  1057→                    <p className="text-base font-bold text-[#1a1a1a]">{baggage.travelerName || t('finder.notSet')}</p>
+  1058→  1058→                  </div>
+  1059→  1059→                </div>
+  1060→  1060→              </DashedEncart>
+  1061→  1061→
+  1062→  1062→              {/* TRANSPORT-FEATURE: Conditional transport info with real PNG images */}
+  1063→  1063→              {(() => {
+  1064→  1064→                const mode = safeTransportMode(baggage.transportMode) as TransportMode;
+  1065→  1065→                const transportImg = getTransportImage(mode);
+  1066→  1066→
+  1067→  1067→                if (mode === 'flight' && (baggage.airlineName || baggage.flightNumber)) {
+  1068→  1068→                  return (
+  1069→  1069→                    <DashedEncart>
+  1070→  1070→                      <div className="flex items-center justify-between">
+  1071→  1071→                        <div className="flex-1">
+  1072→  1072→                          {baggage.airlineName && (
+  1073→  1073→                            <div className="mb-1">
+  1074→  1074→                              <p className="text-xs text-[#1a1a1a]/60 font-medium">{t('transport.airline')}</p>
+  1075→  1075→                              <p className="text-base font-bold text-[#1a1a1a]">{baggage.airlineName}</p>
+  1076→  1076→                            </div>
+  1077→  1077→                          )}
+  1078→  1078→                          {baggage.flightNumber && (
+  1079→  1079→                            <div>
+  1080→  1080→                              <p className="text-xs text-[#1a1a1a]/60 font-medium">{t('transport.flight_number')}</p>
+  1081→  1081→                              <p className="text-xl font-bold text-[#1a1a1a] font-mono tracking-widest">{baggage.flightNumber}</p>
+  1082→  1082→                            </div>
+  1083→  1083→                          )}
+  1084→  1084→                        </div>
+  1085→  1085→                        <div className="h-12 w-12 rounded-full bg-[#c5a643]/20 border border-[#1a1a1a]/20 flex items-center justify-center ml-4 flex-shrink-0">
+  1086→  1086→                          <Image src={transportImg} alt="flight" width={28} height={28} className="mix-blend-multiply" />
+  1087→  1087→                        </div>
+  1088→  1088→                      </div>
+  1089→  1089→                    </DashedEncart>
+  1090→  1090→                  );
+  1091→  1091→                }
+  1092→  1092→                if (mode === 'train' && (baggage.trainCompany || baggage.trainNumber)) {
+  1093→  1093→                  return (
+  1094→  1094→                    <DashedEncart>
+  1095→  1095→                      <div className="flex items-center justify-between">
+  1096→  1096→                        <div className="flex-1">
+  1097→  1097→                          {baggage.trainCompany && (
+  1098→  1098→                            <div className="mb-1">
+  1099→  1099→                              <p className="text-xs text-[#1a1a1a]/60 font-medium">{t('transport.train_company')}</p>
+  1100→  1100→                              <p className="text-base font-bold text-[#1a1a1a]">{baggage.trainCompany}</p>
+  1101→  1101→                            </div>
+  1102→  1102→                          )}
+  1103→  1103→                          {baggage.trainNumber && (
+  1104→  1104→                            <div>
+  1105→  1105→                              <p className="text-xs text-[#1a1a1a]/60 font-medium">{t('transport.train_number')}</p>
+  1106→  1106→                              <p className="text-xl font-bold text-[#1a1a1a] font-mono tracking-widest">{baggage.trainNumber}</p>
+  1107→  1107→                            </div>
+  1108→  1108→                          )}
+  1109→  1109→                        </div>
+  1110→  1110→                        <div className="h-12 w-12 rounded-full bg-[#c5a643]/20 border border-[#1a1a1a]/20 flex items-center justify-center ml-4 flex-shrink-0">
+  1111→  1111→                          <Image src={transportImg} alt="train" width={28} height={28} className="mix-blend-multiply" />
+  1112→  1112→                        </div>
+  1113→  1113→                      </div>
+  1114→  1114→                    </DashedEncart>
+  1115→  1115→                  );
+  1116→  1116→                }
+  1117→  1117→                if (mode === 'boat' && (baggage.shipName || baggage.shipCabin)) {
+  1118→  1118→                  return (
+  1119→  1119→                    <DashedEncart>
+  1120→  1120→                      <div className="flex items-center justify-between">
+  1121→  1121→                        <div className="flex-1">
+  1122→  1122→                          {baggage.shipName && (
+  1123→  1123→                            <div className="mb-1">
+  1124→  1124→                              <p className="text-xs text-[#1a1a1a]/60 font-medium">{t('transport.ship_name')}</p>
+  1125→  1125→                              <p className="text-base font-bold text-[#1a1a1a]">{baggage.shipName}</p>
+  1126→  1126→                            </div>
+  1127→  1127→                          )}
+  1128→  1128→                          {baggage.shipCabin && (
+  1129→  1129→                            <div>
+  1130→  1130→                              <p className="text-xs text-[#1a1a1a]/60 font-medium">{t('transport.ship_cabin')}</p>
+  1131→  1131→                              <p className="text-base font-bold text-[#1a1a1a]">{baggage.shipCabin}</p>
+  1132→  1132→                            </div>
+  1133→  1133→                          )}
+  1134→  1134→                        </div>
+  1135→  1135→                        <div className="h-12 w-12 rounded-full bg-[#c5a643]/20 border border-[#1a1a1a]/20 flex items-center justify-center ml-4 flex-shrink-0">
+  1136→  1136→                          <Image src={transportImg} alt="boat" width={28} height={28} className="mix-blend-multiply" />
+  1137→  1137→                        </div>
+  1138→  1138→                      </div>
+  1139→  1139→                    </DashedEncart>
+  1140→  1140→                  );
+  1141→  1141→                }
+  1142→  1142→                if (mode === 'bus' && (baggage.busCompany || baggage.busLineNumber)) {
+  1143→  1143→                  return (
+  1144→  1144→                    <DashedEncart>
+  1145→  1145→                      <div className="flex items-center justify-between">
+  1146→  1146→                        <div className="flex-1">
+  1147→  1147→                          {baggage.busCompany && (
+  1148→  1148→                            <div className="mb-1">
+  1149→  1149→                              <p className="text-xs text-[#1a1a1a]/60 font-medium">{t('transport.bus_company')}</p>
+  1150→  1150→                              <p className="text-base font-bold text-[#1a1a1a]">{baggage.busCompany}</p>
+  1151→  1151→                            </div>
+  1152→  1152→                          )}
+  1153→  1153→                          {baggage.busLineNumber && (
+  1154→  1154→                            <div>
+  1155→  1155→                              <p className="text-xs text-[#1a1a1a]/60 font-medium">{t('transport.bus_line')}</p>
+  1156→  1156→                              <p className="text-base font-bold text-[#1a1a1a]">{baggage.busLineNumber}</p>
+  1157→  1157→                            </div>
+  1158→  1158→                          )}
+  1159→  1159→                        </div>
+  1160→  1160→                        <div className="h-12 w-12 rounded-full bg-[#c5a643]/20 border border-[#1a1a1a]/20 flex items-center justify-center ml-4 flex-shrink-0">
+  1161→  1161→                          <Image src={transportImg} alt="bus" width={28} height={28} className="mix-blend-multiply" />
+  1162→  1162→                        </div>
+  1163→  1163→                      </div>
+  1164→  1164→                    </DashedEncart>
+  1165→  1165→                  );
+  1166→  1166→                }
+  1167→  1167→                return null;
+  1168→  1168→              })()}
+  1169→  1169→
+  1170→  1170→              {/* Destination */}
+  1171→  1171→              {baggage.destination && (
+  1172→  1172→                <DashedEncart>
+  1173→  1173→                  <div className="flex items-center gap-3">
+  1174→  1174→                    <span className="text-xl">📍</span>
+  1175→  1175→                    <div>
+  1176→  1176→                      <p className="text-xs text-[#1a1a1a]/60 font-medium">{t('transport.common_destination')}</p>
+  1177→  1177→                      <p className="text-base font-bold text-[#1a1a1a]">{baggage.destination}</p>
+  1178→  1178→                    </div>
+  1179→  1179→                  </div>
+  1180→  1180→                </DashedEncart>
+  1181→  1181→              )}
+  1182→  1182→
+  1183→  1183→              {/* Departure Date */}
+  1184→  1184→              {(baggage.departureDate || baggage.createdAt) && (
+  1185→  1185→                <DashedEncart className="mb-0">
+  1186→  1186→                  <div className="flex items-center gap-3">
+  1187→  1187→                    <span className="text-xl">📅</span>
+  1188→  1188→                    <div>
+  1189→  1189→                      <p className="text-xs text-[#1a1a1a]/60 font-medium">{t('transport.common_departure_date')}</p>
+  1190→  1190→                      <p className="text-base font-bold text-[#1a1a1a]">
+  1191→  1191→                        {formatDate(baggage.departureDate || baggage.createdAt)}{baggage.departureTime ? ` — ${baggage.departureTime}` : ''}
+  1192→  1192→                      </p>
+  1193→  1193→                    </div>
+  1194→  1194→                  </div>
+  1195→  1195→                </DashedEncart>
+  1196→  1196→              )}
+  1197→  1197→            </div>
+  1198→  1198→          )}
+  1199→  1199→        </div>
+  1200→  1200→
+  1201→  1201→        {/* ═══ SUPPORT MAILTO ═══ */}
+  1202→  1202→        <div className="text-center py-2">
+  1203→  1203→          <a
+  1204→  1204→            href={supportHref}
+  1205→  1205→            className="text-sm text-[#c5a643] underline hover:text-[#1a1a1a] transition-colors"
+  1206→  1206→          >
+  1207→  1207→            {t('tracking.support_cta')}
+  1208→  1208→          </a>
+  1209→  1209→        </div>
+  1210→  1210→
+  1211→  1211→        {/* ═══ PWA INSTALL BUTTON (conditionnel) ═══ */}
+  1212→  1212→        {showInstallButton && (
+  1213→  1213→          <div className="text-center">
+  1214→  1214→            <button
+  1215→  1215→              onClick={() => {
+  1216→  1216→                if (isIOS) {
+  1217→  1217→                  setShowIOSModal(true);
+  1218→  1218→                } else {
+  1219→  1219→                  handleInstall();
+  1220→  1220→                }
+  1221→  1221→              }}
+  1222→  1222→              className="inline-flex items-center gap-2 border-2 border-[#1a1a1a] text-[#1a1a1a] hover:bg-[#c5a643] py-2 px-4 rounded-lg text-sm font-medium transition-colors min-h-[40px]"
+  1223→  1223→            >
+  1224→  1224→              <span>{isIOS ? '📱' : '⬇️'}</span>
+  1225→  1225→              <span>{isIOS ? t('tracking.install_app_ios') : t('tracking.install_app')}</span>
+  1226→  1226→            </button>
+  1227→  1227→          </div>
+  1228→  1228→        )}
+  1229→  1229→
+  1230→  1230→        {/* ═══ BOUTON DÉCLARER PERDU (mode normal uniquement) ═══ */}
+  1231→  1231→        {!isDeclaredLost && (
+  1232→  1232→          <button
+  1233→  1233→            onClick={() => handleStatusToggle('mark-lost')}
+  1234→  1234→            disabled={isTogglingStatus}
+  1235→  1235→            className="w-full flex items-center justify-center gap-2 border-2 border-[#EF4444] text-[#EF4444] hover:bg-[#FEF2F2] py-3.5 px-4 rounded-xl font-bold transition-colors text-base min-h-[48px] disabled:opacity-50"
+  1236→  1236→          >
+  1237→  1237→            {isTogglingStatus ? (
+  1238→  1238→              <RefreshCw className="w-5 h-5 animate-spin" />
+  1239→  1239→            ) : (
+  1240→  1240→              <AlertTriangle className="w-5 h-5" />
+  1241→  1241→            )}
+  1242→  1242→            {t('tracking.declare_lost_btn')}
+  1243→  1243→          </button>
+  1244→  1244→        )}
+  1245→  1245→
+  1246→  1246→        {/* ─── Trust Note (footer discret) ─── */}
+  1247→  1247→        <div className="text-center text-xs text-[#1a1a1a]/60 tracking-wide flex items-center justify-center gap-1.5 pt-2">
+  1248→  1248→          <Shield className="w-4 h-4 inline" />
+  1249→  1249→          <span>{t('tracking.trust_note')}</span>
+  1250→  1250→        </div>
+  1251→  1251→      </div>
+  1252→  1252→
+  1253→  1253→      {/* ═══ STICKY BOTTOM BAR (Appeler + WhatsApp) — only if finder phone AND NOT in lost mode ═══ */}
+  1254→  1254→      {hasFinderPhone && !isDeclaredLost && (
+  1255→  1255→        <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t-2 border-[#1a1a1a] p-3 sm:p-4 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] sm:pb-[calc(1rem+env(safe-area-inset-bottom,0px))]">
+  1256→  1256→          <div className="max-w-md mx-auto flex gap-3">
+  1257→  1257→            <button
+  1258→  1258→              onClick={handlePhoneCall}
+  1259→  1259→              className="flex-1 bg-[#1a1a1a] hover:bg-black text-[#c5a643] py-3 rounded-lg font-bold transition-colors flex items-center justify-center gap-2 text-base min-h-[48px]"
+  1260→  1260→              aria-label={t('tracking.by_phone')}
+  1261→  1261→            >
+  1262→  1262→              <Phone className="w-5 h-5" />
+  1263→  1263→              <span>📞 {t('tracking.by_phone')}</span>
+  1264→  1264→            </button>
+  1265→  1265→            <button
+  1266→  1266→              onClick={handleWhatsApp}
+  1267→  1267→              className="flex-1 bg-[#25D366] hover:bg-[#1ebe57] text-white py-3 rounded-lg font-bold transition-colors flex items-center justify-center gap-2 text-base min-h-[48px]"
+  1268→  1268→              aria-label={t('tracking.by_whatsapp')}
+  1269→  1269→            >
+  1270→  1270→              <MessageCircle className="w-5 h-5" />
+  1271→  1271→              <span>💬 {t('tracking.by_whatsapp')}</span>
+  1272→  1272→            </button>
+  1273→  1273→          </div>
+  1274→  1274→        </div>
+  1275→  1275→      )}
+  1276→  1276→
+  1277→  1277→      {/* ═══ iOS Install Instructions Modal ═══ */}
+  1278→  1278→      <IOSInstallModal show={showIOSModal} onClose={() => setShowIOSModal(false)} t={t} />
+  1279→  1279→    </main>
+  1280→  1280→  );
+  1281→  1281→}
+  1282→  1282→
