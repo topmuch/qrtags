@@ -1,23 +1,22 @@
 # QRBag - Dockerfile for Coolify Deployment
-# Using Debian slim to avoid bun + @next/swc-linux-x64-musl extraction issue
+# Using npm for deps (bun tarball extraction unreliable in Docker)
 FROM node:20-slim AS base
 
-# Install dependencies only when needed
+# ─── Stage 1: Install dependencies ───
 FROM base AS deps
 WORKDIR /app
 
-# Install bun
-RUN npm install -g bun
-
 # Copy package files
-COPY package.json bun.lock ./
+COPY package.json ./
 
-# Install dependencies
-RUN bun install --frozen-lockfile
+# Use npm install — bun has tarball extraction issues in Docker
+RUN npm install
 
-# Rebuild the source code only when needed
+# ─── Stage 2: Build ───
 FROM base AS builder
 WORKDIR /app
+
+# Install bun for fast builds
 RUN npm install -g bun
 
 COPY --from=deps /app/node_modules ./node_modules
@@ -33,11 +32,11 @@ ENV NODE_ENV=production
 # Build the application
 RUN bun run build
 
-# Production image, copy all the files and run next
+# ─── Stage 3: Production ───
 FROM base AS runner
 WORKDIR /app
 
-# Install sqlite3 CLI (Debian package name)
+# Install sqlite3 CLI
 RUN apt-get update && apt-get install -y --no-install-recommends sqlite3 && rm -rf /var/lib/apt/lists/*
 
 ENV NODE_ENV=production
