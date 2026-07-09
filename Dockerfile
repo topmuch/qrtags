@@ -1,9 +1,9 @@
 # QRBag - Dockerfile for Coolify Deployment
-FROM node:20-alpine AS base
+# Using Debian slim to avoid bun + @next/swc-linux-x64-musl extraction issue
+FROM node:20-slim AS base
 
 # Install dependencies only when needed
 FROM base AS deps
-RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
 # Install bun
@@ -37,8 +37,8 @@ RUN bun run build
 FROM base AS runner
 WORKDIR /app
 
-# Install required tools
-RUN apk add --no-cache sqlite
+# Install sqlite3 CLI (Debian package name)
+RUN apt-get update && apt-get install -y --no-install-recommends sqlite3 && rm -rf /var/lib/apt/lists/*
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
