@@ -1,13 +1,11 @@
 'use client'
 
 import { useState, useEffect, Suspense } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   ArrowLeft,
   ArrowRight,
-  CheckCircle,
   Camera,
   FileText,
   Sparkles,
@@ -15,19 +13,13 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import PhoneInput from '@/components/ui/PhoneInput';
-import CountryRegionSelect from '@/components/inscrire/CountryRegionSelect';
 
-// TRANSPORT-FEATURE: Import transport utilities
+// OBJECT-CATEGORIES-FEATURE: Import object category utilities
 import { useTranslation } from '@/hooks/useTranslation';
 import { Language, LANGUAGE_NAMES } from '@/lib/i18n';
-import TransportModeSelector from '@/components/inscrire/TransportModeSelector';
-import type { TransportMode } from '@/lib/transport';
-import {
-  TRANSPORT_ICONS,
-  TRANSPORT_IMAGES,
-  TRANSPORT_FIELDS,
-  getTransportImage,
-} from '@/lib/transport';
+import ObjectCategorySelector from '@/components/inscrire/ObjectCategorySelector';
+import type { ObjectCategory } from '@/lib/object-categories';
+import { OBJECT_ICONS, getObjectLabel } from '@/lib/object-categories';
 
 // ─── Brand constants ───
 const BRAND = '#FFDE21';
@@ -91,15 +83,10 @@ function InscrireContent() {
   const searchParams = useSearchParams();
   const qrFromUrl = searchParams.get('qr') || '';
 
-  // TRANSPORT-FEATURE: Translation hook + transport mode + step state
+  // Translation hook + object category + step state
   const { t, lang, setLang, dir, countryCode } = useTranslation();
-  // ACTIVATION-FLOW: Lire ?mode= depuis l'URL pour pré-sélectionner le mode de transport
-  const modeFromUrl = searchParams.get('mode') || '';
-  const isModeFromUrl = ['flight', 'train', 'boat', 'bus'].includes(modeFromUrl);
-  const [transportMode, setTransportMode] = useState<TransportMode | ''>(
-    isModeFromUrl ? (modeFromUrl as TransportMode) : ''
-  );
-  const [step, setStep] = useState(isModeFromUrl ? 2 : 1);
+  const [objectCategory, setObjectCategory] = useState<ObjectCategory | ''>('');
+  const [step, setStep] = useState(1);
   const [activeTab, setActiveTab] = useState<'manual' | 'scan'>('manual');
 
   const [loading, setLoading] = useState(false);
@@ -109,18 +96,7 @@ function InscrireContent() {
     firstName: '',
     lastName: '',
     destination: '',
-    departureDate: '',
-    departureTime: '',
     whatsapp: '',
-    // TRANSPORT-FEATURE: Conditional fields (all modes)
-    airlineName: '',
-    flightNumber: '',
-    trainCompany: '',
-    trainNumber: '',
-    shipName: '',
-    shipCabin: '',
-    busCompany: '',
-    busLineNumber: '',
   });
 
   // Sync phoneCountry when countryCode is detected
@@ -130,16 +106,13 @@ function InscrireContent() {
     }
   }, [countryCode]);
 
-  // TRANSPORT-FEATURE: Get dynamic fields for current transport mode
-  const currentFields = transportMode ? TRANSPORT_FIELDS[transportMode] : [];
-
-  // TRANSPORT-FEATURE: Handle transport mode selection → advance to step 2
-  const handleModeSelect = (mode: TransportMode) => {
-    setTransportMode(mode);
+  // Handle object category selection → advance to step 2
+  const handleCategorySelect = (category: ObjectCategory) => {
+    setObjectCategory(category);
     setStep(2);
   };
 
-  const handleBackToMode = () => {
+  const handleBackToCategory = () => {
     setStep(1);
   };
 
@@ -147,7 +120,7 @@ function InscrireContent() {
   const missingReference = !formData.reference;
 
   const doSubmit = async () => {
-    if (!transportMode || missingReference) return;
+    if (!objectCategory || missingReference) return;
     setLoading(true);
 
     try {
@@ -159,18 +132,8 @@ function InscrireContent() {
           travelerFirstName: formData.firstName,
           travelerLastName: formData.lastName,
           whatsappOwner: formData.whatsapp,
-          transportMode: transportMode,
-          airlineName: formData.airlineName,
-          flightNumber: formData.flightNumber,
-          trainCompany: formData.trainCompany,
-          trainNumber: formData.trainNumber,
-          shipName: formData.shipName,
-          shipCabin: formData.shipCabin,
-          busCompany: formData.busCompany,
-          busLineNumber: formData.busLineNumber,
+          objectCategory: objectCategory,
           destination: formData.destination,
-          departureDate: formData.departureDate || undefined,
-          departureTime: formData.departureTime || undefined,
         }),
       });
 
@@ -184,15 +147,7 @@ function InscrireContent() {
             lastName: formData.lastName,
             whatsapp: formData.whatsapp,
             destination: formData.destination,
-            transportMode: transportMode,
-            airlineName: formData.airlineName,
-            flightNumber: formData.flightNumber,
-            trainCompany: formData.trainCompany,
-            trainNumber: formData.trainNumber,
-            shipName: formData.shipName,
-            shipCabin: formData.shipCabin,
-            busCompany: formData.busCompany,
-            busLineNumber: formData.busLineNumber,
+            objectCategory: objectCategory,
             type: 'voyageur',
             activatedAt: new Date().toISOString(),
             expiresAt: data.baggage?.expiresAt,
@@ -211,9 +166,9 @@ function InscrireContent() {
     }
   };
 
-  // TRANSPORT_ICON: Utilise la vraie image PNG si un mode est sélectionné, sinon emoji fallback.
-  const TransportIcon = transportMode ? TRANSPORT_ICONS[transportMode] : '✈️';
-  const TransportImageSrc = transportMode ? getTransportImage(transportMode) : null;
+  // Object category display
+  const CategoryIcon = objectCategory ? OBJECT_ICONS[objectCategory] : '🏷️';
+  const CategoryLabel = objectCategory ? getObjectLabel(objectCategory, lang) : '';
 
   return (
     <main
@@ -230,7 +185,7 @@ function InscrireContent() {
           <span className="text-sm md:text-base font-medium">{t('inscrire.back')}</span>
         </Link>
         <div className="flex items-center gap-2">
-          <img src="/logo.png" alt="QRBag" className="h-12 w-auto object-contain" />
+          <img src="/logo.png" alt="QRTags" className="h-12 w-auto object-contain" />
         </div>
         <LanguageSelector lang={lang} setLang={setLang} />
       </header>
@@ -243,7 +198,7 @@ function InscrireContent() {
             className="inline-flex items-center justify-center px-6 py-3 rounded-full font-bold text-lg shadow-lg text-black"
             style={{ backgroundColor: BRAND, boxShadow: `0 10px 25px ${BRAND}40` }}
           >
-            {qrFromUrl ? `✨ ${t('inscrire.voyageur_badge')}` : `🧳 ${t('inscrire.title')}`}
+            {qrFromUrl ? `✨ ${t('inscrire.voyageur_badge')}` : `🏷️ ${t('inscrire.title')}`}
           </span>
           <p className="mt-3 text-white text-base md:text-lg leading-relaxed max-w-md mx-auto">
             {qrFromUrl ? t('inscrire.welcome_desc') : t('inscrire.subtitle')}
@@ -254,7 +209,7 @@ function InscrireContent() {
         <div className="flex items-center justify-center gap-2 mb-5">
           <span className="w-2.5 h-2.5 rounded-full animate-pulse" style={{ backgroundColor: BRAND }} />
           <span className="text-sm font-bold uppercase tracking-widest text-white">
-            {step === 1 ? t('transport.select_mode') : t('inscrire.step_2_subtitle')}
+            {step === 1 ? t('objects.select_category') : t('inscrire.step_2_subtitle')}
           </span>
         </div>
 
@@ -263,12 +218,12 @@ function InscrireContent() {
           className="w-full rounded-2xl p-5 md:p-6 mb-5 shadow-xl"
           style={{ backgroundColor: BRAND, boxShadow: `0 20px 40px ${INK}15` }}
         >
-          {/* ─── Step 1: Transport Mode Selector ─── */}
+          {/* ─── Step 1: Object Category Selector ─── */}
           {step === 1 && (
             <>
               <h2 className="text-xs uppercase tracking-widest text-black font-bold mb-4 flex items-center gap-2">
                 <Sparkles className="w-4 h-4" style={{ color: INK }} />
-                {t('transport.select_mode')}
+                {t('objects.select_category')}
               </h2>
 
               {/* Tab Toggle — Manual / Scan (selected = #c5a643) */}
@@ -311,16 +266,16 @@ function InscrireContent() {
                 </div>
               ) : (
                 <>
-                  <TransportModeSelector
-                    selectedMode={transportMode}
-                    onSelect={handleModeSelect}
+                  <ObjectCategorySelector
+                    selectedCategory={objectCategory}
+                    onSelect={handleCategorySelect}
                     t={t}
                     lang={lang}
                   />
                   <button
                     type="button"
-                    disabled={!transportMode}
-                    onClick={() => transportMode && setStep(2)}
+                    disabled={!objectCategory}
+                    onClick={() => objectCategory && setStep(2)}
                     className="w-full mt-5 py-4 px-6 bg-black hover:bg-black/80 disabled:bg-black/30 disabled:cursor-not-allowed text-white rounded-xl font-bold text-lg transition-colors flex items-center justify-center gap-2 min-h-[56px] shadow-lg"
                   >
                     {t('inscrire.next_step')}
@@ -337,51 +292,27 @@ function InscrireContent() {
               {/* Back button */}
               <button
                 type="button"
-                onClick={handleBackToMode}
+                onClick={handleBackToCategory}
                 className="flex items-center gap-1.5 text-black/70 hover:text-black transition-colors text-sm mb-2"
               >
                 <ArrowLeft className="w-4 h-4" />
                 {t('inscrire.back_step')}
               </button>
 
-              {/* Mode indicator — vraie image au lieu d'emoji */}
+              {/* Category indicator — emoji + label */}
               <DashedEncart>
                 <div className="flex items-center gap-3">
-                  {TransportImageSrc ? (
-                    <div className="w-10 h-10 flex-shrink-0">
-                      <Image
-                        src={TransportImageSrc}
-                        alt={t(`transport.mode_${transportMode}`)}
-                        width={40}
-                        height={40}
-                        className="w-full h-full object-contain mix-blend-multiply"
-                      />
-                    </div>
-                  ) : (
-                    <span className="text-2xl">{TransportIcon}</span>
-                  )}
+                  <span className="text-2xl">{CategoryIcon}</span>
                   <div>
                     <p className="text-sm text-black/70 font-medium">{t('common.baggage_type')}</p>
-                    <p className="text-lg font-bold text-black">{t(`transport.mode_${transportMode}`)}</p>
+                    <p className="text-lg font-bold text-black">{CategoryLabel}</p>
                   </div>
                 </div>
               </DashedEncart>
 
               <h2 className="text-xs uppercase tracking-widest text-black font-bold flex items-center gap-2">
-                {TransportImageSrc ? (
-                  <div className="w-4 h-4 flex-shrink-0">
-                    <Image
-                      src={TransportImageSrc}
-                      alt=""
-                      width={16}
-                      height={16}
-                      className="w-full h-full object-contain mix-blend-multiply"
-                    />
-                  </div>
-                ) : (
-                  <span>{TransportIcon}</span>
-                )}
-                {t('transport.traveler_info')}
+                <span>{CategoryIcon}</span>
+                {t('objects.owner_info')}
               </h2>
 
               {/* 🔒 Référence absente — warning + bouton désactivé */}
@@ -391,7 +322,7 @@ function InscrireContent() {
                   <div className="text-sm text-black">
                     <p className="font-bold mb-1">⚠️ Aucun code QR détecté</p>
                     <p className="text-black/70">
-                      Scannez le QR code collé sur votre bagage pour activer votre protection. Si vous
+                      Scannez le QR code collé sur votre objet pour activer votre protection. Si vous
                       n&apos;avez pas encore de QR,{' '}
                       <Link href="/#pricing" className="underline font-bold text-black">
                         commandez un autocollant
@@ -434,27 +365,7 @@ function InscrireContent() {
                 </div>
               </DashedEncart>
 
-              {/* TRANSPORT-FEATURE: Dynamic conditional fields */}
-              {currentFields.length > 0 && (
-                <DashedEncart>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {currentFields.map((field) => (
-                      <div key={field.key}>
-                        <p className="text-sm text-black/80 font-medium mb-1.5">{t(field.labelKey)}</p>
-                        <input
-                          type="text"
-                          placeholder={t(field.placeholderKey)}
-                          value={(formData as Record<string, string>)[field.key] || ''}
-                          onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
-                          className="w-full bg-white border-2 border-black text-black placeholder:text-black/40 focus:outline-none focus:ring-2 focus:ring-black focus:border-black rounded-lg px-3 py-2.5 text-base min-h-[48px]"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </DashedEncart>
-              )}
-
-              {/* Destination — Dashed Encart + dropdown pays par régions */}
+              {/* Destination / Lieu habituel — Dashed Encart */}
               <DashedEncart>
                 <div className="flex items-center gap-3">
                   <span className="text-xl">📍</span>
@@ -462,34 +373,14 @@ function InscrireContent() {
                     <p className="text-sm text-black/80 font-medium mb-1.5">
                       {t('inscrire.destination_label')}
                     </p>
-                    <CountryRegionSelect
+                    <input
+                      type="text"
+                      placeholder={t('objects.destination_placeholder')}
                       value={formData.destination}
-                      onChange={(v) => setFormData({ ...formData, destination: v })}
-                      placeholder="Sélectionnez votre destination"
+                      onChange={(e) => setFormData({ ...formData, destination: e.target.value })}
+                      className="w-full bg-white border-2 border-black text-black placeholder:text-black/40 focus:outline-none focus:ring-2 focus:ring-black focus:border-black rounded-lg px-3 py-2.5 text-base min-h-[48px]"
                     />
                   </div>
-                </div>
-              </DashedEncart>
-
-              {/* Departure Date & Time — Dashed Encart */}
-              <DashedEncart>
-                <div className="flex items-center gap-3 mb-3">
-                  <span className="text-xl">📅</span>
-                  <p className="text-sm text-black/80 font-medium">{t('transport.common_departure_date')}</p>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <input
-                    type="date"
-                    value={formData.departureDate}
-                    onChange={(e) => setFormData({ ...formData, departureDate: e.target.value })}
-                    className="w-full bg-white border-2 border-black text-black focus:outline-none focus:ring-2 focus:ring-black focus:border-black rounded-lg px-3 py-2.5 text-base min-h-[48px]"
-                  />
-                  <input
-                    type="time"
-                    value={formData.departureTime}
-                    onChange={(e) => setFormData({ ...formData, departureTime: e.target.value })}
-                    className="w-full bg-white border-2 border-black text-black focus:outline-none focus:ring-2 focus:ring-black focus:border-black rounded-lg px-3 py-2.5 text-base min-h-[48px]"
-                  />
                 </div>
               </DashedEncart>
 
@@ -515,12 +406,12 @@ function InscrireContent() {
           )}
         </div>
 
-        {/* ═══ BOUTON SUBMIT (noir) ═══ */}
+        {/* ═══ BOUTON SUBMIT (jaune) ═══ */}
         {step === 2 && (
           <div className="mb-6">
             <button
               onClick={doSubmit}
-              disabled={loading || !transportMode || missingReference}
+              disabled={loading || !objectCategory || missingReference}
               className="w-full py-4 px-6 bg-[#FFDE21] hover:bg-[#FFDE21]/80 active:bg-[#FFDE21]/90 disabled:bg-[#FFDE21]/30 disabled:cursor-not-allowed text-black font-bold text-lg rounded-xl shadow-lg transition-all duration-200 transform hover:-translate-y-1 min-h-[56px] focus:ring-2 focus:ring-[#FFDE21] focus:ring-offset-2 focus:ring-offset-[#FFDE21] flex items-center justify-center gap-2"
             >
               {loading ? (

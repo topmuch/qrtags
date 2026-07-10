@@ -1,6 +1,6 @@
 {
-  "name": "QRBag - Protection intelligente des bagages",
-  "short_name": "QRBag",
+  "name": "QRTags - Protection intelligente des bagages",
+  "short_name": "QRTags",
   "description": "Protégez vos bagages avec un autocollant QR intelligent. Sans application, sans batterie, sans GPS. Un seul scan pour la tranquillité d'esprit.",
   "start_url": "/",
   "display": "standalone",
@@ -97,7 +97,7 @@
       "sizes": "1080x1920",
       "type": "image/png",
       "form_factor": "narrow",
-      "label": "Page d'accueil QRBag"
+      "label": "Page d'accueil QRTags"
     }
   ],
   "related_applications": [],

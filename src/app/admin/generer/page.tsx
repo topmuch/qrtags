@@ -190,7 +190,7 @@ export default function GenererQRPage() {
 
       // Get filename
       const contentDisposition = exportResponse.headers.get('Content-Disposition');
-      let filename = 'QRBag-export.zip';
+      let filename = 'QRTags-export.zip';
       if (contentDisposition) {
         const match = contentDisposition.match(/filename\*?=(?:UTF-8'')?([^;]+)/i) ||
                       contentDisposition.match(/filename="?([^"]+)"?/);

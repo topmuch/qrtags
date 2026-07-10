@@ -10,7 +10,7 @@
  * - generateVerificationKey(): 8-char verification key (mixed case + digits)
  * - generateChecklistPdf(): builds a timestamped PDF with stamp + QR code + items
  *
- * Brand colors (consistent with the rest of qrbags):
+ * Brand colors (consistent with the rest of qrtags):
  *   BRAND = '#c5a643' (mustard yellow)
  *   INK   = '#1a1a1a' (ink black)
  *   CREAM = '#FDFBF7' (cream)
@@ -98,7 +98,7 @@ function formatTimestamp(date: Date): string {
 
 /**
  * Build a PDF checklist with:
- * - QRBag header
+ * - QRTags header
  * - "Attestation d'inventaire de voyage" title
  * - Timestamped certification stamp
  * - Scannable QR code (links to public URL)
@@ -124,8 +124,8 @@ export async function generateChecklistPdf(data: ChecklistPdfData): Promise<Buff
   // ─── Build PDF with pdf-lib ───
   const { PDFDocument, rgb, StandardFonts } = await import('pdf-lib');
   const pdfDoc = await PDFDocument.create();
-  pdfDoc.setTitle(`Attestation d'inventaire QRBag - ${data.firstName} ${data.lastName}`);
-  pdfDoc.setAuthor('QRBag');
+  pdfDoc.setTitle(`Attestation d'inventaire QRTags - ${data.firstName} ${data.lastName}`);
+  pdfDoc.setAuthor('QRTags');
   pdfDoc.setSubject(`Checklist ${data.code}`);
   pdfDoc.setCreationDate(createdAt);
 
@@ -152,7 +152,7 @@ export async function generateChecklistPdf(data: ChecklistPdfData): Promise<Buff
     color: yellow,
   });
 
-  page.drawText('QRBag', {
+  page.drawText('QRTags', {
     x: margin, y: pageHeight - 38, size: 22, font: fontBold, color: ink,
   });
   page.drawText('— Attestation d\'inventaire de voyage', {
@@ -179,7 +179,7 @@ export async function generateChecklistPdf(data: ChecklistPdfData): Promise<Buff
   });
   y -= 22;
 
-  const subtitleText = 'Document généré et horodaté électroniquement par le protocole QRBag.';
+  const subtitleText = 'Document généré et horodaté électroniquement par le protocole QRTags.';
   const subtitleWidth = fontRegular.widthOfTextAtSize(subtitleText, 9);
   page.drawText(subtitleText, {
     x: (pageWidth - subtitleWidth) / 2, y, size: 9, font: fontRegular, color: gray,
@@ -195,7 +195,7 @@ export async function generateChecklistPdf(data: ChecklistPdfData): Promise<Buff
     x: stampX, y: stampY - stampH, width: stampW, height: stampH,
     borderColor: red, borderWidth: 2, color: rgb(0.996, 0.969, 0.969),
   });
-  page.drawText('CERTIFIÉ QRBag', {
+  page.drawText('CERTIFIÉ QRTags', {
     x: stampX + 8, y: stampY - 16, size: 8, font: fontBold, color: red,
   });
   const stampDate = `Horodaté le ${formatTimestamp(createdAt)}`;
@@ -398,10 +398,10 @@ export async function generateChecklistPdf(data: ChecklistPdfData): Promise<Buff
     x: 0, y: footerY, width: pageWidth, height: footerH,
     color: ink,
   });
-  page.drawText('QRBag — Protection intelligente des bagages', {
+  page.drawText('QRTags — Protection intelligente des bagages', {
     x: margin, y: footerY + 28, size: 9, font: fontBold, color: yellow,
   });
-  const footerLine = `Document protégé par le protocole de certification QRBag • Généré le ${formatTimestamp(createdAt)} • qrbags.com`;
+  const footerLine = `Document protégé par le protocole de certification QRTags • Généré le ${formatTimestamp(createdAt)} • qrtags.com`;
   page.drawText(footerLine, {
     x: margin, y: footerY + 14, size: 7, font: fontRegular, color: rgb(0.8, 0.8, 0.8),
   });
@@ -419,6 +419,6 @@ export async function generateChecklistPdf(data: ChecklistPdfData): Promise<Buff
  * Uses NEXT_PUBLIC_BASE_URL if set, otherwise derives from request headers.
  */
 export function buildPublicChecklistUrl(code: string, baseUrl?: string): string {
-  const base = baseUrl || process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://qrbags.com';
+  const base = baseUrl || process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://qrtags.com';
   return `${base.replace(/\/$/, '')}/checklist/${code}`;
 }

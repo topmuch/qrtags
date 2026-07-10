@@ -34,7 +34,7 @@ export async function GET(
       return NextResponse.json({
         status: 'pending_activation',
         type: baggage.type, // Important: return type for redirect
-        message: 'Ce bagage doit être activé',
+        message: 'Cet objet doit être activé',
         theme: baggage.type === 'hajj' ? 'hajj' : 'voyageur'
       });
     }
@@ -42,7 +42,7 @@ export async function GET(
     if (baggage.status === 'blocked') {
       return NextResponse.json({
         status: 'blocked',
-        message: 'Ce bagage a été bloqué',
+        message: 'Cet objet a été bloqué',
         theme: 'error'
       });
     }
@@ -51,7 +51,7 @@ export async function GET(
     if (baggage.expiresAt && new Date() > baggage.expiresAt) {
       return NextResponse.json({
         status: 'expired',
-        message: 'Ce bagage a expiré',
+        message: 'Cet objet a expiré',
         theme: 'error',
         expiredAt: baggage.expiresAt.toISOString(),
         agency: baggage.agency?.name || null,
@@ -129,7 +129,7 @@ export async function GET(
     }
     );
 
-    // AI-FEATURE: Set qrbag_locale cookie (7 days) so server can detect language on next request
+    // AI-FEATURE: Set qrtag_locale cookie (7 days) so server can detect language on next request
     try {
       response.cookies.set(LANGUAGE_COOKIE_NAME, detectedLocale, {
         path: '/',
@@ -283,7 +283,7 @@ export async function POST(
             minute: '2-digit',
           });
 
-          const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://qrbags.com';
+          const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://qrtags.com';
 
           const aiResult = await generateWhatsAppMessage({
             reference: baggage.reference,
@@ -391,7 +391,7 @@ export async function POST(
     // ─── refonte-7: Nouveau template de message WhatsApp envoyé au propriétaire ───
     // Le frontend construit sa propre URL wa.me via la clé i18n `whatsapp.found_message`.
     // Ce `whatsappUrl` backend est retourné pour les consommateurs API / audit.
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://qrbags.com';
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://qrtags.com';
     const trackingUrl = `${appUrl}/suivi/${reference}`;
 
     // [Prénom] — prénom du propriétaire
@@ -414,7 +414,7 @@ export async function POST(
 
     const whatsappText =
       `🎉 Bonne nouvelle ${ownerFirstName} !\n\n` +
-      `Quelqu'un a trouvé ton bagage ${typeLabel} à ${lieu} !\n` +
+      `Quelqu'un a trouvé ton objet ${typeLabel} à ${lieu} !\n` +
       `📍 Il est actuellement à ${address}\n` +
       `👤 La personne qui l'a trouvé s'appelle ${finderNameDisplay}\n` +
       `📞 Appelle-le vite au ${finderPhoneDisplay}\n` +
@@ -422,7 +422,7 @@ export async function POST(
       `Tu peux aussi voir tous les détails ici :\n` +
       `👉 ${trackingUrl}\n` +
       `Ne panique pas, tout va bien se passer ! 💪\n` +
-      `L'équipe QRBag`;
+      `L'équipe QRTags`;
 
     // Clean phone number
     const phone = baggage.whatsappOwner.replace(/[^0-9]/g, '');

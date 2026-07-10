@@ -1138,3 +1138,110 @@ Work Log:
 Stage Summary:
 - All 5 pages now use unified brand colors #0147d5 (blue) / #FFDE21 (yellow)
 - Push successful: main branch updated 8ebdc4d → 55253ce
+
+---
+Task ID: 4-12
+Agent: full-stack-developer
+Task: QRBag → QRTags rebranding — Prisma schema, activate API, scan API, QR utility
+
+Work Log:
+- **Prisma schema** (`prisma/schema.prisma`):
+  - Added `objectCategory String?` field to Baggage model (after `baggageType`)
+  - Changed Baggage model comment from "luggage tracking" to "object tracking"
+  - Changed EmailSettings `fromEmail` default: `noreply@qrbag.com` → `noreply@qrtags.com`
+  - Changed EmailSettings `fromName` default: `QRBag` → `QRTags`
+  - Pushed schema with `bunx --bun prisma db push` — DB synced, Prisma Client regenerated
+- **Activate API** (`src/app/api/activate/route.ts`):
+  - Added `objectCategory: z.string().optional()` to zod validation schema
+  - Added `objectCategory` to `db.baggage.update` data (main activation)
+  - Added `objectCategory` to hajj group activation loop update
+  - Changed error message: "Ce bagage a déjà été activé" → "Cet objet a déjà été activé"
+- **Scan API** (`src/app/api/scan/[reference]/route.ts`):
+  - Changed user-facing messages: "Ce bagage doit être activé" → "Cet objet doit être activé"
+  - Changed: "Ce bagage a été bloqué" → "Cet objet a été bloqué"
+  - Changed: "Ce bagage a expiré" → "Cet objet a expiré"
+  - Changed WhatsApp message: "ton bagage" → "ton objet"
+  - Changed WhatsApp signature: "L'équipe QRBag" → "L'équipe QRTags"
+- **QR utility** (`src/lib/qr.ts`):
+  - Updated comments: "baggage" → "object" (3 comments)
+- Lint passed clean (0 errors)
+
+Notes:
+- Prisma model name `Baggage` and relation field `baggages` kept unchanged (internal names)
+- All Prisma query field names (db.baggage.findUnique, etc.) left untouched
+- Only user-facing strings were changed
+
+---
+Task ID: 11
+Agent: full-stack-developer
+Task: Update all 3 translation files (fr.json, en.json, ar.json) — QRBag → QRTags rebrand
+
+Work Log:
+- Read existing fr.json, en.json, ar.json translation files
+- Updated fr.json:
+  - common: bagage → objet (activate_in, baggage_type)
+  - errors: bagage → objet (baggage_blocked, baggage_blocked_desc, protection_expired_desc)
+  - finder: all bagage → objet (success_badge, trust_note, bagType, lost_badge, lost_description, found_description, finder.success_badge, finder.bagage_trouve_desc, bagage_trouve_desc, context_label, please_enter_location)
+  - whatsapp: bagage → objet (found_message, title_departure_urgent, title_arrival, title_in_transit, title_static, cta_static, see_bagage, whatsapp_signature) + QRBag → QRTags
+  - chatbot: QRBag → QRTags, qrbags.com → qrtags.com, bagage → objet
+  - inscrire: bagage → objet (title, subtitle, welcome_desc, voyageur_badge, whatsapp_hint, submit, step_1_subtitle, step_2_subtitle, reference_placeholder, destination_label, destination_placeholder)
+  - tracking: all bagage → objet (page_title, baggage_info, no_finder, badge_lost, badge_found, badge_active, lost_description, active_description, found_description, trust_note, baggage_not_found, baggage_not_found_desc, baggage_blocked_desc, baggage_expired_desc, baggage_pending_desc, bagage_localise, bagage_en_attente, bagage_protege, support_cta, urgent_title, urgent_found_btn, declare_lost_btn, declare_lost_confirm, urgent_support, urgent_support_message, baggage_info_toggle, audio_alert_banner_title)
+  - home: bagage → objet (tracking_label, tracking_placeholder)
+  - checklist: QRBag → QRTags (subtitle, view_title)
+  - Renamed "transport" section → "objects" with new object-category keys
+  - Removed entire "transport" section (flight/train/boat/bus modes)
+- Updated en.json: equivalent English translations for all changes above
+- Updated ar.json: equivalent Arabic translations (حقيبة/أمتعة → جهاز, QRBag → QRTags, كيو آر باغ → كيو آر تاغز)
+
+Self-Critique (0 bugs):
+- All JSON validated as valid (no syntax errors)
+- All keys preserved exactly; only values changed
+- "transport" section fully replaced with "objects" section in all 3 files
+
+Stage Summary:
+- 3 files updated: fr.json, en.json, ar.json
+- Complete QRBag → QRTags rebrand across all locales
+- Complete bagage/baggage/حقيبة → objet/object/جهاz rebrand
+- transport section replaced with objects section
+
+---
+Task ID: 5-10-13
+Agent: full-stack-developer
+Task: Rebrand QRBag → QRTags (baggage protection → object protection) across layout, i18n, package.json, and home page
+
+Work Log:
+- Updated `src/app/layout.tsx`: Changed all QRBag → QRTags in metadata (title, template, description, keywords, authors, publisher, metadataBase, openGraph, twitter, applicationName, appleWebApp, PWA meta tags, canonical URL). URLs changed from qrbag.com → qrtags.com. Keywords: "bagage" → "objet", added "qrtags", removed "qrbag".
+- Updated `src/lib/i18n.ts`: Changed `LANGUAGE_COOKIE_NAME` from 'qrbag_locale' to 'qrtag_locale', updated cookie name in `detectLocaleFromHeaders` regex and JSDoc.
+- Updated `package.json`: Changed name from "qrbag" to "qrtag", description updated.
+- Updated `src/app/page.tsx` (large file, ~1184 lines):
+  - Import: `Luggage` → `Tag`
+  - Navigation logo alt: QRBag → QRTags
+  - Hero slides: 3 subtitle text changes (bagage→objet, bagages→objets), 2 stat label changes
+  - Hero floating badge: "Bagage retrouvé !" → "Objet retrouvé !"
+  - Image alt: "QRBag - Protection bagages" → "QRTags - Protection objets"
+  - Checklist section: "certifiée QRBag" → "certifiée QRTags", "Inventoriez vos bagages" → "Inventoriez vos objets", emoji 🎒→🏷️
+  - PDF mockup: "🎒 QRBag" → "🏷️ QRTags", certifié badge text
+  - Renamed functions: `QRBagEnActionSection` → `QRTagsEnActionSection`, `WhyQRBagSection` → `WhyQRTagsSection`
+  - Section comments: "QRBag EN ACTION" → "QRTags EN ACTION", "POURQUOI QRBAG" → "POURQUOI QRTAGS"
+  - Feature text: "du bagage" → "de l'objet", "un bagage trouvé...votre valise" → "un objet trouvé...votre objet"
+  - Transport section: "QRBag vous suit partout" → "QRTags vous suit partout", CTA "Protéger mes bagages" → "Protéger mes objets", train feature "du bagage" → "de l'objet"
+  - Why section: All 3 card descriptions updated (QRBag→QRTags, bagages→objets), section label "Pourquoi QRBag" → "Pourquoi QRTags"
+  - Solutions: descriptions updated (3 bagages→3 objets, 2 bagages soute→2 objets, QRBag→QRTags), icon `Luggage` → `Tag` (2 occurrences)
+  - Stats: "Bagages protégés" → "Objets protégés", icon `Luggage` → `Tag`
+  - How it works: step 3 "Vos bagages...valise" → "Vos objets...objet", step 4 "votre bagage" → "votre objet"
+  - Testimonials: 3 quotes changed (QRBag→QRTags, "perte de bagages" → "perte d'objets")
+  - Pricing: 3 plans features (bagages→objets), heading "bagages" → "objets", icon `Luggage` → `Tag`
+  - Final CTA: "leurs bagages" → "leurs objets"
+  - Footer: logo alt, description, social URLs (qrbag→qrtags), copyright
+  - Component references in JSX: updated to match renamed functions
+
+Self-Critique:
+1. First MultiEdit for layout.tsx partially succeeded (title/template/desc/keywords/authors/publisher/metadataBase changed) but openGraph/twitter/appName/meta tags needed separate pass due to duplicate "QRBag - Protection intelligente des bagages" title strings
+2. Apostrophe escaping issue: "de l'objet" in single-quoted JS strings needed backslash escaping (`\'`) — caught by ESLint parsing error
+3. "l'objet" in features array was auto-converted by an earlier tool call to `\u2019` (unicode right single quote) — manually fixed to `\'`
+
+Lint: PASS (0 errors, 0 warnings)
+Dev server: Compiled successfully, page loads with 200 status.
+
+Stage Summary:
+All 4 files updated. QRBag fully rebranded to QRTags across layout metadata, i18n cookie, package.json, and the entire home page (navigation, hero, features, solutions, stats, pricing, testimonials, footer). All `Luggage` icons replaced with `Tag`. All "bagage/bagages" French text replaced with "objet/objets". All qrbag URLs replaced with qrtags. Hajj/pilgrimage references preserved. Visual design unchanged.

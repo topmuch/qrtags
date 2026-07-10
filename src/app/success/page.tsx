@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { CheckCircle, Luggage, Calendar, Backpack } from 'lucide-react';
+import { CheckCircle, Calendar, Tag } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import SuccessOverlay from '@/components/ui/SuccessOverlay';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -17,23 +17,18 @@ interface ActivationData {
   firstName: string;
   lastName: string;
   whatsapp: string;
-  flightNumber?: string;
   destination?: string;
   type: string;
   activatedAt: string;
   expiresAt?: string;
-  // TRANSPORT-FEATURE: Transport mode + conditional fields (conservés pour sessionStorage, non affichés)
-  transportMode?: string;
-  trainNumber?: string;
-  shipName?: string;
-  busLineNumber?: string;
+  objectCategory?: string;
 }
 
 function SuccessContent() {
   const [activationData, setActivationData] = useState<ActivationData | null>(null);
   const { t } = useTranslation();
 
-  // Lecture unique de sessionStorage au mount — pattern légitime (storage externe non disponible au SSR)
+  // Lecture unique de sessionStorage au mount
   useEffect(() => {
     const storedData = sessionStorage.getItem('activationData');
     if (storedData) {
@@ -46,7 +41,6 @@ function SuccessContent() {
     }
   }, []);
 
-  // Valeur dérivée — évite un useEffect + setState redondant
   const activationConfirmed = activationData !== null;
 
   const reference = activationData?.reference || '';
@@ -82,8 +76,8 @@ function SuccessContent() {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'Mon bagage QRBag',
-          text: 'Suivez mon bagage en temps réel avec QRBag.',
+          title: 'Mon objet QRTags',
+          text: 'Suivez mon objet en temps réel avec QRTags.',
           url: trackingUrl,
         });
       } catch (err) {
@@ -119,14 +113,14 @@ function SuccessContent() {
               ✅ Activation réussie !
             </h1>
             <p className="mb-6" style={{ color: INK, opacity: 0.7 }}>
-              Votre bagage est maintenant protégé
+              Votre objet est maintenant protégé
             </p>
             <Link
               href="/inscrire"
               className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold transition-colors min-h-[48px]"
               style={{ backgroundColor: INK, color: BRAND }}
             >
-              ← Revenir à l&apos;inscription
+              ← Revenir à l&apos;activation
             </Link>
           </div>
         </div>
@@ -136,7 +130,6 @@ function SuccessContent() {
 
   return (
     <main className="min-h-screen bg-[#0147d5] flex items-center justify-center p-4">
-      {/* SuccessOverlay — feedback premium d'activation (indépendant du thème) */}
       <SuccessOverlay show={activationConfirmed} messageKey="activation.success" t={t} />
 
       <div className="max-w-md w-full py-6">
@@ -157,7 +150,7 @@ function SuccessContent() {
           <h1 className="text-2xl font-bold mb-1" style={{ color: '#FFFFFF' }}>
             ✅ Activation réussie !
           </h1>
-          <p style={{ color: '#FFFFFF', opacity: 0.7 }}>Votre bagage est maintenant protégé</p>
+          <p style={{ color: '#FFFFFF', opacity: 0.7 }}>Votre objet est maintenant protégé</p>
         </div>
 
         {/* ═══ 2. Carte QR Code (fond jaune moutarde + bordure dashed noire) ═══ */}
@@ -190,9 +183,9 @@ function SuccessContent() {
           style={{ borderColor: INK }}
         >
           <div className="flex items-center gap-3">
-            <Luggage className="w-5 h-5 flex-shrink-0" style={{ color: INK }} />
+            <Tag className="w-5 h-5 flex-shrink-0" style={{ color: INK }} />
             <p className="font-medium text-sm" style={{ color: INK }}>
-              🧳 1 bagage activé •{' '}
+              🏷️ 1 objet activé •{' '}
               <span style={{ color: INK, opacity: 0.7 }}>Protection active</span>
             </p>
           </div>
@@ -207,14 +200,13 @@ function SuccessContent() {
           </div>
         </div>
 
-        {/* ═══ 4. Boutons d'Action (flex-col mobile, flex-row md) ═══ */}
+        {/* ═══ 4. Boutons d'Action ═══ */}
         <div className="flex flex-col md:flex-row gap-3 mb-4">
-          {/* Bouton A : Suivre mon bagage (target _blank) */}
           <a
             href={`/suivi/${reference}`}
             target="_blank"
             rel="noopener noreferrer"
-            aria-label="Suivre mon bagage dans un nouvel onglet"
+            aria-label="Suivre mon objet dans un nouvel onglet"
             className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl font-bold transition-colors min-h-[52px] border-2"
             style={{ backgroundColor: '#0147d5', color: '#FFFFFF', borderColor: '#0147d5' }}
             onMouseEnter={(e) => {
@@ -226,10 +218,9 @@ function SuccessContent() {
               e.currentTarget.style.color = '#FFFFFF';
             }}
           >
-            📍 Suivre mon bagage
+            📍 Suivre mon objet
           </a>
 
-          {/* Bouton B : Partager (Web Share API + fallback clipboard) */}
           <button
             onClick={handleShare}
             aria-label="Partager le lien de suivi"
@@ -246,26 +237,6 @@ function SuccessContent() {
           >
             📤 Partager
           </button>
-        </div>
-
-        {/* ═══ 5. Encart Checklist (fond jaune moutarde + bordure dashed noire) ═══ */}
-        <div
-          className="border-2 border-dashed rounded-2xl p-5 text-center"
-          style={{ backgroundColor: BRAND, borderColor: INK }}
-        >
-          <div className="flex items-center justify-center gap-2 mb-3">
-            <Backpack className="w-5 h-5" style={{ color: INK }} />
-            <h2 className="font-bold text-base" style={{ color: INK }}>
-              🎒 Préparez votre voyage sereinement
-            </h2>
-          </div>
-          <Link
-            href="/checklist"
-            className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-bold transition-colors min-h-[48px]"
-            style={{ backgroundColor: '#0147d5', color: '#FFFFFF' }}
-          >
-            Créer ma checklist gratuite →
-          </Link>
         </div>
       </div>
     </main>

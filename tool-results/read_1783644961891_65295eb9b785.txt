@@ -1,0 +1,971 @@
+     1→     1→'use client';
+     2→     2→
+     3→     3→import { useEffect, useState, useCallback, useRef } from 'react';
+     4→     4→import { useParams, useRouter } from 'next/navigation';
+     5→     5→import Image from 'next/image';
+     6→     6→import { Badge } from "@/components/ui/badge";
+     7→     7→import {
+     8→     8→  Luggage,
+     9→     9→  AlertCircle,
+    10→    10→  Clock,
+    11→    11→  Shield,
+    12→    12→  CheckCircle,
+    13→    13→  ArrowRight,
+    14→    14→  Sparkles,
+    15→    15→  Globe,
+    16→    16→  Phone,
+    17→    17→  MessageCircle,
+    18→    18→} from "lucide-react";
+    19→    19→import { useTranslation } from '@/hooks/useTranslation';
+    20→    20→import { Language, LANGUAGE_NAMES } from '@/lib/i18n';
+    21→    21→import dynamic from 'next/dynamic';
+    22→    22→import SuccessOverlay from '@/components/ui/SuccessOverlay';
+    23→    23→import PhoneInput from '@/components/ui/PhoneInput';
+    24→    24→import { toast } from '@/hooks/use-toast';
+    25→    25→
+    26→    26→// TRANSPORT-FEATURE: Multi-transport support (real images, emojis as fallback)
+    27→    27→import {
+    28→    28→  safeTransportMode,
+    29→    29→  getTransportImage,
+    30→    30→  getTransportBlockHeader,
+    31→    31→  TRANSPORT_ICONS,
+    32→    32→} from '@/lib/transport';
+    33→    33→import type { TransportMode } from '@/lib/transport';
+    34→    34→import TransportModeSelector from '@/components/inscrire/TransportModeSelector';
+    35→    35→
+    36→    36→// AI-FEATURE: Lazy-load ChatbotWidget (Feature #1) — doesn't block page render
+    37→    37→const ChatbotWidget = dynamic(() => import('@/components/finder/ChatbotWidget'), {
+    38→    38→  ssr: false,
+    39→    39→  loading: () => null,
+    40→    40→});
+    41→    41→
+    42→    42→// ─── Brand constants (unified with /inscrire & /success) ───
+    43→    43→const BRAND = '#FFDE21'; // jaune vif
+    44→    44→const INK = '#000000';   // noir pur
+    45→    45→const CREAM = '#0147d5'; // blue background
+    46→    46→
+    47→    47→const FALLBACK_PHONE = '33745349339';
+    48→    48→
+    49→    49→interface BaggageData {
+    50→    50→  status: string;
+    51→    51→  message?: string;
+    52→    52→  theme?: string;
+    53→    53→  type?: string;
+    54→    54→  expiredAt?: string;
+    55→    55→  agency?: string;
+    56→    56→  baggage?: {
+    57→    57→    reference: string;
+    58→    58→    type: string;
+    59→    59→    travelerName: string;
+    60→    60→    baggageIndex: number;
+    61→    61→    baggageType: string;
+    62→    62→    status: string;
+    63→    63→    airlineName?: string;
+    64→    64→    flightNumber?: string;
+    65→    65→    destination?: string;
+    66→    66→    agency?: string;
+    67→    67→    whatsappOwner?: string;
+    68→    68→    declaredLostAt?: string | null;
+    69→    69→    foundAt?: string | null;
+    70→    70→    createdAt?: string | null;
+    71→    71→    departureDate?: string | null;
+    72→    72→    departureTime?: string | null;
+    73→    73→    // TRANSPORT-FEATURE: Transport mode + conditional fields
+    74→    74→    transportMode?: string;
+    75→    75→    trainCompany?: string | null;
+    76→    76→    trainNumber?: string | null;
+    77→    77→    shipName?: string | null;
+    78→    78→    shipCabin?: string | null;
+    79→    79→    busCompany?: string | null;
+    80→    80→    busLineNumber?: string | null;
+    81→    81→  };
+    82→    82→}
+    83→    83→
+    84→    84→// ─── Language Selector Component (light theme, brand-aware) ───
+    85→    85→function LanguageSelector({ lang, setLang }: { lang: Language; setLang: (l: Language) => void }) {
+    86→    86→  const [isOpen, setIsOpen] = useState(false);
+    87→    87→
+    88→    88→  return (
+    89→    89→    <div className="relative">
+    90→    90→      <button
+    91→    91→        onClick={() => setIsOpen(!isOpen)}
+    92→    92→        aria-expanded={isOpen}
+    93→    93→        aria-haspopup="listbox"
+    94→    94→        className="flex items-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2.5 bg-white/10 border-2 border-white/30 rounded-full text-white hover:bg-white/20 transition-colors text-xs sm:text-sm md:text-base font-medium shadow-sm min-h-[36px] sm:min-h-[40px] md:min-h-[44px]"
+    95→    95→      >
+    96→    96→        <Globe className="w-4 h-4 sm:w-5 sm:h-5" />
+    97→    97→        <span>{LANGUAGE_NAMES[lang]}</span>
+    98→    98→      </button>
+    99→    99→
+   100→   100→      {isOpen && (
+   101→   101→        <div role="listbox" aria-label="Language" className="absolute top-full right-0 mt-1 sm:mt-2 bg-[#0147d5] border-2 border-white/30 rounded-xl shadow-lg overflow-hidden z-50 min-w-[140px] sm:min-w-[160px]">
+   102→   102→          {(['fr', 'en', 'ar'] as Language[]).map((l) => (
+   103→   103→            <button
+   104→   104→              key={l}
+   105→   105→              role="option"
+   106→   106→              aria-selected={lang === l}
+   107→   107→              onClick={() => {
+   108→   108→                setLang(l);
+   109→   109→                setIsOpen(false);
+   110→   110→              }}
+   111→   111→              className={`w-full px-4 py-2.5 sm:px-5 sm:py-3 text-left text-xs sm:text-sm md:text-base font-medium transition-colors ${
+   112→   112→                lang === l
+   113→   113→                  ? 'bg-[#FFDE21] text-black'
+   114→   114→                  : 'text-white hover:bg-white/10'
+   115→   115→              }`}
+   116→   116→            >
+   117→   117→              {LANGUAGE_NAMES[l]}
+   118→   118→            </button>
+   119→   119→          ))}
+   120→   120→        </div>
+   121→   121→      )}
+   122→   122→    </div>
+   123→   123→  );
+   124→   124→}
+   125→   125→
+   126→   126→// ─── Activation Redirect Component (recolored with brand) ───
+   127→   127→// ACTIVATION-FLOW: User selects transport mode BEFORE being redirected to /inscrire?qr=REF&mode=XXX.
+   128→   128→function ActivationRedirect({ type, reference, t, lang, setLang }: {
+   129→   129→  type: string;
+   130→   130→  reference: string;
+   131→   131→  t: (key: string, params?: Record<string, string>) => string;
+   132→   132→  lang: Language;
+   133→   133→  setLang: (l: Language) => void;
+   134→   134→}) {
+   135→   135→  const router = useRouter();
+   136→   136→  const [selectedMode, setSelectedMode] = useState<TransportMode | ''>('');
+   137→   137→
+   138→   138→  const isHajj = type === 'hajj';
+   139→   139→
+   140→   140→  const handleContinue = () => {
+   141→   141→    const url = isHajj
+   142→   142→      ? `/hajj/activate?qr=${reference}`
+   143→   143→      : `/inscrire?qr=${reference}${selectedMode ? `&mode=${selectedMode}` : ''}`;
+   144→   144→    router.push(url);
+   145→   145→  };
+   146→   146→
+   147→   147→  return (
+   148→   148→    <main className="min-h-screen bg-[#0147d5] flex items-center justify-center p-5 md:p-8">
+   149→   149→      <div className="relative max-w-md w-full bg-[#FFDE21] border-2 border-dashed border-[#000000] rounded-2xl p-6 md:p-8 text-center shadow-xl">
+   150→   150→        <div className="absolute top-4 right-4">
+   151→   151→          <LanguageSelector lang={lang} setLang={setLang} />
+   152→   152→        </div>
+   153→   153→
+   154→   154→        <div className="relative inline-block mb-5 mt-6">
+   155→   155→          <div className="w-16 h-16 bg-white border-2 border-[#000000] rounded-full flex items-center justify-center">
+   156→   156→            {selectedMode ? (
+   157→   157→              <Image
+   158→   158→                src={getTransportImage(selectedMode)}
+   159→   159→                alt={selectedMode}
+   160→   160→                width={36}
+   161→   161→                height={36}
+   162→   162→                className="mix-blend-multiply"
+   163→   163→              />
+   164→   164→            ) : (
+   165→   165→              <Luggage className="w-8 h-8 text-white" />
+   166→   166→            )}
+   167→   167→          </div>
+   168→   168→          <div className="absolute -top-1 -right-1 w-7 h-7 bg-[#000000] rounded-full flex items-center justify-center">
+   169→   169→            <Sparkles className="w-3.5 h-3.5 text-[#FFDE21]" />
+   170→   170→          </div>
+   171→   171→        </div>
+   172→   172→
+   173→   173→        <h1 className="text-2xl md:text-3xl font-bold text-black mb-1">
+   174→   174→          {t('common.welcome')}
+   175→   175→        </h1>
+   176→   176→        <p className="text-black/70 text-sm md:text-base mb-5">
+   177→   177→          {t('inscrire.subtitle')}
+   178→   178→        </p>
+   179→   179→
+   180→   180→        {isHajj && (
+   181→   181→          <>
+   182→   182→            <div className="border-2 border-dashed border-[#000000] rounded-xl p-4 mb-5 bg-white/40">
+   183→   183→              <p className="text-[#000000]/80 text-sm mb-2">{t('common.baggage_type')}</p>
+   184→   184→              <Badge className="bg-[#000000] text-white text-base md:text-lg px-5 py-1.5">
+   185→   185→                {t('common.hajj_label')}
+   186→   186→              </Badge>
+   187→   187→            </div>
+   188→   188→            <button
+   189→   189→              className="w-full py-4 px-6 bg-[#000000] hover:bg-black text-white rounded-xl font-bold text-lg transition-colors flex items-center justify-center gap-2 min-h-[56px]"
+   190→   190→              onClick={handleContinue}
+   191→   191→            >
+   192→   192→              {t('common.start_activation')}
+   193→   193→              <ArrowRight className="w-5 h-5" />
+   194→   194→            </button>
+   195→   195→          </>
+   196→   196→        )}
+   197→   197→
+   198→   198→        {!isHajj && (
+   199→   199→          <>
+   200→   200→            <div className="border-2 border-dashed border-[#000000] rounded-xl p-4 mb-5 bg-white/40">
+   201→   201→              <p className="text-[#000000]/80 text-sm mb-2">{t('common.baggage_type')}</p>
+   202→   202→              <Badge className="bg-[#000000] text-white text-base md:text-lg px-5 py-1.5">
+   203→   203→                {t('common.voyageur_label')}
+   204→   204→              </Badge>
+   205→   205→            </div>
+   206→   206→
+   207→   207→            <div className="text-left mb-5">
+   208→   208→              <p className="text-[#000000] font-semibold text-sm mb-3 text-center">
+   209→   209→                {t('transport.select_mode')}
+   210→   210→              </p>
+   211→   211→              <TransportModeSelector
+   212→   212→                selectedMode={selectedMode}
+   213→   213→                onSelect={setSelectedMode}
+   214→   214→                t={t}
+   215→   215→                lang={lang}
+   216→   216→              />
+   217→   217→            </div>
+   218→   218→
+   219→   219→            <button
+   220→   220→              className="w-full py-4 px-6 bg-[#000000] hover:bg-black disabled:bg-[#000000]/30 disabled:cursor-not-allowed text-white rounded-xl font-bold text-lg transition-colors flex items-center justify-center gap-2 min-h-[56px]"
+   221→   221→              onClick={handleContinue}
+   222→   222→              disabled={!selectedMode}
+   223→   223→            >
+   224→   224→              {t('common.start_activation')}
+   225→   225→              <ArrowRight className="w-5 h-5" />
+   226→   226→            </button>
+   227→   227→          </>
+   228→   228→        )}
+   229→   229→      </div>
+   230→   230→    </main>
+   231→   231→  );
+   232→   232→}
+   233→   233→
+   234→   234→// ─── Loading Component (recolored) ───
+   235→   235→function LoadingScreen({ t }: { t: (key: string) => string }) {
+   236→   236→  return (
+   237→   237→    <main className="min-h-screen bg-[#0147d5] flex items-center justify-center">
+   238→   238→      <div className="text-center">
+   239→   239→        <div className="animate-spin w-12 h-12 border-4 border-white/20 border-t-[#FFDE21] rounded-full mx-auto mb-4"></div>
+   240→   240→        <p className="text-lg text-white">{t('common.loading')}</p>
+   241→   241→      </div>
+   242→   242→    </main>
+   243→   243→  );
+   244→   244→}
+   245→   245→
+   246→   246→// ─── Error Screen (recolored) ───
+   247→   247→function ErrorScreen({
+   248→   248→  type,
+   249→   249→  t,
+   250→   250→  lang,
+   251→   251→  setLang
+   252→   252→}: {
+   253→   253→  type: string;
+   254→   254→  t: (key: string) => string;
+   255→   255→  lang: Language;
+   256→   256→  setLang: (l: Language) => void;
+   257→   257→}) {
+   258→   258→  const router = useRouter();
+   259→   259→
+   260→   260→  const errorConfig = {
+   261→   261→    not_found: {
+   262→   262→      icon: <AlertCircle className="w-12 h-12 text-red-500" />,
+   263→   263→      title: t('errors.qr_not_valid'),
+   264→   264→      message: t('errors.qr_not_valid_desc')
+   265→   265→    },
+   266→   266→    blocked: {
+   267→   267→      icon: <Shield className="w-12 h-12 text-white/40" />,
+   268→   268→      title: t('errors.baggage_blocked'),
+   269→   269→      message: t('errors.baggage_blocked_desc')
+   270→   270→    },
+   271→   271→    expired: {
+   272→   272→      icon: <Clock className="w-12 h-12 text-white/40" />,
+   273→   273→      title: t('errors.protection_expired'),
+   274→   274→      message: t('errors.protection_expired_desc')
+   275→   275→    }
+   276→   276→  };
+   277→   277→
+   278→   278→  const config = errorConfig[type as keyof typeof errorConfig] || errorConfig.not_found;
+   279→   279→
+   280→   280→  return (
+   281→   281→    <main className="min-h-screen bg-[#0147d5] flex items-center justify-center p-5 md:p-8 relative">
+   282→   282→      <div className="absolute top-4 right-4">
+   283→   283→        <LanguageSelector lang={lang} setLang={setLang} />
+   284→   284→      </div>
+   285→   285→
+   286→   286→      <div className="max-w-md w-full bg-white border-2 border-dashed border-[#000000] rounded-2xl p-6 md:p-8 text-center shadow-xl">
+   287→   287→        <div className="w-20 h-20 bg-[#FFDE21]/30 border-2 border-dashed border-[#000000] rounded-full flex items-center justify-center mx-auto mb-6">
+   288→   288→          {config.icon}
+   289→   289→        </div>
+   290→   290→        <h1 className="text-2xl md:text-3xl font-bold text-[#000000] mb-3">{config.title}</h1>
+   291→   291→        <p className="text-[#000000] text-base md:text-lg mb-6">{config.message}</p>
+   292→   292→        <button
+   293→   293→          className="w-full py-4 px-6 bg-[#000000] hover:bg-black text-white rounded-xl hover:bg-[#FFDE21] hover:text-[#000000] transition-colors text-base font-medium min-h-[56px]"
+   294→   294→          onClick={() => router.push('/')}
+   295→   295→        >
+   296→   296→          {t('common.back_home')}
+   297→   297→        </button>
+   298→   298→      </div>
+   299→   299→    </main>
+   300→   300→  );
+   301→   301→}
+   302→   302→
+   303→   303→// ─── Dashed Encart Helper (light variant: dashed black on white) ───
+   304→   304→function DashedEncart({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+   305→   305→  return (
+   306→   306→    <div className={`border-2 border-dashed border-[#000000]/60 rounded-xl p-3 mb-2.5 last:mb-0 ${className}`}>
+   307→   307→      {children}
+   308→   308→    </div>
+   309→   309→  );
+   310→   310→}
+   311→   311→
+   312→   312→// ═══════════════════════════════════════════════════════════════
+   313→   313→// ─── MAIN SCAN PAGE ───
+   314→   314→// ═══════════════════════════════════════════════════════════════
+   315→   315→export default function ScanPage() {
+   316→   316→  const params = useParams();
+   317→   317→  const reference = params.reference as string;
+   318→   318→
+   319→   319→  const { t, lang, setLang, dir, countryCode } = useTranslation();
+   320→   320→
+   321→   321→  const [baggageData, setBaggageData] = useState<BaggageData | null>(null);
+   322→   322→  const [loading, setLoading] = useState(true);
+   323→   323→
+   324→   324→  // UI State
+   325→   325→  const [showForm, setShowForm] = useState(false);
+   326→   326→  const [showSuccess, setShowSuccess] = useState(false);
+   327→   327→
+   328→   328→  // Finder form state
+   329→   329→  const [finderName, setFinderName] = useState('');
+   330→   330→  const [finderPhone, setFinderPhone] = useState('');
+   331→   331→  const [finderPhoneCountry, setFinderPhoneCountry] = useState(countryCode);
+   332→   332→  const [otherLocation, setOtherLocation] = useState('');
+   333→   333→  // GPS is now captured INLINE inside handleWhatsApp (no separate button/state).
+   334→   334→  const [isLocating, setIsLocating] = useState(false);
+   335→   335→  const [isSubmitting, setIsSubmitting] = useState(false);
+   336→   336→
+   337→   337→  // SuccessOverlay state
+   338→   338→  const [scanConfirmed, setScanConfirmed] = useState(false);
+   339→   339→  const hasConfirmedRef = useRef(false);
+   340→   340→
+   341→   341→  useEffect(() => {
+   342→   342→    const fetchBaggage = async () => {
+   343→   343→      try {
+   344→   344→        const response = await fetch(`/api/scan/${reference}`);
+   345→   345→        const data = await response.json();
+   346→   346→        setBaggageData(data);
+   347→   347→      } catch (error) {
+   348→   348→        console.error('Error fetching baggage:', error);
+   349→   349→        setBaggageData({ status: 'error', message: 'Erreur serveur' });
+   350→   350→      } finally {
+   351→   351→        setLoading(false);
+   352→   352→      }
+   353→   353→    };
+   354→   354→
+   355→   355→    fetchBaggage();
+   356→   356→  }, [reference]);
+   357→   357→
+   358→   358→  // Trigger SuccessOverlay once when baggage loads successfully
+   359→   359→  useEffect(() => {
+   360→   360→    if (baggageData?.baggage?.reference && !hasConfirmedRef.current) {
+   361→   361→      hasConfirmedRef.current = true;
+   362→   362→      setScanConfirmed(true);
+   363→   363→    }
+   364→   364→  }, [baggageData?.baggage?.reference]);
+   365→   365→
+   366→   366→  // NOTE: GPS sharing now happens inline inside handleWhatsApp (silent fallback to manual location).
+   367→   367→  // The dedicated "Partager ma position GPS" button was removed per refonte-6 brief.
+   368→   368→
+   369→   369→  // Generate WhatsApp message — new template (refonte-7): friendly notification to the owner
+   370→   370→  const generateWhatsAppMessage = useCallback((
+   371→   371→    finderName: string,
+   372→   372→    finderPhone: string,
+   373→   373→    locationText: string,
+   374→   374→    mapLink: string,
+   375→   375→    travelerName: string,
+   376→   376→    baggageType: string
+   377→   377→  ) => {
+   378→   378→    const trackingUrl = `${typeof window !== 'undefined' ? window.location.origin : 'https://qrbags.com'}/suivi/${reference}`;
+   379→   379→
+   380→   380→    // Extract owner's first name from full name
+   381→   381→    const firstName = travelerName.split(' ')[0] || travelerName || '';
+   382→   382→
+   383→   383→    // Baggage type label (voyageur/hajj) — i18n-aware
+   384→   384→    const typeLabel = baggageType === 'hajj'
+   385→   385→      ? t('common.hajj_label')
+   386→   386→      : t('common.voyageur_label');
+   387→   387→
+   388→   388→    // [Lieu] = where the bag was found (manual text, GPS coords, or fallback label)
+   389→   389→    const location = locationText || t('whatsapp.gps_shared_label');
+   390→   390→
+   391→   391→    // [Adresse] = current precise address (Google Maps link if GPS, else same as location, else fallback)
+   392→   392→    const address = mapLink.startsWith('http')
+   393→   393→      ? mapLink
+   394→   394→      : (locationText || t('whatsapp.location_not_shared'));
+   395→   395→
+   396→   396→    // Build message using the template (refonte-7)
+   397→   397→    return encodeURIComponent(
+   398→   398→      t('whatsapp.found_message', {
+   399→   399→        firstName,
+   400→   400→        type: typeLabel,
+   401→   401→        location,
+   402→   402→        address,
+   403→   403→        name: finderName,
+   404→   404→        phone: finderPhone,
+   405→   405→        url: trackingUrl,
+   406→   406→      })
+   407→   407→    );
+   408→   408→  }, [reference, t]);
+   409→   409→
+   410→   410→  // Log scan to API (shared by WhatsApp + Phone flows).
+   411→   411→  // sharedPos/locText are passed as params (no longer state) — GPS is captured inline in handleWhatsApp.
+   412→   412→  const logScan = useCallback(async (
+   413→   413→    sharedPos?: { lat: number; lng: number } | null,
+   414→   414→    locText?: string
+   415→   415→  ) => {
+   416→   416→    try {
+   417→   417→      await fetch(`/api/scan/${reference}`, {
+   418→   418→        method: 'POST',
+   419→   419→        headers: { 'Content-Type': 'application/json' },
+   420→   420→        body: JSON.stringify({
+   421→   421→          location: otherLocation.trim() || locText || t('finder.not_specified'),
+   422→   422→          finderName: finderName.trim(),
+   423→   423→          finderPhone: finderPhone.trim(),
+   424→   424→          message: '',
+   425→   425→          latitude: sharedPos?.lat,
+   426→   426→          longitude: sharedPos?.lng,
+   427→   427→        }),
+   428→   428→      });
+   429→   429→    } catch (e) {
+   430→   430→      // Continue with contact even if logging fails
+   431→   431→      console.error('Log scan failed:', e);
+   432→   432→    }
+   433→   433→  }, [reference, otherLocation, finderName, finderPhone, t]);
+   434→   434→
+   435→   435→  // Handle WhatsApp contact — GPS is captured INLINE with silent fallback to manual location.
+   436→   436→  // Flow: validate name+phone → try GPS (10s timeout, silent fail) → log scan → open wa.me
+   437→   437→  const handleWhatsApp = useCallback(async () => {
+   438→   438→    // Inline validation (name + phone required; location optional since GPS is auto)
+   439→   439→    if (!finderName.trim() || !finderPhone.trim()) {
+   440→   440→      toast({ title: t('finder.fill_info'), variant: 'destructive' });
+   441→   441→      return;
+   442→   442→    }
+   443→   443→
+   444→   444→    // Step 1: try to get GPS automatically (silent fallback if it fails)
+   445→   445→    setIsLocating(true);
+   446→   446→    let sharedPos: { lat: number; lng: number } | null = null;
+   447→   447→    let locText = '';
+   448→   448→
+   449→   449→    if (navigator.geolocation) {
+   450→   450→      try {
+   451→   451→        const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+   452→   452→          navigator.geolocation.getCurrentPosition(resolve, reject, {
+   453→   453→            enableHighAccuracy: true,
+   454→   454→            timeout: 10000,
+   455→   455→            maximumAge: 0,
+   456→   456→          });
+   457→   457→        });
+   458→   458→        sharedPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+   459→   459→        locText = `${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`;
+   460→   460→      } catch {
+   461→   461→        // Silent fallback — use manual location or "not specified"
+   462→   462→        toast({ title: t('finder.gps_fallback_toast') });
+   463→   463→      }
+   464→   464→    }
+   465→   465→
+   466→   466→    setIsLocating(false);
+   467→   467→    setIsSubmitting(true);
+   468→   468→
+   469→   469→    try {
+   470→   470→      await logScan(sharedPos, locText);
+   471→   471→
+   472→   472→      const finalLocationText = locText || otherLocation.trim() || t('finder.not_specified');
+   473→   473→      const mapLink = sharedPos
+   474→   474→        ? `https://maps.app.goo.gl/?link=https://www.google.com/maps?q=${sharedPos.lat},${sharedPos.lng}`
+   475→   475→        : t('whatsapp.location_not_shared');
+   476→   476→
+   477→   477→      const message = generateWhatsAppMessage(
+   478→   478→        finderName,
+   479→   479→        finderPhone,
+   480→   480→        finalLocationText,
+   481→   481→        mapLink,
+   482→   482→        baggageData?.baggage?.travelerName || '',
+   483→   483→        baggageData?.baggage?.type || 'voyageur'
+   484→   484→      );
+   485→   485→      const ownerNumber = baggageData?.baggage?.whatsappOwner?.replace(/\D/g, '') || FALLBACK_PHONE;
+   486→   486→      // Use api.whatsapp.com directly instead of wa.me — wa.me corrupts 4-byte UTF-8 emojis (🎉📍👤📞💬👉💪)
+   487→   487→      // during its redirect to api.whatsapp.com (replaces them with U+FFFD replacement character).
+   488→   488→      const url = `https://api.whatsapp.com/send/?phone=${ownerNumber}&text=${message}`;
+   489→   489→
+   490→   490→      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+   491→   491→
+   492→   492→      if (isIOS) {
+   493→   493→        window.location.href = url;
+   494→   494→      } else {
+   495→   495→        const newWindow = window.open(url, '_blank');
+   496→   496→        if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+   497→   497→          window.location.href = url;
+   498→   498→        }
+   499→   499→      }
+   500→   500→
+   501→   501→      setShowSuccess(true);
+   502→   502→      setTimeout(() => setShowSuccess(false), 4000);
+   503→   503→      toast({ title: t('finder.success_title'), description: t('finder.message_sent') });
+   504→   504→    } catch (error) {
+   505→   505→      console.error('Error:', error);
+   506→   506→      toast({ title: t('errors.error_occurred'), variant: 'destructive' });
+   507→   507→    } finally {
+   508→   508→      setIsSubmitting(false);
+   509→   509→    }
+   510→   510→  }, [finderName, finderPhone, t, logScan, otherLocation, baggageData, generateWhatsAppMessage]);
+   511→   511→
+   512→   512→  // Handle phone call — opens tel:${phone}. No GPS (no message to embed it in).
+   513→   513→  const handlePhoneCall = useCallback(async () => {
+   514→   514→    // Inline validation (same as WhatsApp: name + phone required)
+   515→   515→    if (!finderName.trim() || !finderPhone.trim()) {
+   516→   516→      toast({ title: t('finder.fill_info'), variant: 'destructive' });
+   517→   517→      return;
+   518→   518→    }
+   519→   519→
+   520→   520→    await logScan(null, '');
+   521→   521→
+   522→   522→    const phoneNumber = baggageData?.baggage?.whatsappOwner || FALLBACK_PHONE;
+   523→   523→    window.location.href = `tel:${phoneNumber}`;
+   524→   524→  }, [finderName, finderPhone, t, logScan, baggageData]);
+   525→   525→
+   526→   526→  // Format date for display
+   527→   527→  const formatDate = (dateStr?: string | null) => {
+   528→   528→    if (!dateStr) return null;
+   529→   529→    const locale = lang === 'ar' ? 'ar-SA' : lang === 'en' ? 'en-US' : 'fr-FR';
+   530→   530→    return new Date(dateStr).toLocaleDateString(locale, {
+   531→   531→      day: 'numeric',
+   532→   532→      month: 'long',
+   533→   533→      year: 'numeric',
+   534→   534→    });
+   535→   535→  };
+   536→   536→
+   537→   537→  // NOTE: validateFinderForm was removed — validation is now inlined in handleWhatsApp/handlePhoneCall.
+   538→   538→  // Location is no longer required (GPS is auto-captured inside handleWhatsApp).
+   539→   539→
+   540→   540→  // ─── Loading state ───
+   541→   541→  if (loading) {
+   542→   542→    return <LoadingScreen t={t} />;
+   543→   543→  }
+   544→   544→
+   545→   545→  // ─── Redirect to activation if pending ───
+   546→   546→  if (baggageData?.status === 'pending_activation' && baggageData?.type) {
+   547→   547→    return (
+   548→   548→      <ActivationRedirect
+   549→   549→        type={baggageData.type}
+   550→   550→        reference={reference}
+   551→   551→        t={t}
+   552→   552→        lang={lang}
+   553→   553→        setLang={setLang}
+   554→   554→      />
+   555→   555→    );
+   556→   556→  }
+   557→   557→
+   558→   558→  // ─── Error states ───
+   559→   559→  if (baggageData?.status === 'not_found') {
+   560→   560→    return <ErrorScreen type="not_found" t={t} lang={lang} setLang={setLang} />;
+   561→   561→  }
+   562→   562→
+   563→   563→  if (baggageData?.status === 'blocked') {
+   564→   564→    return <ErrorScreen type="blocked" t={t} lang={lang} setLang={setLang} />;
+   565→   565→  }
+   566→   566→
+   567→   567→  if (baggageData?.status === 'expired') {
+   568→   568→    const expiredAt = baggageData.expiredAt || '';
+   569→   569→    const agencyName = baggageData.agency || '';
+   570→   570→    const urlParams = new URLSearchParams({
+   571→   571→      ref: reference,
+   572→   572→      ...(expiredAt && { expired: expiredAt }),
+   573→   573→      ...(agencyName && { agency: agencyName })
+   574→   574→    });
+   575→   575→    if (typeof window !== 'undefined') {
+   576→   576→      window.location.href = `/expired?${urlParams.toString()}`;
+   577→   577→    }
+   578→   578→    return <LoadingScreen t={t} />;
+   579→   579→  }
+   580→   580→
+   581→   581→  const baggage = baggageData?.baggage;
+   582→   582→  const isDeclaredLost = baggage?.declaredLostAt && !baggage?.foundAt;
+   583→   583→
+   584→   584→  // ═══════════════════════════════════════════════════════════════
+   585→   585→  // ─── MAIN RENDER — Blue bg + White dashed cards + Yellow finder encart ───
+   586→   586→  // ═══════════════════════════════════════════════════════════════
+   587→   587→  return (
+   588→   588→    <main
+   589→   589→      className="min-h-screen bg-[#0147d5] flex flex-col px-4 sm:px-5 md:px-8 pb-[env(safe-area-inset-bottom,0px)]"
+   590→   590→      dir={dir}
+   591→   591→    >
+   592→   592→      {/* ─── Header ─── */}
+   593→   593→      <header className="sticky top-0 z-40 flex items-center justify-end pt-[env(safe-area-inset-top,0px)] px-0 py-2 sm:py-3 md:py-4 bg-[#0147d5]">
+   594→   594→        <LanguageSelector lang={lang} setLang={setLang} />
+   595→   595→      </header>
+   596→   596→
+   597→   597→      {/* SuccessOverlay — Premium scan confirmation */}
+   598→   598→      <SuccessOverlay show={scanConfirmed} messageKey="scan.success" t={t} />
+   599→   599→
+   600→   600→      {/* Success Toast — inline confirmation */}
+   601→   601→      {showSuccess && (
+   602→   602→        <div className="fixed top-[calc(3.5rem+env(safe-area-inset-top,0px))] sm:top-[calc(4rem+env(safe-area-inset-top,0px))] right-3 sm:right-5 bg-[#000000] text-white px-4 sm:px-6 py-3 sm:py-4 rounded-xl shadow-lg z-50 animate-in slide-in-from-right duration-300 max-w-[calc(100vw-2rem)] sm:max-w-sm">
+   603→   603→          <div className="flex items-center gap-3">
+   604→   604→            <CheckCircle className="w-6 h-6 text-[#FFDE21]" />
+   605→   605→            <div>
+   606→   606→              <div className="font-bold text-lg">{t('finder.success_title')} 🎉</div>
+   607→   607→              <div className="text-base opacity-90">{t('finder.message_sent')}</div>
+   608→   608→            </div>
+   609→   609→          </div>
+   610→   610→        </div>
+   611→   611→      )}
+   612→   612→
+   613→   613→      {/* ─── Container ─── */}
+   614→   614→      <div className="w-full max-w-md mx-auto flex-1 flex flex-col py-4 sm:py-6 md:py-2">
+   615→   615→
+   616→   616→        {/* ═══ 🏷️ TITRE : ✅ BAGAGE TROUVÉ ═══ */}
+   617→   617→        <div className="text-center mb-5 sm:mb-6">
+   618→   618→          <h1 className="text-2xl md:text-3xl font-extrabold text-white leading-tight">
+   619→   619→            {isDeclaredLost
+   620→   620→              ? `🚨 ${t('finder.lost_badge')}`
+   621→   621→              : `✅ ${t('finder.success_badge')}`}
+   622→   622→          </h1>
+   623→   623→          <p className="mt-2 text-sm md:text-base text-white/70 leading-relaxed max-w-md mx-auto">
+   624→   624→            {isDeclaredLost
+   625→   625→              ? t('finder.lost_description')
+   626→   626→              : t('finder.bagage_trouve_desc')}
+   627→   627→          </p>
+   628→   628→        </div>
+   629→   629→
+   630→   630→        {/* ═══ 🟦 BLOC 1 : IDENTITÉ PROPRIÉTAIRE (white + dashed black) ═══ */}
+   631→   631→        {baggage && (
+   632→   632→          <div className="w-full bg-white border-2 border-dashed border-[#000000] rounded-2xl p-5 md:p-6 mb-4">
+   633→   633→            <h2 className="text-xs uppercase tracking-widest text-[#000000] font-bold mb-3 flex items-center gap-2">
+   634→   634→              <span>👤</span> {t('finder.owner_section')}
+   635→   635→            </h2>
+   636→   636→
+   637→   637→            {/* Full Name — kept */}
+   638→   638→            <DashedEncart>
+   639→   639→              <div className="flex items-center gap-3">
+   640→   640→                <span className="text-xl">👤</span>
+   641→   641→                <div>
+   642→   642→                  <p className="text-xs text-[#000000]/60 font-medium">{t('finder.fullName')}</p>
+   643→   643→                  <p className="text-base md:text-lg font-bold text-[#000000]">{baggage.travelerName || t('finder.notSet')}</p>
+   644→   644→                </div>
+   645→   645→              </div>
+   646→   646→            </DashedEncart>
+   647→   647→
+   648→   648→            {/* NOTE: Agency + Baggage Type REMOVED per refonte-4 brief */}
+   649→   649→
+   650→   650→            {/* Contact — Secured (NEVER show WhatsApp number) */}
+   651→   651→            <DashedEncart className="mb-0">
+   652→   652→              <div className="flex items-center gap-3">
+   653→   653→                <span className="text-xl">🔒</span>
+   654→   654→                <div>
+   655→   655→                  <p className="text-xs text-[#000000]/60 font-medium">{t('finder.contact_label')}</p>
+   656→   656→                  <p className="text-base font-bold text-[#000000]">{t('finder.secure_contact')}</p>
+   657→   657→                  <p className="text-xs text-[#000000]/60 mt-0.5">{t('finder.contact_reveal_note')}</p>
+   658→   658→                </div>
+   659→   659→              </div>
+   660→   660→            </DashedEncart>
+   661→   661→          </div>
+   662→   662→        )}
+   663→   663→
+   664→   664→        {/* ═══ 🟦 BLOC 2 : DÉTAILS DU VOYAGE (white + dashed black, transport images) ═══ */}
+   665→   665→        {baggage && (() => {
+   666→   666→          const mode = safeTransportMode(baggage.transportMode) as TransportMode;
+   667→   667→          const transportImg = getTransportImage(mode);
+   668→   668→          const blockHeader = getTransportBlockHeader(mode, lang);
+   669→   669→
+   670→   670→          return (
+   671→   671→            <div className="w-full bg-white border-2 border-dashed border-[#000000] rounded-2xl p-5 md:p-6 mb-4">
+   672→   672→              <h2 className="text-xs uppercase tracking-widest text-[#000000] font-bold mb-3 flex items-center gap-2">
+   673→   673→                <Image
+   674→   674→                  src={transportImg}
+   675→   675→                  alt={mode}
+   676→   676→                  width={18}
+   677→   677→                  height={18}
+   678→   678→                  className="mix-blend-multiply"
+   679→   679→                />
+   680→   680→                <span>{blockHeader}</span>
+   681→   681→              </h2>
+   682→   682→
+   683→   683→              {/* TRANSPORT-FEATURE: Flight info */}
+   684→   684→              {mode === 'flight' && (baggage.airlineName || baggage.flightNumber) && (
+   685→   685→                <DashedEncart>
+   686→   686→                  <div className="flex items-center justify-between">
+   687→   687→                    <div className="flex-1">
+   688→   688→                      {baggage.airlineName && (
+   689→   689→                        <div className="mb-1.5">
+   690→   690→                          <p className="text-xs text-[#000000]/60 font-medium">{t('transport.airline')}</p>
+   691→   691→                          <p className="text-base font-bold text-[#000000]">{baggage.airlineName}</p>
+   692→   692→                        </div>
+   693→   693→                      )}
+   694→   694→                      {baggage.flightNumber && (
+   695→   695→                        <div>
+   696→   696→                          <p className="text-xs text-[#000000]/60 font-medium">{t('transport.flight_number')}</p>
+   697→   697→                          <p className="text-xl font-bold text-[#000000] font-mono tracking-widest">{baggage.flightNumber}</p>
+   698→   698→                        </div>
+   699→   699→                      )}
+   700→   700→                    </div>
+   701→   701→                    <div className="h-12 w-12 rounded-full bg-[#FFDE21]/20 border border-[#000000]/20 flex items-center justify-center ml-4 flex-shrink-0">
+   702→   702→                      <Image
+   703→   703→                        src={transportImg}
+   704→   704→                        alt="flight"
+   705→   705→                        width={28}
+   706→   706→                        height={28}
+   707→   707→                        className="mix-blend-multiply"
+   708→   708→                      />
+   709→   709→                    </div>
+   710→   710→                  </div>
+   711→   711→                </DashedEncart>
+   712→   712→              )}
+   713→   713→
+   714→   714→              {/* TRANSPORT-FEATURE: Train info */}
+   715→   715→              {mode === 'train' && (baggage.trainCompany || baggage.trainNumber) && (
+   716→   716→                <DashedEncart>
+   717→   717→                  <div className="flex items-center justify-between">
+   718→   718→                    <div className="flex-1">
+   719→   719→                      {baggage.trainCompany && (
+   720→   720→                        <div className="mb-1.5">
+   721→   721→                          <p className="text-xs text-[#000000]/60 font-medium">{t('transport.train_company')}</p>
+   722→   722→                          <p className="text-base font-bold text-[#000000]">{baggage.trainCompany}</p>
+   723→   723→                        </div>
+   724→   724→                      )}
+   725→   725→                      {baggage.trainNumber && (
+   726→   726→                        <div>
+   727→   727→                          <p className="text-xs text-[#000000]/60 font-medium">{t('transport.train_number')}</p>
+   728→   728→                          <p className="text-xl font-bold text-[#000000] font-mono tracking-widest">{baggage.trainNumber}</p>
+   729→   729→                        </div>
+   730→   730→                      )}
+   731→   731→                    </div>
+   732→   732→                    <div className="h-12 w-12 rounded-full bg-[#FFDE21]/20 border border-[#000000]/20 flex items-center justify-center ml-4 flex-shrink-0">
+   733→   733→                      <Image
+   734→   734→                        src={transportImg}
+   735→   735→                        alt="train"
+   736→   736→                        width={28}
+   737→   737→                        height={28}
+   738→   738→                        className="mix-blend-multiply"
+   739→   739→                      />
+   740→   740→                    </div>
+   741→   741→                  </div>
+   742→   742→                </DashedEncart>
+   743→   743→              )}
+   744→   744→
+   745→   745→              {/* TRANSPORT-FEATURE: Boat info */}
+   746→   746→              {mode === 'boat' && (baggage.shipName || baggage.shipCabin) && (
+   747→   747→                <DashedEncart>
+   748→   748→                  <div className="flex items-center justify-between">
+   749→   749→                    <div className="flex-1">
+   750→   750→                      {baggage.shipName && (
+   751→   751→                        <div className="mb-1.5">
+   752→   752→                          <p className="text-xs text-[#000000]/60 font-medium">{t('transport.ship_name')}</p>
+   753→   753→                          <p className="text-base font-bold text-[#000000]">{baggage.shipName}</p>
+   754→   754→                        </div>
+   755→   755→                      )}
+   756→   756→                      {baggage.shipCabin && (
+   757→   757→                        <div>
+   758→   758→                          <p className="text-xs text-[#000000]/60 font-medium">{t('transport.ship_cabin')}</p>
+   759→   759→                          <p className="text-base font-bold text-[#000000]">{baggage.shipCabin}</p>
+   760→   760→                        </div>
+   761→   761→                      )}
+   762→   762→                    </div>
+   763→   763→                    <div className="h-12 w-12 rounded-full bg-[#FFDE21]/20 border border-[#000000]/20 flex items-center justify-center ml-4 flex-shrink-0">
+   764→   764→                      <Image
+   765→   765→                        src={transportImg}
+   766→   766→                        alt="boat"
+   767→   767→                        width={28}
+   768→   768→                        height={28}
+   769→   769→                        className="mix-blend-multiply"
+   770→   770→                      />
+   771→   771→                    </div>
+   772→   772→                  </div>
+   773→   773→                </DashedEncart>
+   774→   774→              )}
+   775→   775→
+   776→   776→              {/* TRANSPORT-FEATURE: Bus info */}
+   777→   777→              {mode === 'bus' && (baggage.busCompany || baggage.busLineNumber) && (
+   778→   778→                <DashedEncart>
+   779→   779→                  <div className="flex items-center justify-between">
+   780→   780→                    <div className="flex-1">
+   781→   781→                      {baggage.busCompany && (
+   782→   782→                        <div className="mb-1.5">
+   783→   783→                          <p className="text-xs text-[#000000]/60 font-medium">{t('transport.bus_company')}</p>
+   784→   784→                          <p className="text-base font-bold text-[#000000]">{baggage.busCompany}</p>
+   785→   785→                        </div>
+   786→   786→                      )}
+   787→   787→                      {baggage.busLineNumber && (
+   788→   788→                        <div>
+   789→   789→                          <p className="text-xs text-[#000000]/60 font-medium">{t('transport.bus_line')}</p>
+   790→   790→                          <p className="text-base font-bold text-[#000000]">{baggage.busLineNumber}</p>
+   791→   791→                        </div>
+   792→   792→                      )}
+   793→   793→                    </div>
+   794→   794→                    <div className="h-12 w-12 rounded-full bg-[#FFDE21]/20 border border-[#000000]/20 flex items-center justify-center ml-4 flex-shrink-0">
+   795→   795→                      <Image
+   796→   796→                        src={transportImg}
+   797→   797→                        alt="bus"
+   798→   798→                        width={28}
+   799→   799→                        height={28}
+   800→   800→                        className="mix-blend-multiply"
+   801→   801→                      />
+   802→   802→                    </div>
+   803→   803→                  </div>
+   804→   804→                </DashedEncart>
+   805→   805→              )}
+   806→   806→
+   807→   807→              {/* Destination */}
+   808→   808→              {baggage.destination && (
+   809→   809→                <DashedEncart>
+   810→   810→                  <div className="flex items-center gap-3">
+   811→   811→                    <span className="text-xl">📍</span>
+   812→   812→                    <div>
+   813→   813→                      <p className="text-xs text-[#000000]/60 font-medium">{t('transport.common_destination')}</p>
+   814→   814→                      <p className="text-base font-bold text-[#000000]">{baggage.destination}</p>
+   815→   815→                    </div>
+   816→   816→                  </div>
+   817→   817→                </DashedEncart>
+   818→   818→              )}
+   819→   819→
+   820→   820→              {/* Departure Date */}
+   821→   821→              {(baggage.departureDate || baggage.createdAt) && (
+   822→   822→                <DashedEncart className="mb-0">
+   823→   823→                  <div className="flex items-center gap-3">
+   824→   824→                    <span className="text-xl">📅</span>
+   825→   825→                    <div>
+   826→   826→                      <p className="text-xs text-[#000000]/60 font-medium">{t('transport.common_departure_date')}</p>
+   827→   827→                      <p className="text-base font-bold text-[#000000]">
+   828→   828→                        {formatDate(baggage.departureDate || baggage.createdAt)}{baggage.departureTime ? ` — ${baggage.departureTime}` : ''}
+   829→   829→                      </p>
+   830→   830→                    </div>
+   831→   831→                  </div>
+   832→   832→                </DashedEncart>
+   833→   833→              )}
+   834→   834→            </div>
+   835→   835→          );
+   836→   836→        })()}
+   837→   837→
+   838→   838→        {/* ═══ 🟡 BLOC 3 : ENCART FINDER (yellow #FFDE21 + solid black border) ═══ */}
+   839→   839→        <div className="w-full bg-[#FFDE21] border-2 border-solid border-[#000000] rounded-2xl p-5 md:p-6 mb-4 shadow-lg">
+   840→   840→
+   841→   841→          {/* ─── 1. BIG "📞 Contacter le propriétaire" CTA button (FIRST) ─── */}
+   842→   842→          {!showForm && (
+   843→   843→            <button
+   844→   844→              onClick={() => setShowForm(true)}
+   845→   845→              className="w-full py-4 px-6 bg-[#000000] hover:bg-black text-white rounded-xl font-bold text-lg md:text-xl transition-colors flex items-center justify-center gap-2 min-h-[56px] shadow-md"
+   846→   846→            >
+   847→   847→              <Phone className="w-5 h-5" />
+   848→   848→              <span>{t('finder.contact_owner_cta')}</span>
+   849→   849→            </button>
+   850→   850→          )}
+   851→   851→
+   852→   852→          {/* ─── 2 + 3. Form (revealed when CTA clicked): GPS button + form fields ─── */}
+   853→   853→          {showForm && (
+   854→   854→            <div className="space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-300">
+   855→   855→
+   856→   856→              {/* GPS Success/Error indicators + dedicated GPS button REMOVED per refonte-6 brief.
+   857→   857→                  GPS is now captured automatically inside the WhatsApp button click (silent fallback to manual location). */}
+   858→   858→
+   859→   859→              {/* ─── Form fields: prénom, téléphone, lieu ─── */}
+   860→   860→
+   861→   861→              {/* First name */}
+   862→   862→              <input
+   863→   863→                type="text"
+   864→   864→                placeholder={t('finder.first_name')}
+   865→   865→                value={finderName}
+   866→   866→                onChange={(e) => setFinderName(e.target.value)}
+   867→   867→                className="w-full px-4 py-3 bg-white border-2 border-[#000000] rounded-xl text-[#000000] text-base placeholder:text-[#000000]/40 focus:outline-none focus:ring-2 focus:ring-[#000000] focus:border-transparent transition-all min-h-[48px]"
+   868→   868→              />
+   869→   869→
+   870→   870→              {/* Phone (PhoneInput with dark=false but on yellow bg → white input) */}
+   871→   871→              <PhoneInput
+   872→   872→                countryCode={finderPhoneCountry}
+   873→   873→                onCountryChange={setFinderPhoneCountry}
+   874→   874→                value={finderPhone}
+   875→   875→                onChange={setFinderPhone}
+   876→   876→                placeholder="6 12 34 56 78"
+   877→   877→                required
+   878→   878→                className="min-h-[48px]"
+   879→   879→              />
+   880→   880→
+   881→   881→              {/* Location */}
+   882→   882→              <div>
+   883→   883→                <input
+   884→   884→                  type="text"
+   885→   885→                  placeholder={t('finder.location_placeholder')}
+   886→   886→                  value={otherLocation}
+   887→   887→                  onChange={(e) => setOtherLocation(e.target.value)}
+   888→   888→                  className="w-full px-4 py-3 bg-white border-2 border-[#000000] rounded-xl text-[#000000] text-base placeholder:text-[#000000]/40 focus:outline-none focus:ring-2 focus:ring-[#000000] focus:border-transparent transition-all min-h-[48px]"
+   889→   889→                />
+   890→   890→              </div>
+   891→   891→
+   892→   892→              {/* ─── Contact choice: WhatsApp (GREEN + GPS auto) + Phone (YELLOW) ─── */}
+   893→   893→              <div className="pt-1">
+   894→   894→                <h3 className="text-[#000000] text-xs font-bold uppercase tracking-widest text-center mb-2.5">
+   895→   895→                  {t('finder.contact_choice')}
+   896→   896→                </h3>
+   897→   897→                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+   898→   898→                  {/* WhatsApp Button — GREEN #25D366 + GPS auto-captured on click */}
+   899→   899→                  <button
+   900→   900→                    onClick={handleWhatsApp}
+   901→   901→                    disabled={isLocating || isSubmitting}
+   902→   902→                    className="py-3.5 px-4 bg-[#25D366] hover:bg-[#1ebe5d] disabled:opacity-70 text-white rounded-xl font-bold transition-colors flex items-center justify-center gap-2 text-base min-h-[52px]"
+   903→   903→                  >
+   904→   904→                    {isLocating ? (
+   905→   905→                      <>
+   906→   906→                        <svg className="animate-spin h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+   907→   907→                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+   908→   908→                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+   909→   909→                        </svg>
+   910→   910→                        <span>{t('finder.locating')}</span>
+   911→   911→                      </>
+   912→   912→                    ) : isSubmitting ? (
+   913→   913→                      <>
+   914→   914→                        <svg className="animate-spin h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+   915→   915→                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+   916→   916→                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+   917→   917→                        </svg>
+   918→   918→                        <span>{t('finder.sending')}</span>
+   919→   919→                      </>
+   920→   920→                    ) : (
+   921→   921→                      <>
+   922→   922→                        <MessageCircle className="w-5 h-5" />
+   923→   923→                        {t('finder.by_whatsapp')}
+   924→   924→                      </>
+   925→   925→                    )}
+   926→   926→                  </button>
+   927→   927→                  {/* Phone Button — BLACK on yellow card */}
+   928→   928→                  <button
+   929→   929→                    onClick={handlePhoneCall}
+   930→   930→                    disabled={isLocating || isSubmitting}
+   931→   931→                    className="py-3.5 px-4 bg-[#000000] hover:bg-black disabled:opacity-70 text-white rounded-xl font-bold transition-colors flex items-center justify-center gap-2 text-base min-h-[52px]"
+   932→   932→                  >
+   933→   933→                    <Phone className="w-5 h-5" />
+   934→   934→                    {t('finder.by_phone')}
+   935→   935→                  </button>
+   936→   936→                </div>
+   937→   937→                <p className="text-[#000000]/70 text-xs text-center mt-2.5 leading-relaxed">
+   938→   938→                  {t('finder.gps_auto_shared')}
+   939→   939→                </p>
+   940→   940→              </div>
+   941→   941→            </div>
+   942→   942→          )}
+   943→   943→        </div>
+   944→   944→
+   945→   945→        {/* ─── Trust Note ─── */}
+   946→   946→        <div className="mt-1 mb-4 text-center text-xs text-white/60 tracking-wide flex items-center justify-center gap-1.5">
+   947→   947→          <Shield className="w-4 h-4 inline" />
+   948→   948→          <span>{t('finder.trust_note')}</span>
+   949→   949→        </div>
+   950→   950→      </div>
+   951→   951→
+   952→   952→      {/* AI-FEATURE: Chatbot Widget (Feature #1) — only on active/lost baggage */}
+   953→   953→      {baggage && (baggageData?.status === 'active' || baggageData?.status === 'lost') && (
+   954→   954→        <ChatbotWidget
+   955→   955→          reference={reference}
+   956→   956→          baggageContext={{
+   957→   957→            destination: baggage.destination || undefined,
+   958→   958→            city: otherLocation || undefined,
+   959→   959→            agency: baggage.agency || undefined,
+   960→   960→            status: baggage.status,
+   961→   961→            transportMode: baggage.transportMode || undefined,
+   962→   962→          }}
+   963→   963→          locale={lang}
+   964→   964→          t={t}
+   965→   965→          dir={dir}
+   966→   966→        />
+   967→   967→      )}
+   968→   968→    </main>
+   969→   969→  );
+   970→   970→}
+   971→   971→

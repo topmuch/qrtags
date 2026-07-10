@@ -71,7 +71,7 @@ model Agency {
   invoices  Invoice[]
 }
 
-// Baggage model - main entity for luggage tracking
+// Baggage model - main entity for object tracking
 model Baggage {
   id                String    @id @default(cuid())
   reference         String    @unique // HAJJ26-MLQGY7, VOL26-K9X2P4
@@ -83,6 +83,7 @@ model Baggage {
   whatsappOwner     String?
   baggageIndex      Int       @default(1) // 1, 2, 3 (order: 1 = cabine)
   baggageType       String    @default("cabine") // "cabine" or "soute"
+  objectCategory    String?   // "ordinateur" | "telephone" | "ecouteurs" | "passeport" | "carte_identite" | etc.
   status            String    @default("pending_activation") // pending_activation, active, scanned, lost, found, blocked
 
   // TRANSPORT-FEATURE: Multi-context transport mode (flight/train/boat/bus)
@@ -239,8 +240,8 @@ model Notification {
 model EmailSettings {
   id              String   @id @default(cuid())
   provider        String   @default("console") // "console" or "smtp"
-  fromEmail       String   @default("noreply@qrbag.com")
-  fromName        String   @default("QRBag")
+  fromEmail       String   @default("noreply@qrtags.com")
+  fromName        String   @default("QRTags")
   recipientEmail  String?  // Destination for admin notification emails
   // SMTP settings
   smtpHost        String?

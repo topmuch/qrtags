@@ -15,7 +15,7 @@ const LandingChatbotWidget = dynamic(
 import TrackingWidget from '@/components/home/TrackingWidget';
 import {
   Plane,
-  Luggage,
+  Tag,
   QrCode,
   Smartphone,
   MapPin,
@@ -136,7 +136,7 @@ function Navigation() {
       <div className="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 lg:h-[72px]">
           <Link href="/" className="flex items-center gap-2.5 group">
-            <img src="/logo.png" alt="QRBag" className="h-16 w-auto object-contain transition-transform duration-300 group-hover:scale-105" />
+            <img src="/logo.png" alt="QRTags" className="h-16 w-auto object-contain transition-transform duration-300 group-hover:scale-105" />
           </Link>
 
           <div className="hidden md:flex items-center gap-1">
@@ -206,11 +206,11 @@ const heroSlides = [
     badge: 'Protection intelligente',
     title: 'Voyagez serein,',
     highlight: 'sans crainte',
-    subtitle: "QRBag protège vos bagages avec un simple autocollant QR code. Sans application, sans batterie, sans GPS — un scan suffit.",
+    subtitle: "QRTags protège vos objets avec un simple autocollant QR code. Sans application, sans batterie, sans GPS — un scan suffit.",
     cta1: { label: 'Commencer gratuitement', href: '/devenir-partenaire' },
     cta2: { label: 'Voir la démo', href: '/demo', icon: Play },
     stats: [
-      { value: '10 000+', label: 'Bagages protégés' },
+      { value: '10 000+', label: 'Objets protégés' },
       { value: '98%', label: 'Taux de récupération' },
     ],
   },
@@ -219,7 +219,7 @@ const heroSlides = [
     badge: 'Scan & Trouvé',
     title: 'Un scan,',
     highlight: 'une alerte instantanée',
-    subtitle: "Quelqu'un trouve votre bagage, scanne le QR code et vous recevez immédiatement une notification WhatsApp avec la localisation exacte.",
+    subtitle: "Quelqu'un trouve votre objet, scanne le QR code et vous recevez immédiatement une notification WhatsApp avec la localisation exacte.",
     cta1: { label: 'Commander mes QR codes', href: '/contact' },
     cta2: { label: 'Comment ça marche', href: '/#comment' },
     stats: [
@@ -232,11 +232,11 @@ const heroSlides = [
     badge: 'Pour toute la famille',
     title: 'Hajj, vacances,',
     highlight: 'chaque voyage compte',
-    subtitle: "Pèlerinage ou vacances en famille — chaque bagage mérite d'être protégé. 3 QR codes par passager, activation en 30 secondes.",
+    subtitle: "Pèlerinage ou vacances en famille — chaque objet mérite d'être protégé. 3 QR codes par passager, activation en 30 secondes.",
     cta1: { label: 'Découvrir Hajj & Omra', href: '/hajj-omra' },
     cta2: { label: 'Voyageurs Standard', href: '/voyageurs-standard' },
     stats: [
-      { value: '3', label: 'Bagages/pèlerin' },
+      { value: '3', label: 'Objets/pèlerin' },
       { value: '30s', label: 'Activation' },
     ],
   },
@@ -402,7 +402,7 @@ function HeroSection() {
                   >
                     <Image
                       src={slide.image}
-                      alt="QRBag - Protection bagages"
+                      alt="QRTags - Protection objets"
                       width={864}
                       height={1152}
                       className="w-full h-auto object-cover"
@@ -421,7 +421,7 @@ function HeroSection() {
                     <CheckCircle2 className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <div className="text-xs font-bold text-slate-900">Bagage retrouvé !</div>
+                    <div className="text-xs font-bold text-slate-900">Objet retrouvé !</div>
                     <div className="text-[10px] text-slate-500">WhatsApp · il y a 2 min</div>
                   </div>
                 </motion.div>
@@ -532,10 +532,10 @@ function ChecklistCTASection() {
               Service gratuit
             </div>
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-slate-900 mb-4 leading-tight">
-              Créez votre <span className="bg-gradient-to-r from-blue-600 via-indigo-500 to-violet-500 bg-clip-text text-transparent">checklist de voyage</span> certifiée QRBag
+              Créez votre <span className="bg-gradient-to-r from-blue-600 via-indigo-500 to-violet-500 bg-clip-text text-transparent">checklist de voyage</span> certifiée QRTags
             </h2>
             <p className="text-slate-600 text-base md:text-lg mb-6 leading-relaxed">
-              Inventoriez vos bagages en quelques clics, générez un PDF horodaté avec tampon officiel et QR code vérifiable. L'attestation est envoyée par email avec une page publique de consultation.
+              Inventoriez vos objets en quelques clics, générez un PDF horodaté avec tampon officiel et QR code vérifiable. L'attestation est envoyée par email avec une page publique de consultation.
             </p>
 
             <ul className="space-y-2.5 mb-7">
@@ -568,7 +568,7 @@ function ChecklistCTASection() {
               {/* PDF mockup */}
               <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden rotate-2 hover:rotate-0 transition-transform duration-500">
                 <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-3 flex items-center justify-between">
-                  <div className="font-bold text-white">🎒 QRBag</div>
+                  <div className="font-bold text-white">🏷️ QRTags</div>
                   <div className="text-[10px] text-white/70 font-mono">RÉF: K7P3MQ</div>
                 </div>
                 <div className="p-5 space-y-3">
@@ -597,7 +597,7 @@ function ChecklistCTASection() {
                   <div className="flex items-end justify-between pt-2 border-t border-slate-100">
                     <div className="bg-blue-50 border border-blue-200 rounded-lg px-2 py-1">
                       <div className="text-[8px] text-blue-700 font-bold">CERTIFIÉ</div>
-                      <div className="text-[8px] text-blue-600">QRBag</div>
+                      <div className="text-[8px] text-blue-600">QRTags</div>
                     </div>
                     <div className="bg-slate-900 p-1.5 rounded-lg">
                       {/* Faux QR code visual */}
@@ -624,13 +624,13 @@ function ChecklistCTASection() {
 }
 
 /* ══════════════════════════════════════════════
-   QRBag EN ACTION SECTION
+   QRTags EN ACTION SECTION
    ══════════════════════════════════════════════ */
-function QRBagEnActionSection() {
+function QRTagsEnActionSection() {
   const features = [
     'Scan instantané du QR code',
     'Notification WhatsApp en temps réel',
-    'Géolocalisation précise du bagage',
+    'Géolocalisation précise de l\'objet',
     'Interface intuitive sans application',
   ];
   const featureIcons: LucideIcon[] = [ScanLine, BellRing, MapPin, Smartphone];
@@ -643,7 +643,7 @@ function QRBagEnActionSection() {
             <div className="relative">
               <div className="absolute -inset-6 bg-gradient-to-br from-blue-100/40 to-indigo-100/40 rounded-[2rem] blur-[40px]" />
               <div className="relative rounded-3xl overflow-hidden shadow-2xl shadow-slate-200/60 border border-slate-100">
-                <Image src="/images/landing-v2/qrcode-reel.jpg" alt="QR Code QRBag" width={1024} height={1024} className="w-full h-auto object-cover" />
+                <Image src="/images/landing-v2/qrcode-reel.jpg" alt="QR Code QRTags" width={1024} height={1024} className="w-full h-auto object-cover" />
               </div>
               <motion.div
                 className="absolute -bottom-4 -right-4 bg-white text-slate-900 px-5 py-3 rounded-2xl shadow-xl shadow-slate-200/60 border border-slate-100 font-bold text-sm flex items-center gap-2.5"
@@ -662,14 +662,14 @@ function QRBagEnActionSection() {
             <div>
               <span className="inline-flex items-center gap-2 text-xs font-bold tracking-[0.15em] uppercase text-blue-600 mb-5">
                 <Sparkles className="w-3.5 h-3.5" />
-                QRBag en action
+                QRTags en action
               </span>
               <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 mb-7 tracking-[-0.02em] leading-[1.1]">
                 Scannez, activez,{' '}
                 <span className="bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent">voyagez.</span>
               </h2>
               <p className="text-lg text-slate-500 leading-relaxed mb-10">
-                Notre technologie QR code brevetée permet à n&apos;importe qui de signaler un bagage trouvé en un seul geste. Vous recevez instantanément une notification avec la localisation exacte de votre valise.
+                Notre technologie QR code brevetée permet à n&apos;importe qui de signaler un objet trouvé en un seul geste. Vous recevez instantanément une notification avec la localisation exacte de votre objet.
               </p>
               <div className="space-y-4">
                 {features.map((feature, i) => {
@@ -735,7 +735,7 @@ function TransportModesSection() {
       features: [
         'Compagnie ferroviaire & n° de train',
         'Notification en gare d\'arrivée',
-        'Suivi en temps réel du bagage',
+        'Suivi en temps réel de l\'objet',
       ],
       useCase: 'Parfait pour TER, TGV & trains internationaux',
     },
@@ -786,7 +786,7 @@ function TransportModesSection() {
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 mb-6 tracking-[-0.02em]">
             Une protection pour tous vos voyages
           </h2>
-          <p className="text-lg text-slate-500 max-w-2xl mx-auto leading-relaxed">Avion, train, bateau, bus — QRBag vous suit partout.</p>
+          <p className="text-lg text-slate-500 max-w-2xl mx-auto leading-relaxed">Avion, train, bateau, bus — QRTags vous suit partout.</p>
         </FadeIn>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {modes.map((mode, i) => (
@@ -830,7 +830,7 @@ function TransportModesSection() {
                     href="/inscrire"
                     className={`inline-flex items-center justify-center gap-1.5 w-full bg-gradient-to-r ${mode.gradient} hover:opacity-90 text-white text-sm font-semibold py-2.5 rounded-xl transition-all duration-300 hover:shadow-lg`}
                   >
-                    Protéger mes bagages
+                    Protéger mes objets
                     <ArrowRight className="w-3.5 h-3.5" />
                   </Link>
                 </div>
@@ -844,20 +844,20 @@ function TransportModesSection() {
 }
 
 /* ══════════════════════════════════════════════
-   POURQUOI QRBAG
+   POURQUOI QRTAGS
    ══════════════════════════════════════════════ */
-function WhyQRBagSection() {
+function WhyQRTagsSection() {
   const cards = [
-    { icon: Globe, title: 'Ancré en Afrique, pensé pour le monde', description: 'Né à Dakar, déployé dans 15 pays. QRBag comprend les réalités du voyage africain et international avec une solution adaptée à chaque contexte.', lightBg: 'bg-blue-50', iconColor: 'text-blue-600' },
+    { icon: Globe, title: 'Ancré en Afrique, pensé pour le monde', description: 'Né à Dakar, déployé dans 15 pays. QRTags comprend les réalités du voyage africain et international avec une solution adaptée à chaque contexte.', lightBg: 'bg-blue-50', iconColor: 'text-blue-600' },
     { icon: Shield, title: 'Sécurité certifiée RGPD', description: 'Zéro donnée sensible stockée publiquement. Vos informations personnelles sont chiffrées et protégées selon les normes européennes les plus strictes.', lightBg: 'bg-orange-50', iconColor: 'text-orange-600' },
-    { icon: Heart, title: 'Pour les pèlerins, les voyageurs, les agences', description: "Hajj, Omra, tourisme, affaires — une seule solution qui s'adapte à chaque voyageur. Plus de 10 000 bagages déjà protégés à travers le monde.", lightBg: 'bg-emerald-50', iconColor: 'text-emerald-600' },
+    { icon: Heart, title: 'Pour les pèlerins, les voyageurs, les agences', description: "Hajj, Omra, tourisme, affaires — une seule solution qui s'adapte à chaque voyageur. Plus de 10 000 objets déjà protégés à travers le monde.", lightBg: 'bg-emerald-50', iconColor: 'text-emerald-600' },
   ];
 
   return (
     <section className="py-24 lg:py-32 px-5 bg-white">
       <div className="max-w-6xl mx-auto">
         <FadeIn className="text-center mb-16">
-          <span className="inline-flex items-center gap-2 text-xs font-bold tracking-[0.15em] uppercase text-blue-600 mb-5"><BadgeCheck className="w-3.5 h-3.5" />Pourquoi QRBag</span>
+          <span className="inline-flex items-center gap-2 text-xs font-bold tracking-[0.15em] uppercase text-blue-600 mb-5"><BadgeCheck className="w-3.5 h-3.5" />Pourquoi QRTags</span>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 mb-6 tracking-[-0.02em] leading-[1.1]">La confiance, au-delà<br className="hidden sm:block" /> des frontières</h2>
           <p className="text-lg text-slate-500 max-w-2xl mx-auto leading-relaxed">Une technologie conçue avec soin pour servir les voyageurs les plus exigeants.</p>
         </FadeIn>
@@ -882,18 +882,18 @@ function WhyQRBagSection() {
    ══════════════════════════════════════════════ */
 function SolutionsSection() {
   const solutions = [
-    { title: 'Hajj & Omra', description: 'Protection complète pour les pèlerins avec 3 bagages inclus (cabine + 2 soutes). Gérée par votre agence de voyage partenaire.', icon: Shield, href: '/hajj-omra', gradient: 'from-amber-500 to-orange-500' },
-    { title: 'Voyageurs Standard', description: 'Protection flexible pour tous vos voyages. Choisissez 1 ou 2 bagages soute avec une durée adaptée à vos besoins.', icon: Plane, href: '/voyageurs-standard', gradient: 'from-blue-600 to-indigo-600' },
-    { title: 'Devenir Partenaire', description: 'Agences de voyage, compagnies aériennes, hôtels — proposez QRBag à vos clients et générez des revenus complémentaires.', icon: Users, href: '/devenir-partenaire', gradient: 'from-violet-600 to-purple-600' },
+    { title: 'Hajj & Omra', description: 'Protection complète pour les pèlerins avec 3 objets inclus (cabine + 2 soutes). Gérée par votre agence de voyage partenaire.', icon: Shield, href: '/hajj-omra', gradient: 'from-amber-500 to-orange-500' },
+    { title: 'Voyageurs Standard', description: 'Protection flexible pour tous vos voyages. Choisissez 1 ou 2 objets avec une durée adaptée à vos besoins.', icon: Plane, href: '/voyageurs-standard', gradient: 'from-blue-600 to-indigo-600' },
+    { title: 'Devenir Partenaire', description: 'Agences de voyage, compagnies aériennes, hôtels — proposez QRTags à vos clients et générez des revenus complémentaires.', icon: Users, href: '/devenir-partenaire', gradient: 'from-violet-600 to-purple-600' },
   ];
 
   return (
     <section className="py-24 lg:py-32 px-5 bg-slate-50/60" id="solutions">
       <div className="max-w-6xl mx-auto">
         <FadeIn className="text-center mb-16">
-          <span className="inline-flex items-center gap-2 text-xs font-bold tracking-[0.15em] uppercase text-blue-600 mb-5"><Luggage className="w-3.5 h-3.5" />Solutions</span>
+          <span className="inline-flex items-center gap-2 text-xs font-bold tracking-[0.15em] uppercase text-blue-600 mb-5"><Tag className="w-3.5 h-3.5" />Solutions</span>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 mb-6 tracking-[-0.02em]">Deux solutions, une protection</h2>
-          <p className="text-lg text-slate-500 max-w-2xl mx-auto leading-relaxed">Que vous soyez pèlerin ou voyageur, QRBag s&apos;adapte à vos besoins.</p>
+          <p className="text-lg text-slate-500 max-w-2xl mx-auto leading-relaxed">Que vous soyez pèlerin ou voyageur, QRTags s&apos;adapte à vos besoins.</p>
         </FadeIn>
         <div className="grid md:grid-cols-3 gap-6">
           {solutions.map((sol, i) => (
@@ -919,7 +919,7 @@ function SolutionsSection() {
    ══════════════════════════════════════════════ */
 function StatsSection() {
   const stats = [
-    { value: 10000, suffix: '+', label: 'Bagages protégés', icon: Luggage },
+    { value: 10000, suffix: '+', label: 'Objets protégés', icon: Tag },
     { value: 15, suffix: '', label: 'Pays couverts', icon: Globe },
     { value: 98, suffix: '%', label: 'Taux de récupération', icon: TrendingUp },
     { value: 0, suffix: '24/7', label: 'Disponibilité', icon: BellRing },
@@ -953,8 +953,8 @@ function HowItWorksSection() {
   const steps = [
     { step: '01', image: '/images/landing-v2/step-receive.jpg', title: 'Recevez votre QR', description: 'Commandez vos QR codes via notre formulaire B2B ou auprès de votre agence partenaire.', color: 'from-blue-500 to-blue-600', href: '/etapes/recevez-votre-qr' },
     { step: '02', image: '/images/landing-v2/step-activate.jpg', title: 'Activez en 30 secondes', description: 'Scannez le QR code et remplissez le formulaire avec vos informations de voyage.', color: 'from-violet-500 to-violet-600', href: '/etapes/activez-30-secondes' },
-    { step: '03', image: '/images/landing-v2/step-travel.jpg', title: 'Voyagez serein', description: "Vos bagages sont protégés. Collez simplement l'autocollant bien visible sur chaque valise.", color: 'from-emerald-500 to-emerald-600', href: '/etapes/voyagez-serein' },
-    { step: '04', image: '/images/landing-v2/step-notify.jpg', title: 'Soyez notifié instantanément', description: "Si quelqu'un trouve votre bagage, vous recevez une alerte immédiatement via WhatsApp.", color: 'from-orange-500 to-orange-600', href: '/etapes/soyez-notifie' },
+    { step: '03', image: '/images/landing-v2/step-travel.jpg', title: 'Voyagez serein', description: "Vos objets sont protégés. Collez simplement l'autocollant bien visible sur chaque objet.", color: 'from-emerald-500 to-emerald-600', href: '/etapes/voyagez-serein' },
+    { step: '04', image: '/images/landing-v2/step-notify.jpg', title: 'Soyez notifié instantanément', description: "Si quelqu'un trouve votre objet, vous recevez une alerte immédiatement via WhatsApp.", color: 'from-orange-500 to-orange-600', href: '/etapes/soyez-notifie' },
   ];
 
   return (
@@ -991,9 +991,9 @@ function HowItWorksSection() {
    ══════════════════════════════════════════════ */
 function TestimonialsSection() {
   const testimonials = [
-    { name: 'Fatou Diallo', role: 'Pèlerine Hajj 2025', content: "Grâce à QRBag, j'ai retrouvé ma valise à Djeddah en moins de 2 heures. Une invention géniale qui devrait être obligatoire pour tous les pèlerins.", avatar: 'FD', rating: 5 },
-    { name: 'Marc Dupont', role: 'Voyageur fréquent', content: "Simple, efficace et pas cher. J'ai utilisé QRBag pour tous mes voyages cette année. Plus de stress à l'aéroport, enfin !", avatar: 'MD', rating: 5 },
-    { name: 'Amina Benali', role: 'Directrice agence de voyage', content: "Nous avons adopté QRBag pour tous nos pèlerins. Le taux de perte de bagages a chuté de 90%. Nos clients sont ravis.", avatar: 'AB', rating: 5 },
+    { name: 'Fatou Diallo', role: 'Pèlerine Hajj 2025', content: "Grâce à QRTags, j'ai retrouvé ma valise à Djeddah en moins de 2 heures. Une invention géniale qui devrait être obligatoire pour tous les pèlerins.", avatar: 'FD', rating: 5 },
+    { name: 'Marc Dupont', role: 'Voyageur fréquent', content: "Simple, efficace et pas cher. J'ai utilisé QRTags pour tous mes voyages cette année. Plus de stress à l'aéroport, enfin !", avatar: 'MD', rating: 5 },
+    { name: 'Amina Benali', role: 'Directrice agence de voyage', content: "Nous avons adopté QRTags pour tous nos pèlerins. Le taux de perte d'objets a chuté de 90%. Nos clients sont ravis.", avatar: 'AB', rating: 5 },
   ];
 
   return (
@@ -1027,17 +1027,17 @@ function TestimonialsSection() {
    ══════════════════════════════════════════════ */
 function PricingSection() {
   const plans = [
-    { name: 'Solo', price: '5', period: '/an', description: 'Idéal pour un voyage ponctuel', features: ['2 bagages QR codes', 'Activation en 30 secondes', 'Notifications WhatsApp', 'Géolocalisation temps réel'], popular: false, href: '/voyageurs-standard', accentColor: 'text-cyan-600', btnClass: 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white hover:from-cyan-600 hover:to-blue-600 shadow-cyan-500/25', popularBorder: 'border-slate-200/80' },
-    { name: 'Famille', price: '12', period: '/an', description: 'Pour les familles ou voyageurs fréquents', features: ['6 bagages QR codes', 'Activation en 30 secondes', 'Notifications WhatsApp', 'Géolocalisation temps réel', 'Support prioritaire'], popular: true, href: '/voyageurs-standard', accentColor: 'text-orange-600', btnClass: 'bg-gradient-to-r from-orange-500 to-amber-500 text-white hover:from-orange-600 hover:to-amber-600 shadow-orange-500/25', popularBorder: 'border-orange-200 shadow-lg shadow-orange-100/50' },
-    { name: 'Hajj & Omra', price: '5', period: '/pèlerin', description: 'Protection complète pour les pèlerins', features: ['3 bagages QR codes', 'Géré par votre agence', 'Notifications WhatsApp', 'Support 24/7 dédié', 'Couverture internationale'], popular: false, href: '/hajj-omra', accentColor: 'text-teal-600', btnClass: 'bg-gradient-to-r from-teal-500 to-emerald-500 text-white hover:from-teal-600 hover:to-emerald-600 shadow-teal-500/25', popularBorder: 'border-slate-200/80' },
+    { name: 'Solo', price: '5', period: '/an', description: 'Idéal pour un voyage ponctuel', features: ['2 objets QR codes', 'Activation en 30 secondes', 'Notifications WhatsApp', 'Géolocalisation temps réel'], popular: false, href: '/voyageurs-standard', accentColor: 'text-cyan-600', btnClass: 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white hover:from-cyan-600 hover:to-blue-600 shadow-cyan-500/25', popularBorder: 'border-slate-200/80' },
+    { name: 'Famille', price: '12', period: '/an', description: 'Pour les familles ou voyageurs fréquents', features: ['6 objets QR codes', 'Activation en 30 secondes', 'Notifications WhatsApp', 'Géolocalisation temps réel', 'Support prioritaire'], popular: true, href: '/voyageurs-standard', accentColor: 'text-orange-600', btnClass: 'bg-gradient-to-r from-orange-500 to-amber-500 text-white hover:from-orange-600 hover:to-amber-600 shadow-orange-500/25', popularBorder: 'border-orange-200 shadow-lg shadow-orange-100/50' },
+    { name: 'Hajj & Omra', price: '5', period: '/pèlerin', description: 'Protection complète pour les pèlerins', features: ['3 objets QR codes', 'Géré par votre agence', 'Notifications WhatsApp', 'Support 24/7 dédié', 'Couverture internationale'], popular: false, href: '/hajj-omra', accentColor: 'text-teal-600', btnClass: 'bg-gradient-to-r from-teal-500 to-emerald-500 text-white hover:from-teal-600 hover:to-emerald-600 shadow-teal-500/25', popularBorder: 'border-slate-200/80' },
   ];
 
   return (
     <section className="py-24 lg:py-32 px-5 bg-white" id="tarifs">
       <div className="max-w-6xl mx-auto">
         <FadeIn className="text-center mb-16">
-          <span className="inline-flex items-center gap-2 text-xs font-bold tracking-[0.15em] uppercase text-blue-600 mb-5"><Luggage className="w-3.5 h-3.5" />Tarifs</span>
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 mb-6 tracking-[-0.02em]">Protégez vos bagages à partir de 5€</h2>
+          <span className="inline-flex items-center gap-2 text-xs font-bold tracking-[0.15em] uppercase text-blue-600 mb-5"><Tag className="w-3.5 h-3.5" />Tarifs</span>
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 mb-6 tracking-[-0.02em]">Protégez vos objets à partir de 5€</h2>
           <p className="text-lg text-slate-500 max-w-2xl mx-auto leading-relaxed">Des prix simples et transparents. Pas de frais cachés.</p>
         </FadeIn>
         <div className="grid md:grid-cols-3 gap-6 items-start">
@@ -1076,7 +1076,7 @@ function FinalCTASection() {
       <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-indigo-100/20 rounded-full blur-[100px] translate-y-1/4 -translate-x-1/4" />
       <div className="max-w-3xl mx-auto text-center relative z-10">
         <FadeIn><span className="inline-flex items-center gap-2 text-xs font-bold tracking-[0.15em] uppercase text-blue-600 mb-6"><Sparkles className="w-3.5 h-3.5" />Prêt à voyager serein ?</span></FadeIn>
-        <FadeIn delay={0.15}><h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 mb-8 tracking-[-0.02em] leading-[1.1]">Rejoignez 10 000+ voyageurs qui protègent leurs bagages</h2></FadeIn>
+        <FadeIn delay={0.15}><h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 mb-8 tracking-[-0.02em] leading-[1.1]">Rejoignez 10 000+ voyageurs qui protègent leurs objets</h2></FadeIn>
         <FadeIn delay={0.3}><p className="text-lg text-slate-500 mb-12 leading-relaxed">Activation en 30 secondes, tranquillité pour tous vos voyages.</p></FadeIn>
         <FadeIn delay={0.45}>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -1126,10 +1126,10 @@ function Footer() {
       <div className="max-w-6xl mx-auto px-5">
         <div className="grid sm:grid-cols-2 lg:grid-cols-6 gap-12">
           <div className="lg:col-span-2">
-            <div className="mb-5"><img src="/logo.png" alt="QRBag" className="h-14 w-auto object-contain" /></div>
-            <p className="text-base leading-relaxed max-w-xs text-slate-500 mb-7">Protection intelligente des bagages pour voyageurs et pèlerins.</p>
+            <div className="mb-5"><img src="/logo.png" alt="QRTags" className="h-14 w-auto object-contain" /></div>
+            <p className="text-base leading-relaxed max-w-xs text-slate-500 mb-7">Protection intelligente des objets pour voyageurs et pèlerins.</p>
             <div className="flex items-center gap-2.5">
-              {[{ icon: Facebook, href: 'https://facebook.com/qrbag', label: 'Facebook' }, { icon: Instagram, href: 'https://instagram.com/qrbag', label: 'Instagram' }, { icon: Twitter, href: 'https://twitter.com/qrbag', label: 'Twitter' }].map(s => (
+              {[{ icon: Facebook, href: 'https://facebook.com/qrtags', label: 'Facebook' }, { icon: Instagram, href: 'https://instagram.com/qrtags', label: 'Instagram' }, { icon: Twitter, href: 'https://twitter.com/qrtags', label: 'Twitter' }].map(s => (
                 <a key={s.label} href={s.href} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-slate-100 hover:bg-blue-50 rounded-xl flex items-center justify-center transition-all duration-300" aria-label={s.label}><s.icon className="w-5 h-5 text-slate-400 hover:text-blue-600 transition-colors" /></a>
               ))}
             </div>
@@ -1142,7 +1142,7 @@ function Footer() {
           ))}
         </div>
         <div className="mt-16 pt-8 border-t border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-4">
-          <p className="text-sm text-slate-400">&copy; {new Date().getFullYear()} QRBag. Tous droits réservés.</p>
+          <p className="text-sm text-slate-400">&copy; {new Date().getFullYear()} QRTags. Tous droits réservés.</p>
           <div className="flex items-center gap-4 text-sm">
             <Link href="/mentions-legales" className="text-slate-400 hover:text-blue-600 transition-colors">Mentions légales</Link>
             <span className="text-slate-300">·</span>
@@ -1166,9 +1166,9 @@ export default function HomePage() {
       <HeroSection />
       <ChecklistCTASection />
       <TrackingWidget />
-      <QRBagEnActionSection />
+      <QRTagsEnActionSection />
       <TransportModesSection />
-      <WhyQRBagSection />
+      <WhyQRTagsSection />
       <SolutionsSection />
       <StatsSection />
       <HowItWorksSection />

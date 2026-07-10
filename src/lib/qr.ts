@@ -79,14 +79,14 @@ export async function generateReferencesBulk(type: 'hajj' | 'voyageur', count: n
   return Array.from(uniqueRefs);
 }
 
-// Generate multiple baggages for a traveler
+// Generate multiple objects for a traveler
 export interface GenerateBaggageOptions {
   type: 'hajj' | 'voyageur';
   agencyId?: string;
   count: 1 | 2;
 }
 
-// Generate baggage with individual traveler info
+// Generate object with individual traveler info
 export interface GenerateIndividualOptions {
   type: 'hajj' | 'voyageur';
   firstName: string;
@@ -157,7 +157,7 @@ export function isValidReferenceFormat(reference: string): boolean {
   return hajjPattern.test(reference) || volPattern.test(reference);
 }
 
-// Get baggage status info
+// Get object status info
 export function getBaggageStatusInfo(status: string) {
   const statusMap: Record<string, { label: string; color: string; bgColor: string }> = {
     pending_activation: {

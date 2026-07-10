@@ -22,6 +22,7 @@ const activateSchema = z.object({
   shipCabin: z.string().optional(),
   busCompany: z.string().optional(),
   busLineNumber: z.string().optional(),
+  objectCategory: z.string().optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -44,7 +45,7 @@ export async function POST(request: NextRequest) {
 
     if (baggage.status !== 'pending_activation') {
       return NextResponse.json(
-        { error: 'Already activated', message: 'Ce bagage a déjà été activé' },
+        { error: 'Already activated', message: 'Cet objet a déjà été activé' },
         { status: 400 }
       );
     }
@@ -75,6 +76,7 @@ export async function POST(request: NextRequest) {
         shipCabin: validatedData.shipCabin || null,
         busCompany: validatedData.busCompany || null,
         busLineNumber: validatedData.busLineNumber || null,
+        objectCategory: validatedData.objectCategory || null,
         status: 'active',
         expiresAt,
       }
@@ -114,6 +116,7 @@ export async function POST(request: NextRequest) {
               shipCabin: null,
               busCompany: null,
               busLineNumber: null,
+              objectCategory: validatedData.objectCategory || null,
               status: 'active',
               expiresAt,
             }

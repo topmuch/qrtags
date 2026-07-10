@@ -223,7 +223,7 @@ function ChecklistPageContent() {
         <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-xl border-b border-slate-200 px-4 py-2.5">
           <div className="max-w-5xl mx-auto flex items-center justify-between gap-3">
             <Link href="/" className="flex items-center gap-2 flex-shrink-0">
-              <img src="/logo.png" alt="QRBag" className="h-12 w-auto object-contain" />
+              <img src="/logo.png" alt="QRTags" className="h-12 w-auto object-contain" />
             </Link>
             <div className="hidden md:flex items-center gap-1">
               {NAV_LINKS.map((link) => (
@@ -301,7 +301,7 @@ function ChecklistPageContent() {
         </section>
 
         <footer className="bg-slate-900 text-slate-300 text-center py-3 mt-auto">
-          <p className="text-xs">QRBag — Protection intelligente des bagages • qrbags.com</p>
+          <p className="text-xs">QRTags — Protection intelligente des bagages • qrtags.com</p>
         </footer>
       </main>
     );
@@ -321,7 +321,7 @@ function ChecklistPageContent() {
       <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-xl border-b border-slate-200 px-4 py-2.5">
         <div className="max-w-5xl mx-auto flex items-center justify-between gap-3">
           <Link href="/" className="flex items-center gap-2 flex-shrink-0">
-            <img src="/logo.png" alt="QRBag" className="h-12 w-auto object-contain" />
+            <img src="/logo.png" alt="QRTags" className="h-12 w-auto object-contain" />
           </Link>
           <div className="hidden md:flex items-center gap-1">
             {NAV_LINKS.map((link) => (
@@ -348,7 +348,7 @@ function ChecklistPageContent() {
         {/* ─── Title block ─── */}
         <div className="text-center mb-6">
           <div className="inline-flex items-center gap-2 bg-blue-50 border border-blue-100 text-blue-700 text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full mb-3">
-            {refParam && sourceParam === 'tracking_page' ? '✨ Checklist gratuite' : '✨ Service gratuit QRBag'}
+            {refParam && sourceParam === 'tracking_page' ? '✨ Checklist gratuite' : '✨ Service gratuit QRTags'}
           </div>
           <h1 className="text-2xl md:text-3xl font-bold text-slate-900 mb-2">
             {t('checklist.title')}
@@ -710,7 +710,7 @@ function ChecklistPageContent() {
       </section>
 
       <footer className="bg-slate-900 text-slate-300 text-center py-3 mt-auto">
-        <p className="text-xs">QRBag — Protection intelligente des bagages • qrbags.com</p>
+        <p className="text-xs">QRTags — Protection intelligente des bagages • qrtags.com</p>
       </footer>
     </main>
   );

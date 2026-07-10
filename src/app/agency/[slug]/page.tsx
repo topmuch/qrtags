@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import prisma from '@/lib/prisma';
 import { isActive } from '@/lib/status';
-import { Luggage, MapPin, Clock, CheckCircle, QrCode, Phone, Mail, Globe, Search, ArrowLeft, Shield } from 'lucide-react';
+import { Tag, MapPin, Clock, CheckCircle, QrCode, Phone, Mail, Globe, Search, ArrowLeft, Shield } from 'lucide-react';
 
 // ─── Brand constants (unifié avec /inscrire, /success, /scan) ───
 const BRAND = '#FFDE21';
@@ -62,7 +62,7 @@ export default async function PublicAgencyPage({ params }: PageProps) {
             <ArrowLeft className="w-5 h-5" />
             <span className="text-sm md:text-base font-medium">Retour</span>
           </Link>
-          <img src="/logo.png" alt="QRBag" className="h-10 sm:h-12 w-auto object-contain" />
+          <img src="/logo.png" alt="QRTags" className="h-10 sm:h-12 w-auto object-contain" />
           <div className="w-16" /> {/* Spacer for centering */}
         </div>
       </header>
@@ -99,7 +99,7 @@ export default async function PublicAgencyPage({ params }: PageProps) {
               style={{ backgroundColor: BLUE, color: '#FFFFFF' }}
             >
               <Shield className="w-3.5 h-3.5" />
-              Partenaire QRBag vérifié
+              Partenaire QRTags vérifié
             </span>
           </div>
         </div>
@@ -111,7 +111,7 @@ export default async function PublicAgencyPage({ params }: PageProps) {
             style={{ backgroundColor: BRAND, boxShadow: `0 10px 25px ${INK}10` }}
           >
             <div className="w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-2" style={{ backgroundColor: BLUE }}>
-              <Luggage className="w-5 h-5 text-white" />
+              <Tag className="w-5 h-5 text-white" />
             </div>
             <p className="text-2xl sm:text-3xl font-bold" style={{ color: INK }}>{totalBaggages}</p>
             <p className="text-xs sm:text-sm font-medium" style={{ color: INK, opacity: 0.7 }}>Protégés</p>
@@ -159,21 +159,21 @@ export default async function PublicAgencyPage({ params }: PageProps) {
           {/* List Header */}
           <div className="px-5 sm:px-6 py-4 flex justify-between items-center" style={{ borderBottom: `2px dashed ${INK}30` }}>
             <h2 className="text-base sm:text-lg font-bold" style={{ color: INK }}>
-              🧳 Bagages protégés
+              🏷️ Objets protégés
             </h2>
             <span className="text-xs sm:text-sm font-medium" style={{ color: INK, opacity: 0.6 }}>
-              {totalBaggages} bagage{totalBaggages > 1 ? 's' : ''}
+              {totalBaggages} objet{totalBaggages > 1 ? 's' : ''}
             </span>
           </div>
 
           {agency.baggages.length === 0 ? (
             <div className="p-10 sm:p-12 text-center">
               <div className="w-16 h-16 bg-white/40 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Luggage className="w-8 h-8" style={{ color: INK, opacity: 0.4 }} />
+                <Tag className="w-8 h-8" style={{ color: INK, opacity: 0.4 }} />
               </div>
-              <p className="font-medium" style={{ color: INK, opacity: 0.6 }}>Aucun bagage actif</p>
+              <p className="font-medium" style={{ color: INK, opacity: 0.6 }}>Aucun objet actif</p>
               <p className="text-sm mt-1" style={{ color: INK, opacity: 0.4 }}>
-                Les bagages protégés apparaîtront ici
+                Les objets protégés apparaîtront ici
               </p>
             </div>
           ) : (
@@ -216,9 +216,11 @@ export default async function PublicAgencyPage({ params }: PageProps) {
                       >
                         {baggage.status === 'active' ? 'Actif' : baggage.status === 'found' ? 'Retrouvé' : 'Scanné'}
                       </span>
-                      <span className="text-xs hidden sm:block" style={{ color: INK, opacity: 0.5 }}>
-                        {baggage.baggageType === 'cabine' ? 'Cabine' : 'Soute'} #{baggage.baggageIndex}
-                      </span>
+                      {baggage.objectCategory && (
+                        <span className="text-xs hidden sm:block" style={{ color: INK, opacity: 0.5 }}>
+                          {baggage.objectCategory}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -281,10 +283,10 @@ export default async function PublicAgencyPage({ params }: PageProps) {
           <p className="flex items-center justify-center gap-2 text-white/60 text-sm">
             <QrCode className="w-4 h-4" />
             Propulsé par{' '}
-            <span className="font-bold" style={{ color: BRAND }}>QRBag</span>
+            <span className="font-bold" style={{ color: BRAND }}>QRTags</span>
           </p>
           <p className="mt-1 text-xs text-white/40">
-            Protection intelligente des bagages
+            Protection intelligente des objets
           </p>
         </footer>
       </div>

@@ -4,7 +4,7 @@ import { useState, useRef, useCallback } from 'react';
 import type { Language } from '@/lib/i18n';
 
 // ─── Constants ───
-const STORAGE_KEY = 'qrbag_audio_enabled';
+const STORAGE_KEY = 'qrtag_audio_enabled';
 const POLL_INTERVAL_MS = 15_000; // 15 seconds
 const RECENT_SCAN_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
 const NOTIFICATION_ICON = '/icons/icon-192x192.png';
@@ -73,11 +73,11 @@ const LANG_TO_SPEECH: Record<Language, string> = {
 // ─── Notification title/body per locale ───
 const NOTIF_TEXT: Record<Language, { title: string; body: (ref: string, location: string) => string }> = {
   fr: {
-    title: 'QRBag — Bagage localisé !',
+    title: 'QRTags — Bagage localisé !',
     body: (ref, loc) => `Réf. ${ref} scanné à ${loc}`,
   },
   en: {
-    title: 'QRBag — Baggage located!',
+    title: 'QRTags — Baggage located!',
     body: (ref, loc) => `Ref. ${ref} scanned at ${loc}`,
   },
   ar: {
@@ -183,7 +183,7 @@ export function useAudioAlert(lang: Language) {
           body,
           icon: NOTIFICATION_ICON,
           badge: NOTIFICATION_ICON,
-          tag: 'qrbag-scan-alert', // prevent duplicates
+          tag: 'qrtag-scan-alert', // prevent duplicates
         });
       }
     } catch {

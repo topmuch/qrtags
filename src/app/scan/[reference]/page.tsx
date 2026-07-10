@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Badge } from "@/components/ui/badge";
 import {
-  Luggage,
+  Tag,
   AlertCircle,
   Clock,
   Shield,
@@ -31,6 +31,7 @@ import {
   TRANSPORT_ICONS,
 } from '@/lib/transport';
 import type { TransportMode } from '@/lib/transport';
+import { OBJECT_ICONS, getObjectLabel } from '@/lib/object-categories';
 import TransportModeSelector from '@/components/inscrire/TransportModeSelector';
 
 // AI-FEATURE: Lazy-load ChatbotWidget (Feature #1) — doesn't block page render
@@ -78,6 +79,7 @@ interface BaggageData {
     shipCabin?: string | null;
     busCompany?: string | null;
     busLineNumber?: string | null;
+    objectCategory?: string | null;
   };
 }
 
@@ -162,7 +164,7 @@ function ActivationRedirect({ type, reference, t, lang, setLang }: {
                 className="mix-blend-multiply"
               />
             ) : (
-              <Luggage className="w-8 h-8 text-white" />
+              <Tag className="w-8 h-8 text-white" />
             )}
           </div>
           <div className="absolute -top-1 -right-1 w-7 h-7 bg-[#000000] rounded-full flex items-center justify-center">
@@ -375,7 +377,7 @@ export default function ScanPage() {
     travelerName: string,
     baggageType: string
   ) => {
-    const trackingUrl = `${typeof window !== 'undefined' ? window.location.origin : 'https://qrbags.com'}/suivi/${reference}`;
+    const trackingUrl = `${typeof window !== 'undefined' ? window.location.origin : 'https://qrtags.com'}/suivi/${reference}`;
 
     // Extract owner's first name from full name
     const firstName = travelerName.split(' ')[0] || travelerName || '';
@@ -661,11 +663,12 @@ export default function ScanPage() {
           </div>
         )}
 
-        {/* ═══ 🟦 BLOC 2 : DÉTAILS DU VOYAGE (white + dashed black, transport images) ═══ */}
+        {/* ═══ 🟦 BLOC 2 : DÉTAILS (white + dashed black, transport images or object category) ═══ */}
         {baggage && (() => {
           const mode = safeTransportMode(baggage.transportMode) as TransportMode;
           const transportImg = getTransportImage(mode);
           const blockHeader = getTransportBlockHeader(mode, lang);
+          const hasObjectCategory = baggage.objectCategory && OBJECT_ICONS[baggage.objectCategory as keyof typeof OBJECT_ICONS];
 
           return (
             <div className="w-full bg-white border-2 border-dashed border-[#000000] rounded-2xl p-5 md:p-6 mb-4">

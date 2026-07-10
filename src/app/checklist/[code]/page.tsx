@@ -185,7 +185,7 @@ export default function ChecklistViewPage() {
       <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-xl border-b border-slate-200 px-4 py-2.5">
         <div className="max-w-5xl mx-auto flex items-center justify-between gap-3">
           <Link href="/" className="flex items-center gap-2 flex-shrink-0">
-            <img src="/logo.png" alt="QRBag" className="h-12 w-auto object-contain" />
+            <img src="/logo.png" alt="QRTags" className="h-12 w-auto object-contain" />
           </Link>
           <div className="hidden md:flex items-center gap-1">
             <a href="/" className="px-3 py-2 text-[13px] font-medium text-slate-600 hover:text-slate-900 transition-colors rounded-lg hover:bg-slate-50">Accueil</a>
@@ -357,7 +357,7 @@ export default function ChecklistViewPage() {
             <div className="bg-white border-2 border-solid border-[#0f172a] rounded-2xl overflow-hidden shadow-md">
               <div className="bg-[#2563eb] border-b-2 border-[#0f172a] px-5 py-4 flex items-center justify-between">
                 <div>
-                  <div className="font-bold text-[#0f172a] text-lg">🎒 QRBag</div>
+                  <div className="font-bold text-[#0f172a] text-lg">🎒 QRTags</div>
                   <div className="text-xs text-[#0f172a]/75">Attestation d'inventaire de voyage</div>
                 </div>
                 <div className="text-right">
@@ -378,7 +378,7 @@ export default function ChecklistViewPage() {
                   </div>
                   <div className="bg-red-50 border-2 border-red-500 rounded-lg px-3 py-1.5 text-center">
                     <div className="text-[9px] uppercase tracking-widest text-red-700 font-bold">Certifié</div>
-                    <div className="text-[9px] text-red-600">QRBag</div>
+                    <div className="text-[9px] text-red-600">QRTags</div>
                   </div>
                 </div>
 
@@ -506,7 +506,7 @@ export default function ChecklistViewPage() {
       </section>
 
       <footer className="bg-[#0f172a] text-[#2563eb] text-center py-3 mt-auto">
-        <p className="text-xs">QRBag — Protection intelligente des bagages • qrbags.com</p>
+        <p className="text-xs">QRTags — Protection intelligente des bagages • qrtags.com</p>
       </footer>
     </main>
   );
