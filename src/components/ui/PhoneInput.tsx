@@ -203,7 +203,7 @@ export default function PhoneInput({
         />
       </div>
       {hint && (
-        <p className={`text-xs mt-1.5 ${dark ? 'text-white/50' : 'text-black/70'}`}
+        <p className={`text-xs mt-1.5 ${dark ? 'text-white/50' : 'text-black/70'}`}>
           {hint}
         </p>
       )}
