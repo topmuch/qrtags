@@ -1,36 +1,30 @@
 # QRBag - Dockerfile for Coolify Deployment
-# Using npm for deps (bun tarball extraction unreliable in Docker)
+# 100% npm/npx — no bun in Docker (tarball extraction + build issues)
 FROM node:20-slim AS base
 
 # ─── Stage 1: Install dependencies ───
 FROM base AS deps
 WORKDIR /app
 
-# Copy package files
 COPY package.json ./
-
-# Use npm install — bun has tarball extraction issues in Docker
 RUN npm install
 
 # ─── Stage 2: Build ───
 FROM base AS builder
 WORKDIR /app
 
-# Install bun for fast builds
-RUN npm install -g bun
-
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Generate Prisma Client
-RUN bun run db:generate || npx prisma generate
+RUN npx prisma generate
 
 # Set environment variables for build
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 
 # Build the application
-RUN bun run build
+RUN npx next build
 
 # ─── Stage 3: Production ───
 FROM base AS runner
