@@ -521,11 +521,11 @@ function InscrireContent() {
             <button
               onClick={doSubmit}
               disabled={loading || !transportMode || missingReference}
-              className="w-full py-4 px-6 bg-[#0147d5] hover:bg-[#0147d5]/80 active:bg-[#0147d5]/90 disabled:bg-[#0147d5]/30 disabled:cursor-not-allowed text-white font-bold text-lg rounded-xl shadow-lg transition-all duration-200 transform hover:-translate-y-1 min-h-[56px] focus:ring-2 focus:ring-[#0147d5] focus:ring-offset-2 flex items-center justify-center gap-2"
+              className="w-full py-4 px-6 bg-[#FFDE21] hover:bg-[#FFDE21]/80 active:bg-[#FFDE21]/90 disabled:bg-[#FFDE21]/30 disabled:cursor-not-allowed text-black font-bold text-lg rounded-xl shadow-lg transition-all duration-200 transform hover:-translate-y-1 min-h-[56px] focus:ring-2 focus:ring-[#FFDE21] focus:ring-offset-2 focus:ring-offset-[#FFDE21] flex items-center justify-center gap-2"
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <div className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin" />
                   {t('inscrire.submit_loading')}
                 </span>
               ) : (

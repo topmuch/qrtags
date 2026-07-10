@@ -118,16 +118,16 @@ export default function PhoneInput({
     }
   }, [isOpen]);
 
-  const textColor = dark ? 'text-white' : 'text-blue-900';
+  const textColor = dark ? 'text-white' : 'text-black';
   const bgColor = dark ? 'bg-white/10' : 'bg-white';
-  const borderColor = dark ? 'border-white/20' : 'border-blue-200';
-  const placeholderColor = dark ? 'placeholder:text-white/40' : 'placeholder:text-blue-900/40';
-  const focusRing = 'focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent';
+  const borderColor = dark ? 'border-white/20' : 'border-black';
+  const placeholderColor = dark ? 'placeholder:text-white/40' : 'placeholder:text-black/40';
+  const focusRing = 'focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent';
 
   return (
     <div className={`w-full min-w-0 ${className}`}>
       {label && (
-        <p className={`text-sm font-medium mb-1.5 ${dark ? 'text-white/80' : 'text-blue-700'}`}>
+        <p className={`text-sm font-medium mb-1.5 ${dark ? 'text-white/80' : 'text-black'}`}>
           {label}
         </p>
       )}
@@ -203,7 +203,7 @@ export default function PhoneInput({
         />
       </div>
       {hint && (
-        <p className={`text-xs mt-1.5 ${dark ? 'text-white/50' : 'text-blue-900/50'}`}>
+        <p className={`text-xs mt-1.5 ${dark ? 'text-white/50' : 'text-black/70'}`}
           {hint}
         </p>
       )}
