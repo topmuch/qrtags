@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { normalizeStatus, isPending, isActive, statusFilterIn } from '@/lib/status';
+import { generateReference, calculateExpirationDate, generateSetId } from '@/lib/qr';
 
 // GET - List all baggages for an agency
 export async function GET(request: NextRequest) {
@@ -61,6 +62,98 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('Get baggages error:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+// POST - Create a new baggage for an agency
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { agencyId, travelerFirstName, travelerLastName, travelerPhone, travelerEmail, customData } = body;
+
+    if (!agencyId) {
+      return NextResponse.json(
+        { error: 'Agency ID is required' },
+        { status: 400 }
+      );
+    }
+
+    const reference = await generateReference('standard');
+    const setId = generateSetId('standard');
+    const expiresAt = calculateExpirationDate('standard', 'tag');
+
+    const baggage = await db.baggage.create({
+      data: {
+        reference,
+        type: 'standard',
+        setId,
+        agencyId,
+        status: 'pending_activation',
+        expiresAt,
+        travelerFirstName: travelerFirstName || null,
+        travelerLastName: travelerLastName || null,
+        travelerPhone: travelerPhone || null,
+        travelerEmail: travelerEmail || null,
+        customData: typeof customData === 'string' ? customData : customData ? JSON.stringify(customData) : null,
+      }
+    });
+
+    return NextResponse.json({ baggage });
+  } catch (error) {
+    console.error('Create baggage error:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+// PUT - Update a baggage (e.g. customData)
+export async function PUT(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { id, agencyId, customData, ...rest } = body;
+
+    if (!id) {
+      return NextResponse.json(
+        { error: 'Baggage ID is required' },
+        { status: 400 }
+      );
+    }
+
+    // Verify the baggage belongs to the agency if agencyId is provided
+    if (agencyId) {
+      const baggage = await db.baggage.findUnique({ where: { id } });
+      if (!baggage || baggage.agencyId !== agencyId) {
+        return NextResponse.json(
+          { error: 'Baggage not found or does not belong to this agency' },
+          { status: 404 }
+        );
+      }
+    }
+
+    const updateData: Record<string, unknown> = {};
+
+    if (rest.travelerFirstName !== undefined) updateData.travelerFirstName = rest.travelerFirstName || null;
+    if (rest.travelerLastName !== undefined) updateData.travelerLastName = rest.travelerLastName || null;
+    if (rest.travelerPhone !== undefined) updateData.travelerPhone = rest.travelerPhone || null;
+    if (rest.travelerEmail !== undefined) updateData.travelerEmail = rest.travelerEmail || null;
+    if (customData !== undefined) {
+      updateData.customData = typeof customData === 'string' ? customData : customData ? JSON.stringify(customData) : null;
+    }
+
+    const updated = await db.baggage.update({
+      where: { id },
+      data: updateData,
+    });
+
+    return NextResponse.json({ baggage: updated });
+  } catch (error) {
+    console.error('Update baggage error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

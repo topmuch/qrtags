@@ -550,8 +550,19 @@ export function getBaggageFoundEmailTemplate(data: {
   };
 }
 
+const AGENCY_TYPE_LABELS: Record<string, string> = {
+  travel: '🧳 Agence de voyage',
+  hotel: '🏨 Hôtel',
+  bus: '🚌 Compagnie de bus',
+  school: '🎓 École / Université',
+  medical: '🏥 Clinique / Hôpital',
+  company: '🏢 Entreprise',
+  event: '🎪 Événementiel',
+};
+
 export function getNewAgencyEmailTemplate(data: {
   name: string;
+  agencyType?: string;
   email?: string;
   phone?: string;
   address?: string;
@@ -570,6 +581,10 @@ export function getNewAgencyEmailTemplate(data: {
             <tr>
               <td style="padding: 8px 0; color: #999; font-size: 14px; border-bottom: 1px solid #eee;">Nom de l'agence</td>
               <td style="padding: 8px 0; font-weight: bold; color: #333; border-bottom: 1px solid #eee;">${data.name}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #999; font-size: 14px; border-bottom: 1px solid #eee;">Type d'agence</td>
+              <td style="padding: 8px 0; font-weight: bold; color: #333; border-bottom: 1px solid #eee;">${AGENCY_TYPE_LABELS[data.agencyType || 'travel'] || data.agencyType || 'Agence de voyage'}</td>
             </tr>
             ${data.email ? `
             <tr>
@@ -594,7 +609,7 @@ export function getNewAgencyEmailTemplate(data: {
         </div>
       </div>
     `,
-    text: `🏢 QRTags - Nouvelle agence créée\n\nNom: ${data.name}\nEmail: ${data.email || 'Non renseigné'}\nTéléphone: ${data.phone || 'Non renseigné'}\nAdresse: ${data.address || 'Non renseignée'}\n\nNotification automatique QRTags — ${now}\n© QRTags`,
+    text: `🏢 QRTags - Nouvelle agence créée\n\nNom: ${data.name}\nType: ${AGENCY_TYPE_LABELS[data.agencyType || 'travel'] || data.agencyType || 'Agence de voyage'}\nEmail: ${data.email || 'Non renseigné'}\nTéléphone: ${data.phone || 'Non renseigné'}\nAdresse: ${data.address || 'Non renseignée'}\n\nNotification automatique QRTags — ${now}\n© QRTags`,
   };
 }
 

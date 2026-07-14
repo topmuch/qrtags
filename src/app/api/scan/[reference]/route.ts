@@ -102,7 +102,18 @@ export async function GET(
         declaredLostAt: baggage.declaredLostAt,
         foundAt: baggage.foundAt,
         createdAt: baggage.createdAt?.toISOString() || null,
-      }
+        customData: baggage.customData,
+      },
+      // Agency branding for white-label scan page
+      agencyBranding: baggage.agency ? {
+        name: baggage.agency.name,
+        agencyType: baggage.agency.agencyType,
+        logoUrl: baggage.agency.logoUrl,
+        primaryColor: baggage.agency.primaryColor,
+        secondaryColor: baggage.agency.secondaryColor,
+        customMessage: baggage.agency.customMessage,
+        phone: baggage.agency.phone,
+      } : null,
     },
     {
       headers: {

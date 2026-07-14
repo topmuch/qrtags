@@ -14,6 +14,14 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import {
   Plus,
   Trash2,
   Edit,
@@ -26,14 +34,30 @@ import {
   Loader2,
 } from "lucide-react";
 
+// Agency type definitions
+const AGENCY_TYPES: Record<string, { label: string; emoji: string; color: string }> = {
+  travel: { label: 'Agence de voyage', emoji: '🧳', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
+  hotel: { label: 'Hôtel', emoji: '🏨', color: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' },
+  bus: { label: 'Compagnie de bus', emoji: '🚌', color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' },
+  school: { label: 'École / Université', emoji: '🎓', color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' },
+  medical: { label: 'Clinique / Hôpital', emoji: '🏥', color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' },
+  company: { label: 'Entreprise', emoji: '🏢', color: 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300' },
+  event: { label: 'Événementiel', emoji: '🎪', color: 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400' },
+};
+
 // Types
 interface Agency {
   id: string;
   name: string;
   slug: string;
+  agencyType: string;
   email: string | null;
   phone: string | null;
   active: boolean;
+  logoUrl: string | null;
+  primaryColor: string;
+  secondaryColor: string;
+  customMessage: string | null;
   createdAt: string;
   _count?: {
     baggages: number;
@@ -73,6 +97,10 @@ export default function AgencesPage() {
     phone: '',
     password: '',
     confirmPassword: '',
+    agencyType: 'travel',
+    primaryColor: '#2563EB',
+    secondaryColor: '#F97316',
+    customMessage: '',
   });
 
   useEffect(() => {
@@ -126,6 +154,10 @@ export default function AgencesPage() {
           slug: agencyForm.slug,
           email: agencyForm.email,
           phone: agencyForm.phone,
+          agencyType: agencyForm.agencyType,
+          primaryColor: agencyForm.primaryColor,
+          secondaryColor: agencyForm.secondaryColor,
+          customMessage: agencyForm.customMessage || null,
         }),
       });
 
@@ -147,7 +179,7 @@ export default function AgencesPage() {
         setSuccessMessage(`Agence "${agencyForm.name}" créée avec succès !`);
         fetchAgencies();
         setDialogOpen(false);
-        setAgencyForm({ name: '', slug: '', email: '', phone: '', password: '', confirmPassword: '' });
+        setAgencyForm({ name: '', slug: '', email: '', phone: '', password: '', confirmPassword: '', agencyType: 'travel', primaryColor: '#2563EB', secondaryColor: '#F97316', customMessage: '' });
         setTimeout(() => setSuccessMessage(''), 5000);
       } else {
         const error = await agencyResponse.json();
@@ -323,7 +355,7 @@ export default function AgencesPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div>
           <h1 className="text-2xl font-bold text-slate-800 dark:text-white">Agences Partenaires</h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">Gérez les agences de voyage partenaires</p>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">Gérez les agences partenaires (voyage, hôtel, bus, école…)</p>
         </div>
         <div className="flex items-center gap-3">
           <Button
@@ -351,6 +383,73 @@ export default function AgencesPage() {
                     {errorMessage}
                   </div>
                 )}
+                {/* Agency Type Selector */}
+                <div className="space-y-2">
+                  <Label className="text-slate-700 dark:text-slate-300">Type d&apos;agence *</Label>
+                  <Select
+                    value={agencyForm.agencyType}
+                    onValueChange={(value) => setAgencyForm({ ...agencyForm, agencyType: value })}
+                  >
+                    <SelectTrigger className="bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-800 dark:text-white">
+                      <SelectValue placeholder="Sélectionner un type" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
+                      {Object.entries(AGENCY_TYPES).map(([key, type]) => (
+                        <SelectItem key={key} value={key} className="text-slate-800 dark:text-white">
+                          {type.emoji} {type.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {/* Colors */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-slate-700 dark:text-slate-300">Couleur principale</Label>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="color"
+                        value={agencyForm.primaryColor}
+                        onChange={(e) => setAgencyForm({ ...agencyForm, primaryColor: e.target.value })}
+                        className="w-10 h-10 rounded-lg border border-slate-200 dark:border-slate-600 cursor-pointer bg-transparent p-0.5"
+                      />
+                      <Input
+                        value={agencyForm.primaryColor}
+                        onChange={(e) => setAgencyForm({ ...agencyForm, primaryColor: e.target.value })}
+                        className="bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-800 dark:text-white font-mono text-sm"
+                        maxLength={7}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-slate-700 dark:text-slate-300">Couleur secondaire</Label>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="color"
+                        value={agencyForm.secondaryColor}
+                        onChange={(e) => setAgencyForm({ ...agencyForm, secondaryColor: e.target.value })}
+                        className="w-10 h-10 rounded-lg border border-slate-200 dark:border-slate-600 cursor-pointer bg-transparent p-0.5"
+                      />
+                      <Input
+                        value={agencyForm.secondaryColor}
+                        onChange={(e) => setAgencyForm({ ...agencyForm, secondaryColor: e.target.value })}
+                        className="bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-800 dark:text-white font-mono text-sm"
+                        maxLength={7}
+                      />
+                    </div>
+                  </div>
+                </div>
+                {/* Custom Message */}
+                <div className="space-y-2">
+                  <Label className="text-slate-700 dark:text-slate-300">Message personnalisé (page de scan)</Label>
+                  <Textarea
+                    placeholder="Message affiché sur la page de scan quand un QR code est scanné..."
+                    value={agencyForm.customMessage}
+                    onChange={(e) => setAgencyForm({ ...agencyForm, customMessage: e.target.value })}
+                    className="bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-800 dark:text-white resize-none"
+                    rows={3}
+                  />
+                </div>
                 <div className="space-y-2">
                   <Label className="text-slate-700 dark:text-slate-300">Nom de l&apos;agence *</Label>
                   <Input
@@ -651,8 +750,15 @@ export default function AgencesPage() {
                 </div>
               </div>
 
-              {/* Name + Slug */}
-              <h3 className="font-semibold text-slate-800 dark:text-white text-lg">{agency.name}</h3>
+              {/* Name + Type Badge + Slug */}
+              <div className="flex items-center gap-2 mb-1">
+                <h3 className="font-semibold text-slate-800 dark:text-white text-lg">{agency.name}</h3>
+                {agency.agencyType && AGENCY_TYPES[agency.agencyType] && (
+                  <Badge variant="secondary" className={`text-xs px-2 py-0.5 rounded-lg ${AGENCY_TYPES[agency.agencyType].color}`}>
+                    {AGENCY_TYPES[agency.agencyType].emoji} {AGENCY_TYPES[agency.agencyType].label}
+                  </Badge>
+                )}
+              </div>
               <p className="text-sm text-slate-400 font-mono mb-4">@{agency.slug}</p>
 
               {/* Contact */}

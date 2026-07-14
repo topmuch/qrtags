@@ -10,6 +10,11 @@ const agencySchema = z.object({
   email: z.string().email().optional().or(z.literal('')),
   phone: z.string().optional(),
   address: z.string().optional(),
+  agencyType: z.enum(['travel', 'hotel', 'bus', 'school', 'medical', 'company', 'event']).optional().default('travel'),
+  logoUrl: z.string().optional().or(z.literal('')),
+  primaryColor: z.string().default('#2563EB'),
+  secondaryColor: z.string().default('#F97316'),
+  customMessage: z.string().optional().or(z.literal('')),
 });
 
 // GET - List all agencies
@@ -60,6 +65,11 @@ export async function POST(request: NextRequest) {
         email: validatedData.email || null,
         phone: validatedData.phone || null,
         address: validatedData.address || null,
+        agencyType: validatedData.agencyType,
+        logoUrl: validatedData.logoUrl || null,
+        primaryColor: validatedData.primaryColor,
+        secondaryColor: validatedData.secondaryColor,
+        customMessage: validatedData.customMessage || null,
       }
     });
 
@@ -71,6 +81,7 @@ export async function POST(request: NextRequest) {
         if (recipientEmail) {
           const template = getNewAgencyEmailTemplate({
             name: agency.name,
+            agencyType: agency.agencyType,
             email: agency.email || undefined,
             phone: agency.phone || undefined,
             address: agency.address || undefined,
@@ -106,7 +117,7 @@ export async function POST(request: NextRequest) {
     
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: 'Validation error', details: error.errors },
+        { error: 'Validation error', details: error.issues },
         { status: 400 }
       );
     }
@@ -139,6 +150,11 @@ export async function PUT(request: NextRequest) {
     if (data.email !== undefined) updateData.email = data.email || null;
     if (data.phone !== undefined) updateData.phone = data.phone || null;
     if (data.address !== undefined) updateData.address = data.address || null;
+    if (data.agencyType !== undefined) updateData.agencyType = data.agencyType;
+    if (data.logoUrl !== undefined) updateData.logoUrl = data.logoUrl || null;
+    if (data.primaryColor !== undefined) updateData.primaryColor = data.primaryColor;
+    if (data.secondaryColor !== undefined) updateData.secondaryColor = data.secondaryColor;
+    if (data.customMessage !== undefined) updateData.customMessage = data.customMessage || null;
     if (active !== undefined) updateData.active = active;
 
     // Check slug uniqueness if slug is being updated

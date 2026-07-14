@@ -25,7 +25,13 @@ import {
   ExternalLink,
   Copy,
   ShoppingCart,
-  MoreVertical
+  MoreVertical,
+  Hotel,
+  GraduationCap,
+  Stethoscope,
+  Users,
+  UserCheck,
+  Bus,
 } from "lucide-react";
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -45,6 +51,7 @@ export const DEMO_AGENCY = {
 interface AgencyContextType {
   agencyId: string;
   agencyName: string;
+  agencyType: string;
   agencyData: typeof DEMO_AGENCY | null;
   userName: string;
   userEmail: string;
@@ -53,6 +60,7 @@ interface AgencyContextType {
 export const AgencyContext = createContext<AgencyContextType>({
   agencyId: DEMO_AGENCY.id,
   agencyName: DEMO_AGENCY.name,
+  agencyType: 'travel',
   agencyData: null,
   userName: '',
   userEmail: ''
@@ -67,13 +75,46 @@ interface MenuItem {
   badge?: number;
 }
 
-// Modern Sidebar Component - Orange Theme with Black Buttons
-function Sidebar({ isOpen, setIsOpen, unreadMessages, onLogout, userName, agencySlug }: { isOpen: boolean; setIsOpen: (open: boolean) => void; unreadMessages?: number; onLogout: () => void; userName: string; agencySlug: string }) {
+// Type-specific sidebar items
+function getTypeMenuItems(agencyType: string): MenuItem[] {
+  switch (agencyType) {
+    case 'hotel':
+      return [{ label: "Check-in rapide", icon: <Hotel className="w-5 h-5" />, href: "/agence/baggages" }];
+    case 'bus':
+      return [{ label: "Voyages", icon: <Bus className="w-5 h-5" />, href: "/agence/baggages" }];
+    case 'school':
+      return [{ label: "Élèves", icon: <GraduationCap className="w-5 h-5" />, href: "/agence/baggages" }];
+    case 'medical':
+      return [{ label: "Patients", icon: <Stethoscope className="w-5 h-5" />, href: "/agence/baggages" }];
+    case 'company':
+      return [{ label: "Employés", icon: <Users className="w-5 h-5" />, href: "/agence/baggages" }];
+    case 'event':
+      return [{ label: "Participants", icon: <UserCheck className="w-5 h-5" />, href: "/agence/baggages" }];
+    default:
+      return [];
+  }
+}
+
+// Baggage label by type
+function getBaggageLabel(agencyType: string): string {
+  const labels: Record<string, string> = {
+    travel: 'Bagages', hotel: 'Bagages', bus: 'Bagages',
+    school: 'Effets perso', medical: 'Effets perso',
+    company: 'Matériel', event: 'Badges',
+  };
+  return labels[agencyType] || 'Bagages';
+}
+
+// Modern Sidebar Component
+function Sidebar({ isOpen, setIsOpen, unreadMessages, onLogout, userName, agencySlug, agencyType }: { isOpen: boolean; setIsOpen: (open: boolean) => void; unreadMessages?: number; onLogout: () => void; userName: string; agencySlug: string; agencyType: string }) {
   const pathname = usePathname();
-  
+
+  const typeMenuItems = getTypeMenuItems(agencyType);
+
   const menuItems: MenuItem[] = [
     { label: "Tableau de bord", icon: <Home className="w-5 h-5" />, href: "/agence/tableau-de-bord" },
-    { label: "Bagages", icon: <Luggage className="w-5 h-5" />, href: "/agence/baggages" },
+    { label: getBaggageLabel(agencyType), icon: <Luggage className="w-5 h-5" />, href: "/agence/baggages" },
+    ...typeMenuItems,
     { label: "Assistance", icon: <MessageCircle className="w-5 h-5" />, href: "/agence/assistance", badge: unreadMessages },
     { label: "Trouvailles", icon: <CheckCircle className="w-5 h-5" />, href: "/agence/trouvailles" },
     { label: "Perdus", icon: <AlertTriangle className="w-5 h-5" />, href: "/agence/perdus" },
@@ -398,7 +439,7 @@ function Header({ unreadMessages, onMenuClick, userName, agencySlug, mobileActio
             </div>
             <div className="hidden sm:block">
               <p className="text-sm font-medium text-slate-700 dark:text-slate-200">{userName || 'Agence'}</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Agence partenaire</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{agencyType === 'travel' ? 'Agence partenaire' : agencyType === 'hotel' ? 'Hôtel' : agencyType === 'bus' ? 'Compagnie de bus' : agencyType === 'school' ? 'Établissement scolaire' : agencyType === 'medical' ? 'Établissement médical' : agencyType === 'company' ? 'Entreprise' : 'Organisateur événementiel'}</p>
             </div>
           </div>
         </div>
@@ -472,10 +513,13 @@ export default function AgencyRootLayout({
   const agencyId = user?.agencyId || user?.agency?.id || '';
   const agencyName = user?.agency?.name || user?.name || DEMO_AGENCY.name;
   const agencySlug = user?.agency?.slug || DEMO_AGENCY.slug;
+  const agencyType = (user?.agency as any)?.agencyType || 'travel';
+
   const agencyData = user?.agency ? {
     id: user.agency.id,
     name: user.agency.name,
     slug: user.agency.slug,
+    agencyType: (user.agency as any).agencyType || 'travel',
     email: user.agency.email || DEMO_AGENCY.email,
     phone: user.agency.phone || DEMO_AGENCY.phone,
     address: user.agency.address || DEMO_AGENCY.address
@@ -505,12 +549,13 @@ export default function AgencyRootLayout({
     <AgencyContext.Provider value={{
       agencyId,
       agencyName,
+      agencyType,
       agencyData: agencyData || DEMO_AGENCY,
       userName: user.name || 'Agence',
       userEmail: user.email
     }}>
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex transition-colors duration-300">
-        <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} unreadMessages={unreadMessages} onLogout={handleLogout} userName={user.name || 'Agence'} agencySlug={agencySlug} />
+        <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} unreadMessages={unreadMessages} onLogout={handleLogout} userName={user.name || 'Agence'} agencySlug={agencySlug} agencyType={agencyType} />
 
         <div className="flex-1 flex flex-col min-w-0">
           <Header unreadMessages={unreadMessages} onMenuClick={() => setSidebarOpen(true)} userName={user.name || 'Agence'} agencySlug={agencySlug} mobileActionsOpen={mobileActionsOpen} setMobileActionsOpen={setMobileActionsOpen} />
