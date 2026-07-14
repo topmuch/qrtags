@@ -209,7 +209,7 @@ export default function LoginPage({ variant }: { variant: LoginVariant }) {
     }, 6000);
 
     return () => {
-      cycleInterval();
+      clearInterval(cycleInterval);
       timeouts.forEach(clearTimeout);
     };
   }, []);
