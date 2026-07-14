@@ -12,7 +12,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 FROM base AS deps
 WORKDIR /app
 
-COPY package.json package-lock.json* ./
+COPY package.json bun.lock* package-lock.json* ./
 RUN npm install --legacy-peer-deps
 
 # ─── Stage 2: Build ───
@@ -69,15 +69,17 @@ RUN echo '#!/bin/sh' > /app/entrypoint.sh && \
     echo '' >> /app/entrypoint.sh && \
     echo '# Auto-migrate database on first run' >> /app/entrypoint.sh && \
     echo 'if [ ! -f /app/data/qrtags.db ]; then' >> /app/entrypoint.sh && \
-    echo '  echo "📦 First run — creating database..."' >> /app/entrypoint.sh && \
+    echo '  echo "First run — creating database..."' >> /app/entrypoint.sh && \
     echo '  export DATABASE_URL="file:/app/data/qrtags.db"' >> /app/entrypoint.sh && \
     echo '  npx prisma db push --skip-generate --accept-data-loss 2>/dev/null || true' >> /app/entrypoint.sh && \
-    echo '  echo "✅ Database ready"' >> /app/entrypoint.sh && \
+    echo '  echo "Database ready"' >> /app/entrypoint.sh && \
     echo 'else' >> /app/entrypoint.sh && \
-    echo '  echo "📦 Database exists — skipping init"' >> /app/entrypoint.sh && \
+    echo '  echo "Database exists — syncing schema..."' >> /app/entrypoint.sh && \
+    echo '  export DATABASE_URL="file:/app/data/qrtags.db"' >> /app/entrypoint.sh && \
+    echo '  npx prisma db push --skip-generate 2>/dev/null || true' >> /app/entrypoint.sh && \
     echo 'fi' >> /app/entrypoint.sh && \
     echo '' >> /app/entrypoint.sh && \
-    echo 'echo "🚀 Starting QRTags on port ${PORT:-3000}..."' >> /app/entrypoint.sh && \
+    echo 'echo "Starting QRTags on port ${PORT:-3000}..."' >> /app/entrypoint.sh && \
     echo 'exec node server.js' >> /app/entrypoint.sh && \
     chmod +x /app/entrypoint.sh
 
