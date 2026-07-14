@@ -23,10 +23,8 @@ import {
 // Types
 interface DashboardStats {
   totalQR: number;
-  qrActivatedHajj: number;
-  qrActivatedVoyageur: number;
-  totalPelerins: number;
-  totalVoyageurs: number;
+  qrActivated: number;
+  totalTravelers: number;
   expiringSoon: number;
   pendingOrders: number;
   totalAgencies: number;
@@ -135,7 +133,6 @@ function KPICard({
 function QuickActions() {
   const actions = [
     { label: "Générer QR", icon: <QrCode className="w-5 h-5" />, href: "/admin/generer", color: "bg-blue-600" },
-    { label: "Hajj 2026", icon: <Users className="w-5 h-5" />, href: "/admin/hajj", color: "bg-blue-500" },
     { label: "Commandes", icon: <ShoppingCart className="w-5 h-5" />, href: "/admin/messages", color: "bg-blue-500" },
     { label: "Agences", icon: <Building className="w-5 h-5" />, href: "/admin/agences", color: "bg-purple-500" },
   ];
@@ -173,7 +170,7 @@ function ActivationsChart({ data }: { data: DailyActivation[] }) {
         </div>
         <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 dark:bg-blue-600/10 rounded-lg">
           <span className="w-3 h-3 rounded-full bg-blue-600"></span>
-          <span className="text-xs text-slate-600 dark:text-slate-300">Pèlerins/Voyageurs</span>
+          <span className="text-xs text-slate-600 dark:text-slate-300">Voyageurs</span>
         </div>
       </div>
 
@@ -286,10 +283,8 @@ export default function DashboardPage() {
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [stats, setStats] = useState<DashboardStats>({
     totalQR: 0,
-    qrActivatedHajj: 0,
-    qrActivatedVoyageur: 0,
-    totalPelerins: 0,
-    totalVoyageurs: 0,
+    qrActivated: 0,
+    totalTravelers: 0,
     expiringSoon: 0,
     pendingOrders: 0,
     totalAgencies: 0,
@@ -355,21 +350,21 @@ export default function DashboardPage() {
     { 
       title: 'Total QR Codes', 
       value: stats.totalQR, 
-      subtitle: `${stats.qrActivatedHajj} Hajj actifs`,
+      subtitle: `${stats.qrActivated} activés`,
       icon: <QrCode className="w-6 h-6 text-white" />,
       colorVariant: 'green' as const
     },
     { 
       title: 'QR Activés', 
-      value: stats.qrActivatedVoyageur, 
+      value: stats.qrActivated, 
       subtitle: 'Codes activés',
       icon: <Package className="w-6 h-6 text-white" />,
       colorVariant: 'blue' as const
     },
     { 
       title: 'Utilisateurs', 
-      value: stats.totalPelerins + stats.totalVoyageurs, 
-      subtitle: `${stats.totalPelerins} Hajj + ${stats.totalVoyageurs} Std/Voyageurs`,
+      value: stats.totalTravelers, 
+      subtitle: 'Voyageurs enregistrés',
       icon: <Users className="w-6 h-6 text-white" />,
       colorVariant: 'purple' as const
     },
