@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { ServiceWorkerRegistration } from "@/components/pwa-registration";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -154,9 +155,11 @@ export default function RootLayout({
       >
         <ThemeProvider>
           <AuthProvider>
-            <ServiceWorkerRegistration />
-            {children}
-            <Toaster />
+            <ErrorBoundary>
+              <ServiceWorkerRegistration />
+              {children}
+              <Toaster />
+            </ErrorBoundary>
           </AuthProvider>
         </ThemeProvider>
       </body>

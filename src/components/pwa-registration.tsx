@@ -4,47 +4,54 @@ import { useEffect } from 'react';
 
 export function ServiceWorkerRegistration() {
   useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker
-          .register('/sw.js')
-          .then((registration) => {
-            console.log('SW registered:', registration.scope);
+    if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
 
-            // Check for updates
-            registration.addEventListener('updatefound', () => {
-              const newWorker = registration.installing;
-              if (newWorker) {
-                newWorker.addEventListener('statechange', () => {
-                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                    // New content available, show refresh prompt
-                    console.log('New content available, please refresh.');
-                  }
-                });
+    const registerSW = async () => {
+      try {
+        const registration = await navigator.serviceWorker.register('/sw.js', {
+          // Force update check on every page load
+          updateViaCache: 'none',
+        });
+
+        console.log('SW registered:', registration.scope);
+
+        // Check for updates
+        registration.addEventListener('updatefound', () => {
+          const newWorker = registration.installing;
+          if (newWorker) {
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                console.log('New content available, reloading...');
+                // Auto-reload to get fresh content from new SW
+                window.location.reload();
               }
             });
-          })
-          .catch((error) => {
-            console.log('SW registration failed:', error);
-          });
-      });
+          }
+        });
+      } catch (error) {
+        // Silently fail - service worker is not critical for app functionality
+        console.warn('SW registration skipped:', error);
+      }
+    };
 
-      // Handle offline/online status
-      const handleOnline = () => {
-        console.log('Back online');
-      };
-      const handleOffline = () => {
-        console.log('Gone offline');
-      };
-
-      window.addEventListener('online', handleOnline);
-      window.addEventListener('offline', handleOffline);
-
-      return () => {
-        window.removeEventListener('online', handleOnline);
-        window.removeEventListener('offline', handleOffline);
-      };
+    // Register after page load to not block rendering
+    if (document.readyState === 'complete') {
+      registerSW();
+    } else {
+      window.addEventListener('load', registerSW, { once: true });
     }
+
+    // Handle offline/online status
+    const handleOnline = () => console.log('Back online');
+    const handleOffline = () => console.log('Gone offline');
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
   }, []);
 
   return null;
@@ -53,7 +60,7 @@ export function ServiceWorkerRegistration() {
 // Hook to check PWA install status
 export function usePWAInstall() {
   useEffect(() => {
-    // Check if app is installed
+    if (typeof window === 'undefined') return;
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
     const isInWebAppiOS = ('standalone' in window.navigator) && (window.navigator as Navigator & { standalone: boolean }).standalone;
 
@@ -67,12 +74,12 @@ export function usePWAInstall() {
 // Component to prompt PWA installation
 export function PWAInstallPrompt() {
   useEffect(() => {
+    if (typeof window === 'undefined') return;
     let deferredPrompt: BeforeInstallPromptEvent | null = null;
 
     const handler = (e: Event) => {
       e.preventDefault();
       deferredPrompt = e as BeforeInstallPromptEvent;
-      // Show install button or prompt
       console.log('PWA install prompt available');
     };
 
