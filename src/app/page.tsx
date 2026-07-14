@@ -166,7 +166,7 @@ function Navigation() {
    ══════════════════════════════════════════════ */
 function Hero() {
   return (
-    <section className="relative w-full aspect-video max-h-screen flex items-center bg-black overflow-hidden">
+    <section className="relative w-full min-h-[700px] sm:min-h-[750px] lg:aspect-video lg:max-h-screen flex items-center bg-black overflow-hidden">
       {/* Background image with overlay */}
       <div className="absolute inset-0">
         <Image src="/images/hero-qr-bag.png" alt="" fill className="object-cover opacity-40" priority />
@@ -175,10 +175,10 @@ function Hero() {
       </div>
 
       {/* Amber glow */}
-      <div className="absolute top-1/3 right-1/4 w-[500px] h-[500px] bg-amber-500/10 rounded-full blur-[150px]" />
-      <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-yellow-500/8 rounded-full blur-[100px]" />
+      <div className="absolute top-1/3 right-1/4 w-[250px] h-[250px] sm:w-[400px] sm:h-[400px] lg:w-[500px] lg:h-[500px] bg-amber-500/10 rounded-full blur-[100px] sm:blur-[150px]" />
+      <div className="absolute bottom-0 left-0 w-[150px] h-[150px] sm:w-[250px] sm:h-[250px] lg:w-[300px] lg:h-[300px] bg-yellow-500/8 rounded-full blur-[80px] sm:blur-[100px]" />
 
-      <div className="relative z-10 max-w-[1600px] mx-auto px-5 sm:px-8 pt-24 pb-16 w-full">
+      <div className="relative z-10 max-w-[1600px] mx-auto px-5 sm:px-8 pt-20 sm:pt-24 pb-16 w-full">
         <div className="max-w-4xl">
           {/* Tag */}
           <motion.div
@@ -199,7 +199,7 @@ function Hero() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.3 }}
-            className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black text-white leading-[0.95] tracking-[-0.04em] mb-8"
+            className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-black text-white leading-[0.95] tracking-[-0.04em] mb-8"
           >
             Objets perdus,
             <br />
@@ -526,7 +526,7 @@ function BentoFeatures() {
                   </p>
                 </div>
                 <div className="flex-shrink-0">
-                  <div className="w-48 h-48 rounded-2xl bg-gradient-to-br from-amber-500/20 to-yellow-500/10 border border-amber-500/20 flex items-center justify-center">
+                  <div className="w-32 h-32 sm:w-48 sm:h-48 rounded-2xl bg-gradient-to-br from-amber-500/20 to-yellow-500/10 border border-amber-500/20 flex items-center justify-center">
                     <div className="text-center">
                       <MessageCircle className="w-12 h-12 text-amber-400 mx-auto mb-2" />
                       <span className="text-xs text-amber-400/80 font-semibold">Notification envoyée</span>
@@ -698,7 +698,7 @@ function StatsDark() {
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(245,158,11,0.08),transparent_60%)]" />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_50%,rgba(234,179,8,0.06),transparent_60%)]" />
       <div className="max-w-[1400px] mx-auto relative z-10">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-16">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-10 lg:gap-16">
           {stats.map((stat, i) => (
             <Reveal key={stat.label} delay={i * 0.1}>
               <div className="text-center">
@@ -761,7 +761,7 @@ function Testimonials() {
         <div className="grid md:grid-cols-3 gap-5">
           {testimonials.map((t, i) => (
             <Reveal key={t.name} delay={i * 0.12}>
-              <div className="h-full bg-slate-50 rounded-2xl p-8 hover:bg-slate-100/50 transition-all duration-500 flex flex-col">
+              <div className="h-full bg-slate-50 rounded-2xl p-5 sm:p-8 hover:bg-slate-100/50 transition-all duration-500 flex flex-col">
                 <div className="flex gap-0.5 mb-6">
                   {Array.from({ length: 5 }).map((_, j) => (
                     <Star key={j} className="w-4 h-4 text-amber-400 fill-amber-400" />
@@ -830,7 +830,7 @@ function Pricing() {
         <div className="grid md:grid-cols-2 gap-6 items-start">
           {plans.map((plan, i) => (
             <Reveal key={plan.name} delay={i * 0.12}>
-              <div className={`relative h-full rounded-2xl p-8 lg:p-10 transition-all duration-500 hover:-translate-y-1 hover:shadow-2xl ${
+              <div className={`relative h-full rounded-2xl p-6 sm:p-8 lg:p-10 transition-all duration-500 hover:-translate-y-1 hover:shadow-2xl ${
                 plan.popular
                   ? 'bg-black text-white shadow-xl shadow-black/20'
                   : 'bg-white border border-slate-200'
@@ -844,7 +844,7 @@ function Pricing() {
                 <p className={`text-sm mb-6 ${plan.popular ? 'text-white/50' : 'text-slate-500'}`}>{plan.desc}</p>
                 <div className="flex items-baseline gap-1 mb-8">
                   {plan.price ? (
-                  <span className={`text-5xl font-black tracking-[-0.02em] ${plan.popular ? 'text-amber-400' : 'text-slate-900'}`}>
+                  <span className={`text-4xl sm:text-5xl font-black tracking-[-0.02em] ${plan.popular ? 'text-amber-400' : 'text-slate-900'}`}>
                     {plan.price}{' '}{plan.period}
                   </span>
                   ) : (
@@ -931,7 +931,7 @@ function ContactBar() {
   return (
     <section className="py-16 px-5 bg-white">
       <div className="max-w-[1200px] mx-auto">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-6 p-8 rounded-2xl bg-slate-50 border border-slate-100">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-6 p-5 sm:p-8 rounded-2xl bg-slate-50 border border-slate-100">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center flex-shrink-0">
               <Headphones className="w-5 h-5 text-amber-600" />
@@ -964,7 +964,7 @@ function Footer() {
   ];
 
   return (
-    <footer className="bg-slate-950 text-white pt-16 pb-10">
+    <footer className="bg-slate-950 text-white pt-12 sm:pt-16 pb-10">
       <div className="max-w-[1600px] mx-auto px-5">
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-12">
           <div>
