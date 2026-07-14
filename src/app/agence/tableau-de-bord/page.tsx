@@ -188,7 +188,7 @@ function AISuggestions({ agencyId, stats }: { agencyId: string; stats: Stats }) 
       suggestions.push({
         icon: '⚠️',
         title: 'Bagages perdus',
-        text: `Vous avez ${stats.lost} bagage(s) signalé(s) comme perdu(s). Contactez rapidement les voyageurs concernés.`,
+        text: `Vous avez ${stats.lost} objet(s) signalé(s) comme perdu(s). Contactez rapidement les propriétaires concernés.`,
         color: 'bg-rose-50 dark:bg-rose-500/10 border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-400'
       });
     }
@@ -197,7 +197,7 @@ function AISuggestions({ agencyId, stats }: { agencyId: string; stats: Stats }) 
       suggestions.push({
         icon: '⏳',
         title: 'Activation en attente',
-        text: `${stats.pending} bagages sont en attente d'activation. Envoyez un rappel aux voyageurs.`,
+        text: `${stats.pending} objets sont en attente d'activation. Envoyez un rappel aux propriétaires.`,
         color: 'bg-amber-50 dark:bg-blue-600/10 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-blue-500'
       });
     }
@@ -1067,14 +1067,15 @@ export default function AgencyDashboardPage() {
                     onChange={(e) => setCommandForm({ ...commandForm, type: e.target.value })}
                     className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600"
                   >
+                    <option value="standard">Standard — Bagages perdus (1 QR/objet)</option>
                     <option value="hajj">Hajj 2026 (3 QR/pèlerin)</option>
-                    <option value="voyageur">Voyageurs Standard (1 ou 2 QR)</option>
+                    <option value="voyageur">Voyageurs (1 ou 2 QR)</option>
                   </select>
                 </div>
                 
                 <div>
                   <label className="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">
-                    Nombre de {commandForm.type === 'hajj' ? 'pèlerins' : 'voyageurs'}
+                    Nombre de {commandForm.type === 'hajj' ? 'pèlerins' : commandForm.type === 'standard' ? 'objets' : 'voyageurs'}
                   </label>
                   <input
                     type="number"
@@ -1103,7 +1104,7 @@ export default function AgencyDashboardPage() {
                     <strong className="text-slate-800 dark:text-white">Estimation :</strong> {' '}
                     {commandForm.type === 'hajj' 
                       ? `${commandForm.count * 3} QR codes (${commandForm.count} pèlerins × 3)`
-                      : `${commandForm.count} QR codes voyageur`
+                      : `${commandForm.count} QR codes ${commandForm.type === 'standard' ? 'standard' : 'voyageur'}`
                     }
                   </p>
                 </div>
@@ -1154,13 +1155,13 @@ export default function AgencyDashboardPage() {
                 </div>
                 <div>
                   <p className="text-slate-800 dark:text-white font-mono font-bold">{selectedBaggage.reference}</p>
-                  <p className="text-slate-500 dark:text-slate-400 text-sm">{selectedBaggage.type === 'hajj' ? 'Hajj 2026' : 'Voyageur'}</p>
+                  <p className="text-slate-500 dark:text-slate-400 text-sm">{selectedBaggage.type === 'hajj' ? 'Hajj 2026' : selectedBaggage.type === 'standard' ? 'Standard' : 'Voyageur'}</p>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <p className="text-slate-500 dark:text-slate-400 text-sm">Pèlerin</p>
+                  <p className="text-slate-500 dark:text-slate-400 text-sm">Propriétaire</p>
                   {selectedBaggage.travelerFirstName || selectedBaggage.travelerLastName ? (
                     <p className="text-slate-800 dark:text-white font-medium">{selectedBaggage.travelerFirstName} {selectedBaggage.travelerLastName}</p>
                   ) : (

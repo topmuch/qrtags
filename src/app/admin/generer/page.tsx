@@ -63,7 +63,7 @@ export default function GenererQRPage() {
   
   // Agency form
   const [agencyForm, setAgencyForm] = useState({
-    type: 'hajj' as 'hajj' | 'voyageur',
+    type: 'standard' as 'standard' | 'hajj' | 'voyageur',
     agencyId: '',
     travelerCount: 1,
     baggagePerTraveler: 2 as 1 | 2,
@@ -93,7 +93,9 @@ export default function GenererQRPage() {
     }
     return agencyForm.type === 'hajj' 
       ? agencyForm.travelerCount * 3 
-      : agencyForm.travelerCount * agencyForm.baggagePerTraveler;
+      : agencyForm.type === 'standard'
+        ? agencyForm.travelerCount * 1
+        : agencyForm.travelerCount * agencyForm.baggagePerTraveler;
   };
 
   // Validate individual form
@@ -169,7 +171,7 @@ export default function GenererQRPage() {
       } catch (fetchError) {
         clearTimeout(timeoutId);
         if (fetchError instanceof DOMException && fetchError.name === 'AbortError') {
-          throw new Error('Délai d\'attente dépassé. L\'export est trop volumineux. Essayez de filtrer par type (hajj/voyageur).');
+          throw new Error('Délai d\'attente dépassé. L\'export est trop volumineux. Essayez de filtrer par type (standard/hajj/voyageur).');
         }
         throw fetchError;
       }
@@ -239,7 +241,7 @@ export default function GenererQRPage() {
       const payload = context === 'individual' 
         ? {
             context: 'individual',
-            type: 'voyageur' as const,
+            type: 'standard' as const,
             firstName: individualForm.firstName.trim(),
             lastName: individualForm.lastName.trim(),
             whatsapp: individualForm.whatsapp.trim(),
@@ -251,7 +253,7 @@ export default function GenererQRPage() {
             type: agencyForm.type,
             agencyId: agencyForm.agencyId,
             travelerCount: agencyForm.travelerCount,
-            count: agencyForm.type === 'hajj' ? 3 : agencyForm.baggagePerTraveler,
+            count: agencyForm.type === 'hajj' ? 3 : agencyForm.type === 'standard' ? 1 : agencyForm.baggagePerTraveler,
           };
       
       const response = await fetch('/api/admin/baggages/generate', {
@@ -295,7 +297,7 @@ export default function GenererQRPage() {
       {/* Page Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-slate-800 dark:text-white">Génération de QR Codes</h1>
-        <p className="text-slate-500 dark:text-slate-400 mt-1">Créez des QR codes anti-fraude pour vos voyageurs</p>
+        <p className="text-slate-500 dark:text-slate-400 mt-1">Créez des QR codes de protection pour les objets et bagages</p>
       </div>
 
       {/* Success Message */}
@@ -466,17 +468,25 @@ export default function GenererQRPage() {
                   <Label className="text-slate-700 dark:text-slate-300">Type de voyage</Label>
                   <Select 
                     value={agencyForm.type} 
-                    onValueChange={(v) => setAgencyForm({ ...agencyForm, type: v as 'hajj' | 'voyageur' })}
+                    onValueChange={(v) => setAgencyForm({ ...agencyForm, type: v as 'standard' | 'hajj' | 'voyageur' })}
                   >
                     <SelectTrigger className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+                      <SelectItem value="standard">Standard (Bagages perdus)</SelectItem>
                       <SelectItem value="hajj">Hajj (Pèlerinage)</SelectItem>
                       <SelectItem value="voyageur">Voyageur</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
+
+                {/* Standard type note */}
+                {agencyForm.type === 'standard' && (
+                  <div className="bg-amber-50 dark:bg-amber-600/10 border border-amber-200 dark:border-amber-800 rounded-xl p-4 text-sm text-amber-700 dark:text-amber-400">
+                    <p className="font-medium">🏷️ Type standard — protection 1 an, préfixe BAG</p>
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   <Label className="text-slate-700 dark:text-slate-300">Agence partenaire *</Label>
@@ -540,6 +550,11 @@ export default function GenererQRPage() {
                     <p>ℹ️ Chaque voyageur reçoit {agencyForm.baggagePerTraveler} bagage(s) soute</p>
                   </div>
                 )}
+                {agencyForm.type === 'standard' && (
+                  <div className="bg-slate-50 dark:bg-slate-800 rounded-xl p-4 text-sm text-slate-600 dark:text-slate-300">
+                    <p>ℹ️ Chaque voyageur reçoit 1 objet protégé • Protection 365 jours • Référence préfixe BAG</p>
+                  </div>
+                )}
               </>
             )}
 
@@ -580,7 +595,7 @@ export default function GenererQRPage() {
               <div className="text-sm text-slate-500 dark:text-slate-400">
                 {context === 'individual' 
                   ? `${individualForm.duration === '7d' ? '7 jours' : '1 an'} de validité • Activation immédiate`
-                  : `${agencyForm.type === 'hajj' ? agencyForm.travelerCount * 3 : agencyForm.travelerCount * agencyForm.baggagePerTraveler} QR • En attente d'attribution`
+                  : `${getQrCount()} QR • En attente d'attribution`
                 }
               </div>
             </div>
@@ -591,7 +606,7 @@ export default function GenererQRPage() {
                 <div>
                   <p className="text-slate-500 dark:text-slate-400">Type</p>
                   <p className="text-slate-800 dark:text-white font-medium">
-                    {context === 'individual' ? 'Individuel' : agencyForm.type === 'hajj' ? 'Hajj' : 'Voyageur'}
+                    {context === 'individual' ? 'Individuel' : agencyForm.type === 'standard' ? 'Standard' : agencyForm.type === 'hajj' ? 'Hajj' : 'Voyageur'}
                   </p>
                 </div>
                 <div>
@@ -618,7 +633,9 @@ export default function GenererQRPage() {
                       ? individualForm.duration === '7d' ? '7 jours' : '1 an'
                       : agencyForm.type === 'hajj' 
                         ? '60 jours'
-                        : '5 jours'
+                        : agencyForm.type === 'standard'
+                          ? '365 jours'
+                          : '5 jours'
                     }
                   </p>
                 </div>

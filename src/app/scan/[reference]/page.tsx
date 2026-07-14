@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import Image from 'next/image';
 import { Badge } from "@/components/ui/badge";
 import {
   Tag,
@@ -22,17 +21,8 @@ import dynamic from 'next/dynamic';
 import SuccessOverlay from '@/components/ui/SuccessOverlay';
 import PhoneInput from '@/components/ui/PhoneInput';
 import { toast } from '@/hooks/use-toast';
-
-// TRANSPORT-FEATURE: Multi-transport support (real images, emojis as fallback)
-import {
-  safeTransportMode,
-  getTransportImage,
-  getTransportBlockHeader,
-  TRANSPORT_ICONS,
-} from '@/lib/transport';
-import type { TransportMode } from '@/lib/transport';
-import { OBJECT_ICONS, getObjectLabel } from '@/lib/object-categories';
-import TransportModeSelector from '@/components/inscrire/TransportModeSelector';
+import { OBJECT_ICONS, getObjectLabel, safeObjectCategory } from '@/lib/object-categories';
+import type { ObjectCategory } from '@/lib/object-categories';
 
 // AI-FEATURE: Lazy-load ChatbotWidget (Feature #1) — doesn't block page render
 const ChatbotWidget = dynamic(() => import('@/components/finder/ChatbotWidget'), {
@@ -41,9 +31,9 @@ const ChatbotWidget = dynamic(() => import('@/components/finder/ChatbotWidget'),
 });
 
 // ─── Brand constants (unified with /inscrire & /success) ───
-const BRAND = '#FFDE21'; // jaune vif
+const BRAND = '#F97316'; // orange
 const INK = '#000000';   // noir pur
-const CREAM = '#0147d5'; // blue background
+const CREAM = '#000000'; // black background
 
 const FALLBACK_PHONE = '33745349339';
 
@@ -61,25 +51,16 @@ interface BaggageData {
     baggageIndex: number;
     baggageType: string;
     status: string;
-    airlineName?: string;
-    flightNumber?: string;
-    destination?: string;
-    agency?: string;
     whatsappOwner?: string;
     declaredLostAt?: string | null;
     foundAt?: string | null;
     createdAt?: string | null;
-    departureDate?: string | null;
-    departureTime?: string | null;
-    // TRANSPORT-FEATURE: Transport mode + conditional fields
-    transportMode?: string;
-    trainCompany?: string | null;
-    trainNumber?: string | null;
-    shipName?: string | null;
-    shipCabin?: string | null;
-    busCompany?: string | null;
-    busLineNumber?: string | null;
     objectCategory?: string | null;
+    itemDescription?: string | null;
+    itemColor?: string | null;
+    itemBrand?: string | null;
+    identificationMark?: string | null;
+    agency?: string;
   };
 }
 
@@ -100,7 +81,7 @@ function LanguageSelector({ lang, setLang }: { lang: Language; setLang: (l: Lang
       </button>
 
       {isOpen && (
-        <div role="listbox" aria-label="Language" className="absolute top-full right-0 mt-1 sm:mt-2 bg-[#0147d5] border-2 border-white/30 rounded-xl shadow-lg overflow-hidden z-50 min-w-[140px] sm:min-w-[160px]">
+        <div role="listbox" aria-label="Language" className="absolute top-full right-0 mt-1 sm:mt-2 bg-[#000000] border-2 border-white/30 rounded-xl shadow-lg overflow-hidden z-50 min-w-[140px] sm:min-w-[160px]">
           {(['fr', 'en', 'ar'] as Language[]).map((l) => (
             <button
               key={l}
@@ -112,7 +93,7 @@ function LanguageSelector({ lang, setLang }: { lang: Language; setLang: (l: Lang
               }}
               className={`w-full px-4 py-2.5 sm:px-5 sm:py-3 text-left text-xs sm:text-sm md:text-base font-medium transition-colors ${
                 lang === l
-                  ? 'bg-[#FFDE21] text-black'
+                  ? 'bg-[#F97316] text-black'
                   : 'text-white hover:bg-white/10'
               }`}
             >
@@ -126,108 +107,48 @@ function LanguageSelector({ lang, setLang }: { lang: Language; setLang: (l: Lang
 }
 
 // ─── Activation Redirect Component (recolored with brand) ───
-// ACTIVATION-FLOW: User selects transport mode BEFORE being redirected to /inscrire?qr=REF&mode=XXX.
-function ActivationRedirect({ type, reference, t, lang, setLang }: {
-  type: string;
+function ActivationRedirect({ reference, t, lang, setLang }: {
   reference: string;
   t: (key: string, params?: Record<string, string>) => string;
   lang: Language;
   setLang: (l: Language) => void;
 }) {
   const router = useRouter();
-  const [selectedMode, setSelectedMode] = useState<TransportMode | ''>('');
-
-  const isHajj = type === 'hajj';
 
   const handleContinue = () => {
-    const url = isHajj
-      ? `/hajj/activate?qr=${reference}`
-      : `/inscrire?qr=${reference}${selectedMode ? `&mode=${selectedMode}` : ''}`;
-    router.push(url);
+    router.push(`/inscrire?qr=${reference}`);
   };
 
   return (
-    <main className="min-h-screen bg-[#0147d5] flex items-center justify-center p-5 md:p-8">
-      <div className="relative max-w-md w-full bg-[#FFDE21] border-2 border-dashed border-[#000000] rounded-2xl p-6 md:p-8 text-center shadow-xl">
+    <main className="min-h-screen bg-[#000000] flex items-center justify-center p-5 md:p-8">
+      <div className="relative max-w-md w-full bg-[#F97316] border-2 border-dashed border-[#000000] rounded-2xl p-6 md:p-8 text-center shadow-xl">
         <div className="absolute top-4 right-4">
           <LanguageSelector lang={lang} setLang={setLang} />
         </div>
 
         <div className="relative inline-block mb-5 mt-6">
           <div className="w-16 h-16 bg-white border-2 border-[#000000] rounded-full flex items-center justify-center">
-            {selectedMode ? (
-              <Image
-                src={getTransportImage(selectedMode)}
-                alt={selectedMode}
-                width={36}
-                height={36}
-                className="mix-blend-multiply"
-              />
-            ) : (
-              <Tag className="w-8 h-8 text-white" />
-            )}
+            <Tag className="w-8 h-8 text-white" />
           </div>
           <div className="absolute -top-1 -right-1 w-7 h-7 bg-[#000000] rounded-full flex items-center justify-center">
-            <Sparkles className="w-3.5 h-3.5 text-[#FFDE21]" />
+            <Sparkles className="w-3.5 h-3.5 text-[#F97316]" />
           </div>
         </div>
 
         <h1 className="text-2xl md:text-3xl font-bold text-black mb-1">
           {t('common.welcome')}
         </h1>
-        <p className="text-black/70 text-sm md:text-base mb-5">
+        <p className="text-black/70 text-sm md:text-base mb-6">
           {t('inscrire.subtitle')}
         </p>
 
-        {isHajj && (
-          <>
-            <div className="border-2 border-dashed border-[#000000] rounded-xl p-4 mb-5 bg-white/40">
-              <p className="text-[#000000]/80 text-sm mb-2">{t('common.baggage_type')}</p>
-              <Badge className="bg-[#000000] text-white text-base md:text-lg px-5 py-1.5">
-                {t('common.hajj_label')}
-              </Badge>
-            </div>
-            <button
-              className="w-full py-4 px-6 bg-[#000000] hover:bg-black text-white rounded-xl font-bold text-lg transition-colors flex items-center justify-center gap-2 min-h-[56px]"
-              onClick={handleContinue}
-            >
-              {t('common.start_activation')}
-              <ArrowRight className="w-5 h-5" />
-            </button>
-          </>
-        )}
-
-        {!isHajj && (
-          <>
-            <div className="border-2 border-dashed border-[#000000] rounded-xl p-4 mb-5 bg-white/40">
-              <p className="text-[#000000]/80 text-sm mb-2">{t('common.baggage_type')}</p>
-              <Badge className="bg-[#000000] text-white text-base md:text-lg px-5 py-1.5">
-                {t('common.voyageur_label')}
-              </Badge>
-            </div>
-
-            <div className="text-left mb-5">
-              <p className="text-[#000000] font-semibold text-sm mb-3 text-center">
-                {t('transport.select_mode')}
-              </p>
-              <TransportModeSelector
-                selectedMode={selectedMode}
-                onSelect={setSelectedMode}
-                t={t}
-                lang={lang}
-              />
-            </div>
-
-            <button
-              className="w-full py-4 px-6 bg-[#000000] hover:bg-black disabled:bg-[#000000]/30 disabled:cursor-not-allowed text-white rounded-xl font-bold text-lg transition-colors flex items-center justify-center gap-2 min-h-[56px]"
-              onClick={handleContinue}
-              disabled={!selectedMode}
-            >
-              {t('common.start_activation')}
-              <ArrowRight className="w-5 h-5" />
-            </button>
-          </>
-        )}
+        <button
+          className="w-full py-4 px-6 bg-[#000000] hover:bg-black text-white rounded-xl font-bold text-lg transition-colors flex items-center justify-center gap-2 min-h-[56px]"
+          onClick={handleContinue}
+        >
+          {t('common.start_activation')}
+          <ArrowRight className="w-5 h-5" />
+        </button>
       </div>
     </main>
   );
@@ -236,9 +157,9 @@ function ActivationRedirect({ type, reference, t, lang, setLang }: {
 // ─── Loading Component (recolored) ───
 function LoadingScreen({ t }: { t: (key: string) => string }) {
   return (
-    <main className="min-h-screen bg-[#0147d5] flex items-center justify-center">
+    <main className="min-h-screen bg-[#000000] flex items-center justify-center">
       <div className="text-center">
-        <div className="animate-spin w-12 h-12 border-4 border-white/20 border-t-[#FFDE21] rounded-full mx-auto mb-4"></div>
+        <div className="animate-spin w-12 h-12 border-4 border-white/20 border-t-[#F97316] rounded-full mx-auto mb-4"></div>
         <p className="text-lg text-white">{t('common.loading')}</p>
       </div>
     </main>
@@ -280,19 +201,19 @@ function ErrorScreen({
   const config = errorConfig[type as keyof typeof errorConfig] || errorConfig.not_found;
 
   return (
-    <main className="min-h-screen bg-[#0147d5] flex items-center justify-center p-5 md:p-8 relative">
+    <main className="min-h-screen bg-[#000000] flex items-center justify-center p-5 md:p-8 relative">
       <div className="absolute top-4 right-4">
         <LanguageSelector lang={lang} setLang={setLang} />
       </div>
 
       <div className="max-w-md w-full bg-white border-2 border-dashed border-[#000000] rounded-2xl p-6 md:p-8 text-center shadow-xl">
-        <div className="w-20 h-20 bg-[#FFDE21]/30 border-2 border-dashed border-[#000000] rounded-full flex items-center justify-center mx-auto mb-6">
+        <div className="w-20 h-20 bg-[#F97316]/30 border-2 border-dashed border-[#000000] rounded-full flex items-center justify-center mx-auto mb-6">
           {config.icon}
         </div>
         <h1 className="text-2xl md:text-3xl font-bold text-[#000000] mb-3">{config.title}</h1>
         <p className="text-[#000000] text-base md:text-lg mb-6">{config.message}</p>
         <button
-          className="w-full py-4 px-6 bg-[#000000] hover:bg-black text-white rounded-xl hover:bg-[#FFDE21] hover:text-[#000000] transition-colors text-base font-medium min-h-[56px]"
+          className="w-full py-4 px-6 bg-[#000000] hover:bg-black text-white rounded-xl hover:bg-[#F97316] hover:text-[#000000] transition-colors text-base font-medium min-h-[56px]"
           onClick={() => router.push('/')}
         >
           {t('common.back_home')}
@@ -525,30 +446,15 @@ export default function ScanPage() {
     window.location.href = `tel:${phoneNumber}`;
   }, [finderName, finderPhone, t, logScan, baggageData]);
 
-  // Format date for display
-  const formatDate = (dateStr?: string | null) => {
-    if (!dateStr) return null;
-    const locale = lang === 'ar' ? 'ar-SA' : lang === 'en' ? 'en-US' : 'fr-FR';
-    return new Date(dateStr).toLocaleDateString(locale, {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    });
-  };
-
-  // NOTE: validateFinderForm was removed — validation is now inlined in handleWhatsApp/handlePhoneCall.
-  // Location is no longer required (GPS is auto-captured inside handleWhatsApp).
-
   // ─── Loading state ───
   if (loading) {
     return <LoadingScreen t={t} />;
   }
 
   // ─── Redirect to activation if pending ───
-  if (baggageData?.status === 'pending_activation' && baggageData?.type) {
+  if (baggageData?.status === 'pending_activation') {
     return (
       <ActivationRedirect
-        type={baggageData.type}
         reference={reference}
         t={t}
         lang={lang}
@@ -583,16 +489,27 @@ export default function ScanPage() {
   const baggage = baggageData?.baggage;
   const isDeclaredLost = baggage?.declaredLostAt && !baggage?.foundAt;
 
+  // Prepare object category info
+  const objectCategory = baggage?.objectCategory
+    ? safeObjectCategory(baggage.objectCategory)
+    : null;
+
+  const hasObjectInfo = objectCategory
+    || baggage?.itemDescription
+    || baggage?.itemColor
+    || baggage?.itemBrand
+    || baggage?.identificationMark;
+
   // ═══════════════════════════════════════════════════════════════
   // ─── MAIN RENDER — Blue bg + White dashed cards + Yellow finder encart ───
   // ═══════════════════════════════════════════════════════════════
   return (
     <main
-      className="min-h-screen bg-[#0147d5] flex flex-col px-4 sm:px-5 md:px-8 pb-[env(safe-area-inset-bottom,0px)]"
+      className="min-h-screen bg-[#000000] flex flex-col px-4 sm:px-5 md:px-8 pb-[env(safe-area-inset-bottom,0px)]"
       dir={dir}
     >
       {/* ─── Header ─── */}
-      <header className="sticky top-0 z-40 flex items-center justify-end pt-[env(safe-area-inset-top,0px)] px-0 py-2 sm:py-3 md:py-4 bg-[#0147d5]">
+      <header className="sticky top-0 z-40 flex items-center justify-end pt-[env(safe-area-inset-top,0px)] px-0 py-2 sm:py-3 md:py-4 bg-[#000000]">
         <LanguageSelector lang={lang} setLang={setLang} />
       </header>
 
@@ -603,7 +520,7 @@ export default function ScanPage() {
       {showSuccess && (
         <div className="fixed top-[calc(3.5rem+env(safe-area-inset-top,0px))] sm:top-[calc(4rem+env(safe-area-inset-top,0px))] right-3 sm:right-5 bg-[#000000] text-white px-4 sm:px-6 py-3 sm:py-4 rounded-xl shadow-lg z-50 animate-in slide-in-from-right duration-300 max-w-[calc(100vw-2rem)] sm:max-w-sm">
           <div className="flex items-center gap-3">
-            <CheckCircle className="w-6 h-6 text-[#FFDE21]" />
+            <CheckCircle className="w-6 h-6 text-[#F97316]" />
             <div>
               <div className="font-bold text-lg">{t('finder.success_title')} 🎉</div>
               <div className="text-base opacity-90">{t('finder.message_sent')}</div>
@@ -615,9 +532,9 @@ export default function ScanPage() {
       {/* ─── Container ─── */}
       <div className="w-full max-w-md mx-auto flex-1 flex flex-col py-4 sm:py-6 md:py-2">
 
-        {/* ═══ 🏷️ TITRE : ✅ BAGAGE TROUVÉ ═══ */}
+        {/* ═══ 🏷️ TITRE : ✅ BAGAGE TROUVÉ / 🚨 PERDU ═══ */}
         <div className="text-center mb-5 sm:mb-6">
-          <h1 className="text-2xl md:text-3xl font-extrabold text-white leading-tight">
+          <h1 className={`text-2xl md:text-3xl font-extrabold leading-tight ${isDeclaredLost ? 'text-red-500' : 'text-white'}`}>
             {isDeclaredLost
               ? `🚨 ${t('finder.lost_badge')}`
               : `✅ ${t('finder.success_badge')}`}
@@ -647,8 +564,6 @@ export default function ScanPage() {
               </div>
             </DashedEncart>
 
-            {/* NOTE: Agency + Baggage Type REMOVED per refonte-4 brief */}
-
             {/* Contact — Secured (NEVER show WhatsApp number) */}
             <DashedEncart className="mb-0">
               <div className="flex items-center gap-3">
@@ -663,183 +578,84 @@ export default function ScanPage() {
           </div>
         )}
 
-        {/* ═══ 🟦 BLOC 2 : DÉTAILS (white + dashed black, transport images or object category) ═══ */}
-        {baggage && (() => {
-          const mode = safeTransportMode(baggage.transportMode) as TransportMode;
-          const transportImg = getTransportImage(mode);
-          const blockHeader = getTransportBlockHeader(mode, lang);
-          const hasObjectCategory = baggage.objectCategory && OBJECT_ICONS[baggage.objectCategory as keyof typeof OBJECT_ICONS];
+        {/* ═══ 🟡 BLOC 2 : DESCRIPTION DE L'OBJET (white + dashed yellow #F97316 border) ═══ */}
+        {baggage && hasObjectInfo && (
+          <div className="w-full bg-white border-2 border-dashed border-[#F97316] rounded-2xl p-5 md:p-6 mb-4">
+            <h2 className="text-xs uppercase tracking-widest text-[#000000] font-bold mb-3 flex items-center gap-2">
+              <span>📦</span> {t('finder.object_section')}
+            </h2>
 
-          return (
-            <div className="w-full bg-white border-2 border-dashed border-[#000000] rounded-2xl p-5 md:p-6 mb-4">
-              <h2 className="text-xs uppercase tracking-widest text-[#000000] font-bold mb-3 flex items-center gap-2">
-                <Image
-                  src={transportImg}
-                  alt={mode}
-                  width={18}
-                  height={18}
-                  className="mix-blend-multiply"
-                />
-                <span>{blockHeader}</span>
-              </h2>
-
-              {/* TRANSPORT-FEATURE: Flight info */}
-              {mode === 'flight' && (baggage.airlineName || baggage.flightNumber) && (
-                <DashedEncart>
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      {baggage.airlineName && (
-                        <div className="mb-1.5">
-                          <p className="text-xs text-[#000000]/60 font-medium">{t('transport.airline')}</p>
-                          <p className="text-base font-bold text-[#000000]">{baggage.airlineName}</p>
-                        </div>
-                      )}
-                      {baggage.flightNumber && (
-                        <div>
-                          <p className="text-xs text-[#000000]/60 font-medium">{t('transport.flight_number')}</p>
-                          <p className="text-xl font-bold text-[#000000] font-mono tracking-widest">{baggage.flightNumber}</p>
-                        </div>
-                      )}
-                    </div>
-                    <div className="h-12 w-12 rounded-full bg-[#FFDE21]/20 border border-[#000000]/20 flex items-center justify-center ml-4 flex-shrink-0">
-                      <Image
-                        src={transportImg}
-                        alt="flight"
-                        width={28}
-                        height={28}
-                        className="mix-blend-multiply"
-                      />
-                    </div>
+            {/* Object Category with emoji icon */}
+            {objectCategory && (
+              <DashedEncart>
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">{OBJECT_ICONS[objectCategory]}</span>
+                  <div>
+                    <p className="text-xs text-[#000000]/60 font-medium">{t('finder.object_type')}</p>
+                    <Badge className="bg-[#000000] text-white text-sm px-3 py-0.5 mt-0.5">
+                      {getObjectLabel(objectCategory, lang)}
+                    </Badge>
                   </div>
-                </DashedEncart>
-              )}
+                </div>
+              </DashedEncart>
+            )}
 
-              {/* TRANSPORT-FEATURE: Train info */}
-              {mode === 'train' && (baggage.trainCompany || baggage.trainNumber) && (
-                <DashedEncart>
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      {baggage.trainCompany && (
-                        <div className="mb-1.5">
-                          <p className="text-xs text-[#000000]/60 font-medium">{t('transport.train_company')}</p>
-                          <p className="text-base font-bold text-[#000000]">{baggage.trainCompany}</p>
-                        </div>
-                      )}
-                      {baggage.trainNumber && (
-                        <div>
-                          <p className="text-xs text-[#000000]/60 font-medium">{t('transport.train_number')}</p>
-                          <p className="text-xl font-bold text-[#000000] font-mono tracking-widest">{baggage.trainNumber}</p>
-                        </div>
-                      )}
-                    </div>
-                    <div className="h-12 w-12 rounded-full bg-[#FFDE21]/20 border border-[#000000]/20 flex items-center justify-center ml-4 flex-shrink-0">
-                      <Image
-                        src={transportImg}
-                        alt="train"
-                        width={28}
-                        height={28}
-                        className="mix-blend-multiply"
-                      />
-                    </div>
+            {/* Description */}
+            {baggage.itemDescription && (
+              <DashedEncart>
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">📝</span>
+                  <div>
+                    <p className="text-xs text-[#000000]/60 font-medium">{t('finder.item_description')}</p>
+                    <p className="text-base font-bold text-[#000000]">{baggage.itemDescription}</p>
                   </div>
-                </DashedEncart>
-              )}
+                </div>
+              </DashedEncart>
+            )}
 
-              {/* TRANSPORT-FEATURE: Boat info */}
-              {mode === 'boat' && (baggage.shipName || baggage.shipCabin) && (
-                <DashedEncart>
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      {baggage.shipName && (
-                        <div className="mb-1.5">
-                          <p className="text-xs text-[#000000]/60 font-medium">{t('transport.ship_name')}</p>
-                          <p className="text-base font-bold text-[#000000]">{baggage.shipName}</p>
-                        </div>
-                      )}
-                      {baggage.shipCabin && (
-                        <div>
-                          <p className="text-xs text-[#000000]/60 font-medium">{t('transport.ship_cabin')}</p>
-                          <p className="text-base font-bold text-[#000000]">{baggage.shipCabin}</p>
-                        </div>
-                      )}
-                    </div>
-                    <div className="h-12 w-12 rounded-full bg-[#FFDE21]/20 border border-[#000000]/20 flex items-center justify-center ml-4 flex-shrink-0">
-                      <Image
-                        src={transportImg}
-                        alt="boat"
-                        width={28}
-                        height={28}
-                        className="mix-blend-multiply"
-                      />
-                    </div>
+            {/* Color */}
+            {baggage.itemColor && (
+              <DashedEncart>
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">🎨</span>
+                  <div>
+                    <p className="text-xs text-[#000000]/60 font-medium">{t('finder.item_color')}</p>
+                    <p className="text-base font-bold text-[#000000]">{baggage.itemColor}</p>
                   </div>
-                </DashedEncart>
-              )}
+                </div>
+              </DashedEncart>
+            )}
 
-              {/* TRANSPORT-FEATURE: Bus info */}
-              {mode === 'bus' && (baggage.busCompany || baggage.busLineNumber) && (
-                <DashedEncart>
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      {baggage.busCompany && (
-                        <div className="mb-1.5">
-                          <p className="text-xs text-[#000000]/60 font-medium">{t('transport.bus_company')}</p>
-                          <p className="text-base font-bold text-[#000000]">{baggage.busCompany}</p>
-                        </div>
-                      )}
-                      {baggage.busLineNumber && (
-                        <div>
-                          <p className="text-xs text-[#000000]/60 font-medium">{t('transport.bus_line')}</p>
-                          <p className="text-base font-bold text-[#000000]">{baggage.busLineNumber}</p>
-                        </div>
-                      )}
-                    </div>
-                    <div className="h-12 w-12 rounded-full bg-[#FFDE21]/20 border border-[#000000]/20 flex items-center justify-center ml-4 flex-shrink-0">
-                      <Image
-                        src={transportImg}
-                        alt="bus"
-                        width={28}
-                        height={28}
-                        className="mix-blend-multiply"
-                      />
-                    </div>
+            {/* Brand */}
+            {baggage.itemBrand && (
+              <DashedEncart>
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">🏷️</span>
+                  <div>
+                    <p className="text-xs text-[#000000]/60 font-medium">{t('finder.item_brand')}</p>
+                    <p className="text-base font-bold text-[#000000]">{baggage.itemBrand}</p>
                   </div>
-                </DashedEncart>
-              )}
+                </div>
+              </DashedEncart>
+            )}
 
-              {/* Destination */}
-              {baggage.destination && (
-                <DashedEncart>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl">📍</span>
-                    <div>
-                      <p className="text-xs text-[#000000]/60 font-medium">{t('transport.common_destination')}</p>
-                      <p className="text-base font-bold text-[#000000]">{baggage.destination}</p>
-                    </div>
+            {/* Identification Mark */}
+            {baggage.identificationMark && (
+              <DashedEncart className="mb-0">
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">🔖</span>
+                  <div>
+                    <p className="text-xs text-[#000000]/60 font-medium">{t('finder.identification_mark')}</p>
+                    <p className="text-base font-bold text-[#000000]">{baggage.identificationMark}</p>
                   </div>
-                </DashedEncart>
-              )}
+                </div>
+              </DashedEncart>
+            )}
+          </div>
+        )}
 
-              {/* Departure Date */}
-              {(baggage.departureDate || baggage.createdAt) && (
-                <DashedEncart className="mb-0">
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl">📅</span>
-                    <div>
-                      <p className="text-xs text-[#000000]/60 font-medium">{t('transport.common_departure_date')}</p>
-                      <p className="text-base font-bold text-[#000000]">
-                        {formatDate(baggage.departureDate || baggage.createdAt)}{baggage.departureTime ? ` — ${baggage.departureTime}` : ''}
-                      </p>
-                    </div>
-                  </div>
-                </DashedEncart>
-              )}
-            </div>
-          );
-        })()}
-
-        {/* ═══ 🟡 BLOC 3 : ENCART FINDER (yellow #FFDE21 + solid black border) ═══ */}
-        <div className="w-full bg-[#FFDE21] border-2 border-solid border-[#000000] rounded-2xl p-5 md:p-6 mb-4 shadow-lg">
+        {/* ═══ 🟡 BLOC 3 : ENCART FINDER (yellow #F97316 + solid black border) ═══ */}
+        <div className={`w-full border-2 border-solid border-[#000000] rounded-2xl p-5 md:p-6 mb-4 shadow-lg ${isDeclaredLost ? 'bg-red-500' : 'bg-[#F97316]'}`}>
 
           {/* ─── 1. BIG "📞 Contacter le propriétaire" CTA button (FIRST) ─── */}
           {!showForm && (
@@ -892,7 +708,7 @@ export default function ScanPage() {
                 />
               </div>
 
-              {/* ─── Contact choice: WhatsApp (GREEN + GPS auto) + Phone (YELLOW) ─── */}
+              {/* ─── Contact choice: WhatsApp (GREEN + GPS auto) + Phone (BLACK) ─── */}
               <div className="pt-1">
                 <h3 className="text-[#000000] text-xs font-bold uppercase tracking-widest text-center mb-2.5">
                   {t('finder.contact_choice')}
@@ -957,11 +773,9 @@ export default function ScanPage() {
         <ChatbotWidget
           reference={reference}
           baggageContext={{
-            destination: baggage.destination || undefined,
             city: otherLocation || undefined,
             agency: baggage.agency || undefined,
             status: baggage.status,
-            transportMode: baggage.transportMode || undefined,
           }}
           locale={lang}
           t={t}

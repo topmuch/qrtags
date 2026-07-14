@@ -1,11 +1,11 @@
 /**
- * API Route — Suivi Bagage (Public, lecture seule)
+ * API Route — Suivi Objet (Public, lecture seule)
  *
  * GET /api/suivi/[reference]
  *
- * Retourne les informations de suivi pour un bagage :
- *   - Infos du bagage (référence, statut, voyage, etc.)
- *   - 5 derniers scans (avec contexte, lieu, date)
+ * Retourne les informations de suivi pour un objet perdu :
+ *   - Infos de l'objet (référence, statut, description, etc.)
+ *   - 5 derniers scans (avec lieu, date)
  *   - Infos du dernier trouveur (nom + téléphone EN ENTIER)
  *
  * SÉCURITÉ — Données JAMAIS exposées :
@@ -13,13 +13,6 @@
  *   ❌ Numéro WhatsApp du propriétaire
  *   ❌ Coordonnées GPS brutes du trouveur
  *   ❌ IP du scanner
- *
- * Données exposées :
- *   ✅ Nom du trouveur (volontairement partagé)
- *   ✅ Téléphone du trouveur (volontairement partagé)
- *   ✅ Ville / Pays du scan (approximatif)
- *   ✅ Adresse textuelle (approximative)
- *   ✅ Contexte du scan
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -28,10 +21,6 @@ import { logMetric } from '@/lib/logger';
 import { rateLimit } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
-
-// ═══════════════════════════════════════════════════════
-//  GET HANDLER
-// ═══════════════════════════════════════════════════════
 
 export async function GET(
   request: NextRequest,
@@ -55,7 +44,7 @@ export async function GET(
       );
     }
 
-    // ─── Récupérer le bagage ───
+    // ─── Récupérer l'objet ───
     const baggage = await db.baggage.findUnique({
       where: { reference },
       include: { agency: true },
@@ -64,22 +53,21 @@ export async function GET(
     if (!baggage) {
       return NextResponse.json({
         status: 'not_found',
-        message: 'Bagage non trouvé.',
+        message: 'Objet non trouvé.',
       });
     }
 
-    // ─── Vérifier le statut ───
     if (baggage.status === 'pending_activation') {
       return NextResponse.json({
         status: 'pending_activation',
-        message: 'Ce bagage n\'est pas encore activé.',
+        message: 'Cet objet n\'est pas encore activé.',
       });
     }
 
     if (baggage.status === 'blocked') {
       return NextResponse.json({
         status: 'blocked',
-        message: 'Ce bagage a été bloqué.',
+        message: 'Cet objet a été bloqué.',
       });
     }
 
@@ -100,24 +88,20 @@ export async function GET(
         finderPhone: true,
         message: true,
         createdAt: true,
-        // Exposé pour le suivi du statut WhatsApp
         whatsappStatus: true,
       },
     });
 
-    // ─── Mapper les scans (sans données sensibles) ───
+    // ─── Mapper les scans ───
     const mappedScans = scanLogs.map((scan) => ({
       id: scan.id,
       location: scan.location || scan.city || null,
       city: scan.city || null,
       country: scan.country || null,
-      context: scan.context || 'static_location',
       finderName: scan.finderName || null,
       finderPhone: scan.finderPhone || null,
       message: scan.message || null,
-      // Approximation de l'adresse pour la carte (pas de GPS brut)
       hasMap: !!(scan.latitude && scan.longitude),
-      // Formater la date côté serveur
       scannedAt: scan.createdAt.toISOString(),
       whatsappStatus: scan.whatsappStatus || null,
     }));
@@ -133,26 +117,18 @@ export async function GET(
 
     const response = {
       status: isExpired ? 'expired' : isDeclaredLost ? 'lost' : 'active',
-      // TRANSPORT-FEATURE: Include transportMode + conditional fields
       baggage: {
         reference: baggage.reference,
         type: baggage.type,
         travelerName: `${baggage.travelerFirstName || ''} ${baggage.travelerLastName || ''}`.trim(),
         baggageIndex: baggage.baggageIndex,
-        baggageType: baggage.baggageType,
         status: baggage.status,
-        transportMode: baggage.transportMode || 'flight',
-        airlineName: baggage.airlineName || null,
-        flightNumber: baggage.flightNumber || null,
-        trainCompany: baggage.trainCompany || null,
-        trainNumber: baggage.trainNumber || null,
-        shipName: baggage.shipName || null,
-        shipCabin: baggage.shipCabin || null,
-        busCompany: baggage.busCompany || null,
-        busLineNumber: baggage.busLineNumber || null,
-        destination: baggage.destination || null,
-        departureDate: baggage.departureDate?.toISOString() || null,
-        departureTime: baggage.departureTime || null,
+        objectCategory: baggage.objectCategory,
+        // Lost baggage description fields
+        itemDescription: baggage.itemDescription,
+        itemColor: baggage.itemColor,
+        itemBrand: baggage.itemBrand,
+        identificationMark: baggage.identificationMark,
         agency: baggage.agency?.name || null,
         createdAt: baggage.createdAt?.toISOString() || null,
         lastScanDate: baggage.lastScanDate?.toISOString() || null,
@@ -161,16 +137,13 @@ export async function GET(
         foundAt: baggage.foundAt?.toISOString() || null,
         expiresAt: baggage.expiresAt?.toISOString() || null,
       },
-      // Dernier trouveur (nom + téléphone EN ENTIER)
       lastFinder: lastScanWithFinder
         ? {
             name: lastScanWithFinder.finderName || null,
             phone: lastScanWithFinder.finderPhone || null,
           }
         : null,
-      // Historique des scans (max 5)
       scans: mappedScans,
-      // Dernière position pour la carte
       lastPosition: scanLogs.length > 0
         ? {
             latitude: scanLogs[0].latitude,

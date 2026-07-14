@@ -11,27 +11,27 @@ export function generateRandomCode(length: number = 6): string {
 }
 
 // Generate unique reference (single - for individual use)
-export async function generateReference(type: 'hajj' | 'voyageur'): Promise<string> {
+export async function generateReference(type: string = 'standard'): Promise<string> {
   const year = new Date().getFullYear().toString().slice(-2);
-  const prefix = type === 'hajj' ? 'HAJJ' : 'VOL';
-  
+  const prefix = type === 'hajj' ? 'HAJJ' : type === 'voyageur' ? 'VOL' : 'BAG';
+
   let reference = '';
   let attempts = 0;
   const maxAttempts = 100;
-  
+
   while (attempts < maxAttempts) {
     reference = `${prefix}${year}-${generateRandomCode(6)}`;
-    
+
     const existing = await db.baggage.findUnique({
       where: { reference }
     });
-    
+
     if (!existing) {
       return reference;
     }
     attempts++;
   }
-  
+
   throw new Error('Failed to generate unique reference');
 }
 
@@ -40,9 +40,9 @@ export async function generateReference(type: 'hajj' | 'voyageur'): Promise<stri
  * Generates all candidates, then checks uniqueness in a single DB query.
  * Replaces any duplicates and re-checks until all are unique.
  */
-export async function generateReferencesBulk(type: 'hajj' | 'voyageur', count: number): Promise<string[]> {
+export async function generateReferencesBulk(type: string = 'standard', count: number): Promise<string[]> {
   const year = new Date().getFullYear().toString().slice(-2);
-  const prefix = type === 'hajj' ? 'HAJJ' : 'VOL';
+  const prefix = type === 'hajj' ? 'HAJJ' : type === 'voyageur' ? 'VOL' : 'BAG';
   const uniqueRefs = new Set<string>();
   let iterations = 0;
   const maxIterations = 10; // Safety limit
@@ -81,14 +81,14 @@ export async function generateReferencesBulk(type: 'hajj' | 'voyageur', count: n
 
 // Generate multiple objects for a traveler
 export interface GenerateBaggageOptions {
-  type: 'hajj' | 'voyageur';
+  type: string;
   agencyId?: string;
   count: 1 | 2;
 }
 
-// Generate object with individual traveler info
+// Generate object with individual owner info
 export interface GenerateIndividualOptions {
-  type: 'hajj' | 'voyageur';
+  type: string;
   firstName: string;
   lastName: string;
   whatsapp: string;
@@ -97,9 +97,9 @@ export interface GenerateIndividualOptions {
 }
 
 // Generate unique set ID
-export function generateSetId(type: 'hajj' | 'voyageur'): string {
+export function generateSetId(type: string = 'standard'): string {
   const year = new Date().getFullYear();
-  const prefix = type === 'hajj' ? 'HAJJ' : 'VOL';
+  const prefix = type === 'hajj' ? 'HAJJ' : type === 'voyageur' ? 'VOL' : 'BAG';
   const random = generateRandomCode(4);
   return `${prefix}-${year}-${random}`;
 }
@@ -125,7 +125,6 @@ export async function generateBaggages(options: GenerateBaggageOptions): Promise
       setId,
       agencyId: agencyId || null,
       baggageIndex: i + 1,
-      baggageType: 'soute',
       status: 'pending_activation',
     })),
   });
@@ -133,28 +132,31 @@ export async function generateBaggages(options: GenerateBaggageOptions): Promise
   return references;
 }
 
-// Calculate expiration date based on type
-export function calculateExpirationDate(type: 'hajj' | 'voyageur', subtype?: 'sticker' | 'tag'): Date {
+// Calculate expiration date - simplified for lost baggage (365 days for standard)
+export function calculateExpirationDate(type: string, subtype?: string): Date {
   const now = new Date();
-  
-  switch (type) {
-    case 'hajj':
-      return new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000); // +60 days
-    case 'voyageur':
-      if (subtype === 'tag') {
-        return new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000); // +365 days
-      }
-      return new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // +7 days (sticker) - changed from 72h
-    default:
-      return new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // Default 30 days
+
+  // Legacy types still supported
+  if (type === 'hajj') {
+    return new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000); // +60 days
   }
+  if (type === 'voyageur') {
+    if (subtype === 'tag') {
+      return new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000); // +365 days
+    }
+    return new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // +7 days (sticker)
+  }
+
+  // Standard type: 365 days
+  return new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000); // +365 days
 }
 
 // Validate reference format
 export function isValidReferenceFormat(reference: string): boolean {
+  const bagPattern = /^BAG\d{2}-[A-Z0-9]{6}$/;
   const hajjPattern = /^HAJJ\d{2}-[A-Z0-9]{6}$/;
   const volPattern = /^VOL\d{2}-[A-Z0-9]{6}$/;
-  return hajjPattern.test(reference) || volPattern.test(reference);
+  return bagPattern.test(reference) || hajjPattern.test(reference) || volPattern.test(reference);
 }
 
 // Get object status info
@@ -182,7 +184,7 @@ export function getBaggageStatusInfo(status: string) {
     },
     found: {
       label: 'Retrouvé',
-      color: 'text-blue-700',
+      color: 'text-emerald-600',
       bgColor: 'bg-emerald-100'
     },
     blocked: {
@@ -191,7 +193,7 @@ export function getBaggageStatusInfo(status: string) {
       bgColor: 'bg-gray-100'
     }
   };
-  
+
   return statusMap[status] || {
     label: status,
     color: 'text-gray-600',

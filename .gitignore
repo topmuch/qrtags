@@ -56,6 +56,10 @@ server.log
 db/*.db
 db/*.db-journal
 !db/.gitkeep
+prisma/*.db
+prisma/*.db-journal
+prisma/db/*.db
+prisma/db/*.db-journal
 
 # Uploads (user data)
 /upload/*
@@ -72,3 +76,16 @@ db/*.db-journal
 
 # OS
 Thumbs.db
+
+# Screenshots
+screenshot-*.png
+
+# Dev artifacts
+tool-results/
+agent-ctx/
+dev-server*.log
+start.sh
+download/
+Caddyfile
+worklog.md
+.zscripts/

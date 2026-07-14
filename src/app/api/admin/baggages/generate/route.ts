@@ -6,20 +6,20 @@ import { db } from '@/lib/db';
 // Schema for individual generation
 const individualSchema = z.object({
   context: z.literal('individual'),
-  type: z.enum(['hajj', 'voyageur']),
+  type: z.enum(['hajj', 'voyageur', 'standard']),
   firstName: z.string().min(2).max(50),
   lastName: z.string().min(2).max(50),
   whatsapp: z.string().min(6).max(20),
-  duration: z.enum(['7d', '1y']),
+  duration: z.enum(['7d', '1y']).optional().default('1y'),
   baggageCount: z.number().min(1).max(2),
 });
 
 // Schema for agency generation
 const agencySchema = z.object({
   context: z.literal('agency'),
-  type: z.enum(['hajj', 'voyageur']),
+  type: z.enum(['hajj', 'voyageur', 'standard']),
   agencyId: z.string().min(1),
-  count: z.number().min(1).max(2),
+  count: z.number().min(1).max(3),
   travelerCount: z.number().min(1).max(1000),
 });
 
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     const validatedData = combinedSchema.parse(body);
 
     if (validatedData.context === 'individual') {
-      // Generate for individual traveler
+      // Generate for individual
       const references = await generateBaggagesWithTraveler({
         type: validatedData.type,
         firstName: validatedData.firstName,
@@ -52,11 +52,12 @@ export async function POST(request: NextRequest) {
       });
     } else {
       // Generate for agency - use batch insert for performance
+      const bagCount = validatedData.type === 'hajj' ? 3 : validatedData.count as 1 | 2 | 3;
       const result = await generateBaggagesBatch({
         type: validatedData.type,
         agencyId: validatedData.agencyId,
         travelerCount: validatedData.travelerCount,
-        count: validatedData.type === 'hajj' ? 3 : validatedData.count as 1 | 3,
+        count: bagCount as 1 | 2 | 3,
       });
 
       return NextResponse.json({
@@ -67,7 +68,7 @@ export async function POST(request: NextRequest) {
     }
   } catch (error) {
     console.error('Generate QR error:', error);
-    
+
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: 'Validation error', details: error.errors },
@@ -83,18 +84,18 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * Generate baggages for individual traveler with traveler info
+ * Generate baggages for individual with owner info
  */
 async function generateBaggagesWithTraveler(options: {
-  type: 'hajj' | 'voyageur';
+  type: string;
   firstName: string;
   lastName: string;
   whatsapp: string;
-  duration: '7d' | '1y';
+  duration: string;
   baggageCount: 1 | 2;
 }): Promise<string[]> {
   const { type, firstName, lastName, whatsapp, duration, baggageCount } = options;
-  
+
   const setId = generateSetId(type);
   const expiresAt = calculateExpirationDate(type, duration === '1y' ? 'tag' : 'sticker');
 
@@ -115,7 +116,6 @@ async function generateBaggagesWithTraveler(options: {
       travelerLastName: lastName,
       whatsappOwner: whatsapp,
       baggageIndex: i + 1,
-      baggageType: 'soute',
       status: 'active',
       expiresAt,
     })),
@@ -126,26 +126,25 @@ async function generateBaggagesWithTraveler(options: {
 
 /**
  * Generate baggages for agency using BATCH INSERT for high performance.
- * Uses bulk reference generation and createMany to avoid thousands of sequential DB calls.
  */
 async function generateBaggagesBatch(options: {
-  type: 'hajj' | 'voyageur';
+  type: string;
   agencyId: string;
   travelerCount: number;
-  count: 1 | 2;
+  count: 1 | 2 | 3;
 }): Promise<string[]> {
   const { type, agencyId, travelerCount, count } = options;
   const totalBaggages = travelerCount * count;
-  
-  console.log(`[GENERATE] Starting bulk generation: ${travelerCount} travelers × ${count} bags = ${totalBaggages} QR codes`);
 
-  // Pre-generate all set IDs (no DB calls needed)
+  console.log(`[GENERATE] Starting bulk generation: ${travelerCount} × ${count} = ${totalBaggages} QR codes`);
+
+  // Pre-generate all set IDs
   const setIds: string[] = [];
   for (let t = 0; t < travelerCount; t++) {
     setIds.push(generateSetId(type));
   }
 
-  // Generate ALL references in bulk (1-2 DB queries instead of 1800)
+  // Generate ALL references in bulk
   const allReferences = await generateReferencesBulk(type, totalBaggages);
 
   // Build all baggage data
@@ -155,7 +154,6 @@ async function generateBaggagesBatch(options: {
     setId: string;
     agencyId: string | null;
     baggageIndex: number;
-    baggageType: string;
     status: string;
   }> = [];
 
@@ -169,21 +167,20 @@ async function generateBaggagesBatch(options: {
         setId,
         agencyId,
         baggageIndex: i + 1,
-        baggageType: 'soute',
         status: 'pending_activation',
       });
     }
   }
 
-  // Batch insert in chunks of 200 for memory efficiency
+  // Batch insert in chunks of 200
   const BATCH_SIZE = 200;
   for (let i = 0; i < allData.length; i += BATCH_SIZE) {
     const batch = allData.slice(i, i + BATCH_SIZE);
     await db.baggage.createMany({ data: batch });
-    console.log(`[GENERATE] Inserted batch ${Math.floor(i / BATCH_SIZE) + 1}: ${batch.length} baggages (total: ${Math.min(i + BATCH_SIZE, allData.length)}/${allData.length})`);
+    console.log(`[GENERATE] Inserted batch ${Math.floor(i / BATCH_SIZE) + 1}: ${batch.length} (total: ${Math.min(i + BATCH_SIZE, allData.length)}/${allData.length})`);
   }
 
-  console.log(`[GENERATE] Complete: ${totalBaggages} QR codes generated for ${travelerCount} travelers`);
+  console.log(`[GENERATE] Complete: ${totalBaggages} QR codes generated`);
   return allReferences;
 }
 
@@ -197,15 +194,15 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '500');
 
     const where: Record<string, unknown> = {};
-    
+
     if (agencyId) {
       where.agencyId = agencyId;
     }
-    
+
     if (type) {
       where.type = type;
     }
-    
+
     if (status) {
       where.status = status;
     }

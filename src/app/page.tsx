@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { Button } from "@/components/ui/button";
 import Image from 'next/image';
 import { motion, useInView, AnimatePresence } from 'framer-motion';
@@ -12,10 +12,8 @@ const LandingChatbotWidget = dynamic(
   () => import('@/components/finder/LandingChatbotWidget'),
   { ssr: false, loading: () => null }
 );
-import TrackingWidget from '@/components/home/TrackingWidget';
+
 import {
-  Plane,
-  Tag,
   QrCode,
   Smartphone,
   MapPin,
@@ -28,81 +26,34 @@ import {
   Facebook,
   Twitter,
   Instagram,
-  Play,
   Lock,
   Zap,
   Users,
   Headphones,
   Shield,
   Globe,
-  Heart,
-  CheckCircle,
-  Ship,
-  Bus,
-  TrainFront,
   CheckCircle2,
-  Sparkles,
-  TrendingUp,
-  BadgeCheck,
-  Phone,
-  LucideIcon,
-  ChevronDown,
-  CircleDot,
   ScanLine,
-  BellRing,
-  ArrowUpRight,
-  ChevronLeft,
-  ClipboardCheck,
-  FileText,
-  ChevronRight,
+  PackageSearch,
+  Tag,
+  Luggage,
+  CreditCard,
+  Laptop,
+  KeyRound,
 } from "lucide-react";
 
 /* ──────────────────────────────────────────────
-   Animated Counter
+   Utility: Fade-in on scroll
    ────────────────────────────────────────────── */
-function AnimatedCounter({ target, suffix = '' }: { target: number; suffix?: string }) {
-  const [count, setCount] = useState(0);
-  const ref = useRef<HTMLSpanElement>(null);
-  const inView = useInView(ref, { once: true });
-
-  useEffect(() => {
-    if (!inView) return;
-    let start = 0;
-    const duration = 2000;
-    const step = target / (duration / 16);
-    const timer = setInterval(() => {
-      start += step;
-      if (start >= target) {
-        setCount(target);
-        clearInterval(timer);
-      } else {
-        setCount(Math.floor(start));
-      }
-    }, 16);
-    return () => clearInterval(timer);
-  }, [inView, target]);
-
-  return <span ref={ref}>{count.toLocaleString()}{suffix}</span>;
-}
-
-/* ──────────────────────────────────────────────
-   Fade-in wrapper
-   ────────────────────────────────────────────── */
-function FadeIn({ children, className, delay = 0, direction = 'up' }: { children: React.ReactNode; className?: string; delay?: number; direction?: 'up' | 'down' | 'left' | 'right' }) {
+function Reveal({ children, className, delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
   const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { once: true, margin: '-60px' });
-  const directions = {
-    up: { y: 50, x: 0 },
-    down: { y: -50, x: 0 },
-    left: { x: 50, y: 0 },
-    right: { x: -50, y: 0 },
-  };
+  const inView = useInView(ref, { once: true, margin: '-40px' });
   return (
     <motion.div
       ref={ref}
-      initial={{ opacity: 0, ...directions[direction] }}
-      animate={inView ? { opacity: 1, x: 0, y: 0 } : { opacity: 0, ...directions[direction] }}
-      transition={{ duration: 0.8, ease: [0.25, 0.46, 0.45, 0.94], delay }}
+      initial={{ opacity: 0, y: 40 }}
+      animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 40 }}
+      transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1], delay }}
       className={className}
     >
       {children}
@@ -110,83 +61,96 @@ function FadeIn({ children, className, delay = 0, direction = 'up' }: { children
   );
 }
 
+/* ──────────────────────────────────────────────
+   Animated Counter
+   ────────────────────────────────────────────── */
+function Counter({ target, suffix = '' }: { target: number; suffix?: string }) {
+  const [val, setVal] = useState(0);
+  const ref = useRef<HTMLSpanElement>(null);
+  const inView = useInView(ref, { once: true });
+  useEffect(() => {
+    if (!inView) return;
+    let cur = 0;
+    const step = target / (2000 / 16);
+    const t = setInterval(() => {
+      cur += step;
+      if (cur >= target) { setVal(target); clearInterval(t); }
+      else setVal(Math.floor(cur));
+    }, 16);
+    return () => clearInterval(t);
+  }, [inView, target]);
+  return <span ref={ref}>{val.toLocaleString()}{suffix}</span>;
+}
+
 /* ══════════════════════════════════════════════
-   NAVIGATION (Light Glass Effect)
+   NAVIGATION
    ══════════════════════════════════════════════ */
 function Navigation() {
-  const [isOpen, setIsOpen] = useState(false);
+  const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 40);
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
+    const fn = () => setScrolled(window.scrollY > 60);
+    window.addEventListener('scroll', fn, { passive: true });
+    return () => window.removeEventListener('scroll', fn);
   }, []);
 
-  const navLinks = [
-    { label: 'Accueil', href: '/' },
-    { label: 'Checklist', href: '/checklist' },
-    { label: 'À propos', href: '/#comment' },
-    { label: 'Tarifs', href: '/#tarifs' },
-    { label: 'Contactez-nous', href: '/contact' },
+  const links = [
+    { label: 'Fonctionnement', href: '#fonctionnement' },
+    { label: 'Protéger', href: '#objets' },
+    { label: 'Tarifs', href: '#tarifs' },
+    { label: 'Témoignages', href: '#temoignages' },
   ];
 
   return (
-    <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? 'bg-white/95 backdrop-blur-xl shadow-sm border-b border-slate-100' : 'bg-white/60 backdrop-blur-lg'}`}>
-      <div className="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 lg:h-[72px]">
-          <Link href="/" className="flex items-center gap-2.5 group">
-            <img src="/logo.png" alt="QRTags" className="h-16 w-auto object-contain transition-transform duration-300 group-hover:scale-105" />
+    <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${scrolled ? 'bg-white/95 backdrop-blur-xl shadow-lg shadow-black/5' : 'bg-white'}`}>
+      <div className="max-w-[1600px] mx-auto px-5 sm:px-8">
+        <div className="flex items-center justify-between h-16 lg:h-20">
+          <Link href="/" className="flex items-center gap-2">
+            <img src="/logo.png" alt="QRTags" className="h-12 w-auto object-contain" />
           </Link>
 
           <div className="hidden md:flex items-center gap-1">
-            {navLinks.map(link => (
-              <a key={link.href} href={link.href} className="px-4 py-2 text-[13px] font-medium text-slate-600 hover:text-slate-900 transition-colors duration-200 rounded-lg hover:bg-slate-50">
-                {link.label}
+            {links.map(l => (
+              <a key={l.href} href={l.href} className="px-4 py-2 text-[13px] font-medium text-slate-600 hover:text-slate-900 transition-colors duration-300 rounded-lg hover:bg-slate-50">
+                {l.label}
               </a>
             ))}
           </div>
 
           <div className="hidden md:flex items-center gap-3">
             <Link href="/login">
-              <Button variant="ghost" className="text-slate-600 hover:text-slate-900 font-medium text-[13px]">
+              <Button variant="ghost" className="text-slate-600 hover:text-slate-900 font-medium text-[13px] hover:bg-slate-50">
                 Connexion
               </Button>
             </Link>
             <Link href="/devenir-partenaire">
-              <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold text-[13px] rounded-full px-6 h-10 shadow-lg shadow-blue-600/25 hover:shadow-blue-600/40 transition-all duration-300 hover:scale-[1.02]">
+              <Button className="bg-amber-500 hover:bg-amber-400 text-black font-bold text-[13px] rounded-full px-6 h-10 transition-all duration-300 hover:scale-[1.02] shadow-lg shadow-amber-500/20">
                 Devenir Partenaire
               </Button>
             </Link>
           </div>
 
-          <button className="md:hidden text-slate-700 p-2" onClick={() => setIsOpen(!isOpen)} aria-label="Menu">
-            {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          <button className="md:hidden text-slate-700 p-2" onClick={() => setOpen(!open)} aria-label="Menu">
+            {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
         </div>
 
         <AnimatePresence>
-          {isOpen && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="md:hidden overflow-hidden"
-            >
+          {open && (
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="md:hidden overflow-hidden">
               <div className="py-4 border-t border-slate-100 space-y-1">
-                {navLinks.map(link => (
-                  <a key={link.href} href={link.href} className="block text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-medium py-2.5 px-3 rounded-xl text-base transition-colors" onClick={() => setIsOpen(false)}>
-                    {link.label}
+                {links.map(l => (
+                  <a key={l.href} href={l.href} className="block text-slate-700 hover:text-slate-900 hover:bg-slate-50 font-medium py-3 px-3 rounded-xl text-base transition-colors" onClick={() => setOpen(false)}>
+                    {l.label}
                   </a>
                 ))}
-                <hr className="border-slate-100 my-2" />
-                <Link href="/login" onClick={() => setIsOpen(false)}>
-                  <Button variant="ghost" className="w-full text-slate-600 font-medium justify-start">Connexion</Button>
+                <hr className="border-slate-100 my-3" />
+                <Link href="/login" onClick={() => setOpen(false)}>
+                  <Button variant="ghost" className="w-full text-slate-700 font-medium justify-start hover:bg-slate-50">Connexion</Button>
                 </Link>
-                <Link href="/devenir-partenaire" onClick={() => setIsOpen(false)}>
-                  <Button className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium rounded-full mt-1">
-                    Devenir Partenaire
-                  </Button>
+                <Link href="/devenir-partenaire" onClick={() => setOpen(false)}>
+                  <Button className="w-full bg-amber-500 text-black font-bold rounded-full mt-1">Devenir Partenaire</Button>
                 </Link>
               </div>
             </motion.div>
@@ -198,315 +162,463 @@ function Navigation() {
 }
 
 /* ══════════════════════════════════════════════
-   HERO SECTION (Slider - Boutiko-inspired)
+   HERO — Dark, bold, single message
    ══════════════════════════════════════════════ */
-const heroSlides = [
-  {
-    image: '/images/landing-v2/hero-woman-traveler.png',
-    badge: 'Protection intelligente',
-    title: 'Voyagez serein,',
-    highlight: 'sans crainte',
-    subtitle: "QRTags protège vos objets avec un simple autocollant QR code. Sans application, sans batterie, sans GPS — un scan suffit.",
-    cta1: { label: 'Commencer gratuitement', href: '/devenir-partenaire' },
-    cta2: { label: 'Voir la démo', href: '/demo', icon: Play },
-    stats: [
-      { value: '10 000+', label: 'Objets protégés' },
-      { value: '98%', label: 'Taux de récupération' },
-    ],
-  },
-  {
-    image: '/images/landing-v2/hero-man-scanning.png',
-    badge: 'Scan & Trouvé',
-    title: 'Un scan,',
-    highlight: 'une alerte instantanée',
-    subtitle: "Quelqu'un trouve votre objet, scanne le QR code et vous recevez immédiatement une notification WhatsApp avec la localisation exacte.",
-    cta1: { label: 'Commander mes QR codes', href: '/contact' },
-    cta2: { label: 'Comment ça marche', href: '/#comment' },
-    stats: [
-      { value: '24/7', label: 'Disponibilité' },
-      { value: '15+', label: 'Pays couverts' },
-    ],
-  },
-  {
-    image: '/images/landing-v2/hero-family-travel.png',
-    badge: 'Pour toute la famille',
-    title: 'Hajj, vacances,',
-    highlight: 'chaque voyage compte',
-    subtitle: "Pèlerinage ou vacances en famille — chaque objet mérite d'être protégé. 3 QR codes par passager, activation en 30 secondes.",
-    cta1: { label: 'Découvrir Hajj & Omra', href: '/hajj-omra' },
-    cta2: { label: 'Voyageurs Standard', href: '/voyageurs-standard' },
-    stats: [
-      { value: '3', label: 'Objets/pèlerin' },
-      { value: '30s', label: 'Activation' },
-    ],
-  },
-];
+function Hero() {
+  return (
+    <section className="relative w-full aspect-video max-h-screen flex items-center bg-black overflow-hidden">
+      {/* Background image with overlay */}
+      <div className="absolute inset-0">
+        <Image src="/images/hero-qr-bag.png" alt="" fill className="object-cover opacity-40" priority />
+        <div className="absolute inset-0 bg-gradient-to-r from-black via-black/80 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/60" />
+      </div>
 
-function HeroSection() {
-  const [current, setCurrent] = useState(0);
-  const [direction, setDirection] = useState(1);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+      {/* Amber glow */}
+      <div className="absolute top-1/3 right-1/4 w-[500px] h-[500px] bg-amber-500/10 rounded-full blur-[150px]" />
+      <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-yellow-500/8 rounded-full blur-[100px]" />
 
-  const startTimer = useCallback(() => {
-    if (timerRef.current) clearInterval(timerRef.current);
-    timerRef.current = setInterval(() => {
-      setDirection(1);
-      setCurrent(prev => (prev + 1) % heroSlides.length);
-    }, 6000);
-  }, []);
+      <div className="relative z-10 max-w-[1600px] mx-auto px-5 sm:px-8 pt-24 pb-16 w-full">
+        <div className="max-w-4xl">
+          {/* Tag */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="inline-flex items-center gap-2 mb-8 px-4 py-2 border border-amber-500/30 rounded-full bg-amber-500/5"
+          >
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-500 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
+            </span>
+            <span className="text-sm font-semibold text-amber-400">Système de protection par QR code</span>
+          </motion.div>
 
-  useEffect(() => {
-    startTimer();
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [startTimer]);
+          {/* Heading */}
+          <motion.h1
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.3 }}
+            className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black text-white leading-[0.95] tracking-[-0.04em] mb-8"
+          >
+            Objets perdus,
+            <br />
+            <span className="text-amber-400">jamais plus.</span>
+          </motion.h1>
 
-  const goTo = (idx: number) => {
-    setDirection(idx > current ? 1 : -1);
-    setCurrent(idx);
-    startTimer();
-  };
+          {/* Subtitle */}
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.5 }}
+            className="text-lg sm:text-xl text-white/60 max-w-xl leading-relaxed mb-10"
+          >
+            Collez un QR code sur vos objets. Si quelqu&apos;un les trouve, un scan suffit pour vous alerter sur WhatsApp — avec la localisation exacte.
+          </motion.p>
 
-  const slide = heroSlides[current];
+          {/* CTAs */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.7 }}
+            className="flex flex-col sm:flex-row gap-4 mb-16"
+          >
+            <Link href="/devenir-partenaire">
+              <Button className="bg-amber-500 hover:bg-amber-400 text-black px-8 py-4 rounded-full font-bold text-base shadow-xl shadow-amber-500/25 hover:shadow-amber-500/35 hover:scale-[1.03] transition-all duration-300 gap-2 h-14">
+                Protéger mes objets
+                <ArrowRight className="w-4 h-4" />
+              </Button>
+            </Link>
+            <a href="#fonctionnement">
+              <Button className="bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white px-8 py-4 rounded-full font-semibold text-base transition-all duration-300 h-14 backdrop-blur-sm">
+                Comment ça marche
+              </Button>
+            </a>
+          </motion.div>
 
-  const slideVariants = {
-    enter: () => ({ opacity: 0 }),
-    center: { opacity: 1 },
-    exit: () => ({ opacity: 0 }),
-  };
+          {/* Micro stats */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.8, delay: 0.9 }}
+            className="flex flex-wrap gap-8 sm:gap-12"
+          >
+            {[
+              { value: '15 000+', label: 'Objets protégés' },
+              { value: '98%', label: 'Taux de récupération' },
+              { value: '24/7', label: 'Disponibilité' },
+            ].map((s, i) => (
+              <div key={i}>
+                <div className="text-2xl sm:text-3xl font-black text-white">{s.value}</div>
+                <div className="text-sm text-white/40 font-medium mt-0.5">{s.label}</div>
+              </div>
+            ))}
+          </motion.div>
+        </div>
+      </div>
 
-  const textVariants = {
-    enter: (dir: number) => ({ y: dir > 0 ? 30 : -30, opacity: 0 }),
-    center: { y: 0, opacity: 1 },
-    exit: (dir: number) => ({ y: dir > 0 ? -30 : 30, opacity: 0 }),
-  };
+      {/* Scroll indicator */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 1.5 }}
+        className="absolute bottom-8 left-1/2 -translate-x-1/2"
+      >
+        <motion.div
+          animate={{ y: [0, 8, 0] }}
+          transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+          className="w-6 h-10 rounded-full border-2 border-white/20 flex items-start justify-center p-1.5"
+        >
+          <div className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+        </motion.div>
+      </motion.div>
+    </section>
+  );
+}
+
+/* ══════════════════════════════════════════════
+   MARQUEE TRUST BAR
+   ══════════════════════════════════════════════ */
+function TrustMarquee() {
+  const items = [
+    'Sans application à installer',
+    'Fonctionne sans batterie',
+    'Alerte WhatsApp instantanée',
+    'Géolocalisation GPS',
+    'Conforme RGPD',
+    'Disponible 24/7',
+  ];
+  const doubled = [...items, ...items];
+  return (
+    <div className="bg-amber-500 py-3.5 overflow-hidden">
+      <div className="flex animate-[marquee_20s_linear_infinite] whitespace-nowrap">
+        {doubled.map((item, i) => (
+          <span key={i} className="mx-8 text-sm font-bold text-black/80 flex items-center gap-2">
+            <QrCode className="w-3.5 h-3.5" />
+            {item}
+          </span>
+        ))}
+      </div>
+      <style jsx>{`
+        @keyframes marquee {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════
+   PROBLEM SECTION — "Le problème"
+   ══════════════════════════════════════════════ */
+function ProblemSection() {
+  const items = [
+    { icon: '✈️', place: "A l'aéroport", detail: "Valises échangées, sacs oubliés au contrôle, objets laissés aux comptoirs" },
+    { icon: '🚆', place: "En gare / bus", detail: "Bagages perdus en transit, téléphones glissés sur les sièges" },
+    { icon: '🏨', place: "À l'hôtel", detail: "Chargeurs, clés, passeports oubliés dans les chambres" },
+    { icon: '☕', place: "Au quotidien", detail: "Portefeuilles, clés, lunettes laissés au café, au restaurant, au travail" },
+  ];
 
   return (
-    <section className="relative pt-24 pb-0 lg:pt-28 overflow-hidden bg-gradient-to-br from-slate-50 via-white to-blue-50/40">
-      {/* Decorative blobs */}
-      <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-blue-400/8 rounded-full blur-[120px] -translate-y-1/3 translate-x-1/4" />
-      <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-indigo-400/6 rounded-full blur-[100px] translate-y-1/3 -translate-x-1/4" />
+    <section className="py-24 lg:py-32 px-5 bg-slate-50">
+      <div className="max-w-[1400px] mx-auto">
+        {/* Header */}
+        <Reveal>
+          <div className="text-center max-w-2xl mx-auto mb-16">
+            <span className="inline-flex items-center gap-2 text-xs font-bold tracking-[0.15em] uppercase text-red-500 mb-4">
+              <PackageSearch className="w-3.5 h-3.5" />
+              Le problème
+            </span>
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-[-0.03em] leading-[1.05] mb-5">
+              On perd tous quelque chose,<br />
+              <span className="text-red-500">partout, tout le temps</span>
+            </h2>
+            <p className="text-lg text-slate-500 leading-relaxed">
+              25 millions d&apos;objets sont perdus chaque année dans le monde. Sans QRTags, moins de 5% sont retrouvés.
+            </p>
+          </div>
+        </Reveal>
 
-      <div className="max-w-7xl mx-auto px-5 sm:px-6 relative z-10">
-        <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center min-h-[70vh] lg:min-h-[80vh]">
-          {/* Left - Text Content */}
-          <div className="order-2 lg:order-1 pt-4 lg:pt-0 pb-8 lg:pb-0">
-            <AnimatePresence mode="wait" custom={direction}>
-              <motion.div
-                key={current}
-                custom={direction}
-                variants={textVariants}
-                initial="enter"
-                animate="center"
-                exit="exit"
-                transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
-              >
-                {/* Badge */}
-                <div className="inline-flex items-center gap-2 mb-6 px-4 py-2 bg-blue-50 border border-blue-100 rounded-full">
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500" />
-                  </span>
-                  <span className="text-base font-semibold text-blue-700">{slide.badge}</span>
+        {/* Bento grid — 2 big + 2 small */}
+        <div className="grid md:grid-cols-2 gap-4 mb-12">
+          {items.slice(0, 2).map((item, i) => (
+            <Reveal key={item.place} delay={i * 0.1}>
+              <div className="group relative bg-white rounded-2xl p-8 lg:p-10 border border-slate-100 hover:border-red-100 hover:shadow-xl hover:shadow-red-50/50 transition-all duration-500 h-full">
+                <div className="flex items-start gap-5">
+                  <div className="text-4xl flex-shrink-0 mt-1 group-hover:scale-110 transition-transform duration-300">
+                    {item.icon}
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-slate-900 mb-2">{item.place}</h3>
+                    <p className="text-slate-500 leading-relaxed">{item.detail}</p>
+                  </div>
                 </div>
+              </div>
+            </Reveal>
+          ))}
+        </div>
 
-                {/* Title */}
-                <h1 className="text-5xl sm:text-6xl md:text-7xl font-extrabold text-slate-900 mb-6 leading-[1.05] tracking-[-0.03em]">
-                  {slide.title}
-                  <br />
-                  <span className="bg-gradient-to-r from-blue-600 via-indigo-500 to-violet-500 bg-clip-text text-transparent">
-                    {slide.highlight}
-                  </span>
-                </h1>
-
-                {/* Subtitle */}
-                <p className="text-xl text-slate-500 max-w-xl leading-relaxed mb-8">
-                  {slide.subtitle}
-                </p>
-
-                {/* CTAs */}
-                <div className="flex flex-col sm:flex-row gap-3 mb-10">
-                  <Link href={slide.cta1.href}>
-                    <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-7 py-4 rounded-full font-semibold text-base shadow-xl shadow-blue-600/20 hover:shadow-blue-600/30 hover:scale-[1.03] transition-all duration-300 gap-2 h-13">
-                      {slide.cta1.label}
-                      <ArrowRight className="w-4 h-4" />
-                    </Button>
-                  </Link>
-                  <Link href={slide.cta2.href}>
-                    <Button className="bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-300 text-slate-700 px-7 py-4 rounded-full font-semibold text-base transition-all duration-300 gap-2 h-13 hover:scale-[1.03] shadow-sm">
-                      {slide.cta2.icon && <slide.cta2.icon className="w-4 h-4" />}
-                      {slide.cta2.label}
-                    </Button>
-                  </Link>
+        <div className="grid md:grid-cols-2 gap-4 mb-16">
+          {items.slice(2).map((item, i) => (
+            <Reveal key={item.place} delay={(i + 2) * 0.1}>
+              <div className="group bg-white rounded-2xl p-6 lg:p-8 border border-slate-100 hover:border-red-100 hover:shadow-lg hover:shadow-red-50/50 transition-all duration-500 h-full">
+                <div className="flex items-start gap-4">
+                  <div className="text-3xl flex-shrink-0 mt-0.5 group-hover:scale-110 transition-transform duration-300">
+                    {item.icon}
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-900 mb-1.5">{item.place}</h3>
+                    <p className="text-sm text-slate-500 leading-relaxed">{item.detail}</p>
+                  </div>
                 </div>
+              </div>
+            </Reveal>
+          ))}
+        </div>
 
-                {/* Stats */}
-                <div className="flex gap-8">
-                  {slide.stats.map((stat, i) => (
-                    <div key={i}>
-                      <div className="text-3xl font-extrabold text-slate-900">{stat.value}</div>
-                      <div className="text-sm text-slate-500 font-medium mt-0.5">{stat.label}</div>
+        {/* Bottom CTA line */}
+        <Reveal delay={0.35}>
+          <div className="bg-black rounded-2xl p-8 lg:p-10 flex flex-col lg:flex-row items-center justify-between gap-6">
+            <div className="text-center lg:text-left">
+              <p className="text-white/50 text-sm font-medium mb-2">AVEC QRTAGS</p>
+              <p className="text-2xl sm:text-3xl font-black text-white">
+                Taux de récupération : <span className="text-amber-400">98%</span>
+              </p>
+            </div>
+            <Link href="/devenir-partenaire">
+              <Button className="bg-amber-500 hover:bg-amber-400 text-black font-bold text-sm rounded-full px-8 h-12 shadow-lg shadow-amber-500/25 hover:scale-[1.03] transition-all duration-300 gap-2">
+                Protéger mes objets
+                <ArrowRight className="w-4 h-4" />
+              </Button>
+            </Link>
+          </div>
+        </Reveal>
+      </div>
+    </section>
+  );
+}
+
+/* ══════════════════════════════════════════════
+   HOW IT WORKS — Horizontal timeline
+   ══════════════════════════════════════════════ */
+function HowItWorks() {
+  const steps = [
+    {
+      num: '01',
+      icon: QrCode,
+      title: 'Collez le QR code',
+      description: "Recevez votre autocollant QR et collez-le sur l'objet à protéger.",
+      color: 'bg-amber-500',
+    },
+    {
+      num: '02',
+      icon: Smartphone,
+      title: 'Décrivez votre objet',
+      description: "Scannez le QR et ajoutez la description, couleur, marque distinctive.",
+      color: 'bg-orange-500',
+    },
+    {
+      num: '03',
+      icon: ScanLine,
+      title: 'Le trouveur scanne',
+      description: "Quelqu'un trouve votre objet et scanne le QR avec son téléphone.",
+      color: 'bg-emerald-500',
+    },
+    {
+      num: '04',
+      icon: MessageCircle,
+      title: 'Alerte WhatsApp',
+      description: "Vous recevez une notification avec la localisation et les coordonnées du trouveur.",
+      color: 'bg-amber-400',
+    },
+  ];
+
+  return (
+    <section className="py-24 lg:py-32 px-5 bg-slate-50" id="fonctionnement">
+      <div className="max-w-[1600px] mx-auto">
+        <Reveal className="text-center mb-20">
+          <span className="inline-flex items-center gap-2 text-xs font-bold tracking-[0.15em] uppercase text-amber-600 mb-4">
+            <Zap className="w-3.5 h-3.5" />
+            Fonctionnement
+          </span>
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-[-0.03em]">
+            4 étapes. 30 secondes.
+          </h2>
+        </Reveal>
+
+        {/* Desktop: horizontal with line */}
+        <div className="hidden lg:block">
+          <div className="relative">
+            {/* Connecting line */}
+            <div className="absolute top-[48px] left-[60px] right-[60px] h-0.5 bg-gradient-to-r from-amber-300 via-orange-300 via-emerald-300 to-amber-200" />
+
+            <div className="grid grid-cols-4 gap-8">
+              {steps.map((s, i) => (
+                <Reveal key={s.num} delay={i * 0.15}>
+                  <div className="relative text-center">
+                    {/* Circle */}
+                    <div className={`relative z-10 w-24 h-24 mx-auto rounded-2xl ${s.color} flex items-center justify-center shadow-xl mb-6`}>
+                      <s.icon className="w-8 h-8 text-white" />
                     </div>
+                    <div className="text-xs font-black text-slate-300 mb-3">{s.num}</div>
+                    <h3 className="text-lg font-bold text-slate-900 mb-2">{s.title}</h3>
+                    <p className="text-sm text-slate-500 leading-relaxed">{s.description}</p>
+                  </div>
+                </Reveal>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile: vertical */}
+        <div className="lg:hidden space-y-6">
+          {steps.map((s, i) => (
+            <Reveal key={s.num} delay={i * 0.1}>
+              <div className="flex gap-5 items-start">
+                <div className={`flex-shrink-0 w-14 h-14 rounded-xl ${s.color} flex items-center justify-center shadow-lg`}>
+                  <s.icon className="w-6 h-6 text-white" />
+                </div>
+                <div className="flex-1 pb-6 border-b border-slate-200 last:border-0">
+                  <div className="text-xs font-black text-slate-300 mb-1">{s.num}</div>
+                  <h3 className="text-base font-bold text-slate-900 mb-1">{s.title}</h3>
+                  <p className="text-sm text-slate-500 leading-relaxed">{s.description}</p>
+                </div>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ══════════════════════════════════════════════
+   BENTO FEATURES GRID
+   ══════════════════════════════════════════════ */
+function BentoFeatures() {
+  return (
+    <section className="py-24 lg:py-32 px-5 bg-white">
+      <div className="max-w-[1600px] mx-auto">
+        <Reveal className="text-center mb-16">
+          <span className="inline-flex items-center gap-2 text-xs font-bold tracking-[0.15em] uppercase text-amber-600 mb-4">
+            <Shield className="w-3.5 h-3.5" />
+            Fonctionnalités
+          </span>
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-[-0.03em]">
+            Pourquoi <span className="text-amber-500">QRTags</span> est différent
+          </h2>
+        </Reveal>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* Large card - spans 2 cols */}
+          <Reveal className="md:col-span-2">
+            <div className="h-full bg-black rounded-3xl p-8 lg:p-10 text-white relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-amber-500/10 rounded-full blur-[100px] group-hover:bg-amber-500/15 transition-all duration-700" />
+              <div className="relative z-10 flex flex-col lg:flex-row lg:items-center gap-8">
+                <div className="flex-1">
+                  <div className="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center mb-5">
+                    <MessageCircle className="w-6 h-6 text-amber-400" />
+                  </div>
+                  <h3 className="text-2xl font-bold mb-3">Alerte WhatsApp instantanée</h3>
+                  <p className="text-white/60 leading-relaxed">
+                    Dès que quelqu&apos;un scanne votre QR code, vous recevez une notification WhatsApp avec la localisation GPS exacte et les coordonnées du trouveur. Pas d&apos;application à installer, pas de SMS payant.
+                  </p>
+                </div>
+                <div className="flex-shrink-0">
+                  <div className="w-48 h-48 rounded-2xl bg-gradient-to-br from-amber-500/20 to-yellow-500/10 border border-amber-500/20 flex items-center justify-center">
+                    <div className="text-center">
+                      <MessageCircle className="w-12 h-12 text-amber-400 mx-auto mb-2" />
+                      <span className="text-xs text-amber-400/80 font-semibold">Notification envoyée</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Reveal>
+
+          {/* Tall card */}
+          <Reveal className="md:row-span-2">
+            <div className="h-full bg-gradient-to-b from-slate-50 to-white rounded-3xl p-8 border border-slate-100 flex flex-col">
+              <div className="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center mb-5">
+                <MapPin className="w-6 h-6 text-amber-600" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 mb-3">Géolocalisation GPS</h3>
+              <p className="text-slate-500 leading-relaxed flex-1">
+                Le téléphone du trouveur envoie automatiquement sa position GPS. Vous savez exactement où se trouve votre objet, en temps réel, sur une carte interactive.
+              </p>
+              <div className="mt-8 flex flex-col gap-3">
+                <div className="flex items-center gap-3 text-sm">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                  </div>
+                  <span className="text-slate-600">Position automatique</span>
+                </div>
+                <div className="flex items-center gap-3 text-sm">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                  </div>
+                  <span className="text-slate-600">Carte interactive</span>
+                </div>
+                <div className="flex items-center gap-3 text-sm">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                  </div>
+                  <span className="text-slate-600">Temps réel</span>
+                </div>
+              </div>
+            </div>
+          </Reveal>
+
+          {/* Regular cards row */}
+          <Reveal>
+            <div className="h-full bg-amber-50 rounded-3xl p-8 border border-amber-100/60 group hover:bg-amber-100/50 transition-all duration-500">
+              <div className="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center mb-5">
+                <Smartphone className="w-6 h-6 text-amber-600" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-900 mb-2">Sans application</h3>
+              <p className="text-sm text-slate-500 leading-relaxed">
+                Le trouveur n&apos;installe rien. Un simple scan QR avec l&apos;appareil photo suffit. Zéro friction.
+              </p>
+            </div>
+          </Reveal>
+
+          <Reveal>
+            <div className="h-full bg-slate-50 rounded-3xl p-8 border border-slate-100 group hover:bg-slate-100/70 transition-all duration-500">
+              <div className="w-12 h-12 rounded-xl bg-slate-200/60 flex items-center justify-center mb-5">
+                <Lock className="w-6 h-6 text-slate-600" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-900 mb-2">Sans batterie</h3>
+              <p className="text-sm text-slate-500 leading-relaxed">
+                Le QR code est passif. Pas de pile, pas de recharge, pas de limite de temps. Il fonctionne toujours.
+              </p>
+            </div>
+          </Reveal>
+
+          {/* Full width security card */}
+          <Reveal className="md:col-span-2 lg:col-span-3">
+            <div className="rounded-3xl p-8 lg:p-10 bg-gradient-to-r from-slate-900 to-slate-800 text-white relative overflow-hidden">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_50%,rgba(245,158,11,0.1),transparent_60%)]" />
+              <div className="relative z-10 flex flex-col lg:flex-row lg:items-center gap-8">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-4">
+                    <Shield className="w-8 h-8 text-amber-400" />
+                    <h3 className="text-2xl font-bold">Sécurité RGPD certifiée</h3>
+                  </div>
+                  <p className="text-white/60 leading-relaxed">
+                    Vos données personnelles ne sont jamais stockées publiquement. Le système fonctionne avec des redirections sécurisées. Conforme aux normes européennes les plus strictes.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-3 flex-shrink-0">
+                  {['Chiffrement AES-256', 'Hébergement UE', 'Aucune donnée publique', 'Audit de sécurité'].map(tag => (
+                    <span key={tag} className="px-4 py-2 bg-white/5 border border-white/10 rounded-full text-xs font-semibold text-white/70">
+                      {tag}
+                    </span>
                   ))}
                 </div>
-              </motion.div>
-            </AnimatePresence>
-
-            {/* Slide indicators */}
-            <div className="flex items-center gap-2 mt-10">
-              {heroSlides.map((_, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => goTo(idx)}
-                  className={`transition-all duration-500 rounded-full ${
-                    idx === current
-                      ? 'w-10 h-3 bg-gradient-to-r from-blue-600 to-indigo-600'
-                      : 'w-3 h-3 bg-slate-200 hover:bg-slate-300'
-                  }`}
-                  aria-label={`Slide ${idx + 1}`}
-                />
-              ))}
-              {/* Navigation arrows */}
-              <button
-                onClick={() => { goTo((current - 1 + heroSlides.length) % heroSlides.length); }}
-                className="ml-3 w-9 h-9 rounded-full border border-slate-200 hover:border-slate-300 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => { goTo((current + 1) % heroSlides.length); }}
-                className="w-9 h-9 rounded-full border border-slate-200 hover:border-slate-300 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-
-          {/* Right - Image Slider */}
-          <div className="order-1 lg:order-2 flex justify-center lg:justify-end">
-            <div className="relative w-full max-w-md lg:max-w-lg xl:max-w-xl">
-              {/* Phone frame mockup */}
-              <div className="relative">
-                {/* Glow behind image */}
-                <div className="absolute -inset-8 bg-gradient-to-br from-blue-200/30 to-indigo-200/30 rounded-[3rem] blur-[60px]" />
-                
-                <AnimatePresence mode="popLayout" custom={direction}>
-                  <motion.div
-                    key={current}
-                    custom={direction}
-                    variants={slideVariants}
-                    initial="enter"
-                    animate="center"
-                    exit="exit"
-                    transition={{ duration: 0.5, ease: 'easeInOut' }}
-                    className="relative rounded-[2.5rem] overflow-hidden shadow-2xl shadow-slate-300/40 border border-slate-200/60 bg-slate-900"
-                  >
-                    <Image
-                      src={slide.image}
-                      alt="QRTags - Protection objets"
-                      width={864}
-                      height={1152}
-                      className="w-full h-auto object-cover"
-                      priority={current === 0}
-                    />
-                  </motion.div>
-                </AnimatePresence>
-
-                {/* Floating badges */}
-                <motion.div
-                  className="absolute -left-4 bottom-24 bg-white px-4 py-3 rounded-2xl shadow-xl shadow-slate-200/60 border border-slate-100 flex items-center gap-3"
-                  animate={{ y: [0, -6, 0] }}
-                  transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-                >
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-500 flex items-center justify-center">
-                    <CheckCircle2 className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <div className="text-xs font-bold text-slate-900">Objet retrouvé !</div>
-                    <div className="text-[10px] text-slate-500">WhatsApp · il y a 2 min</div>
-                  </div>
-                </motion.div>
-
-                <motion.div
-                  className="absolute -right-4 top-16 bg-white px-4 py-3 rounded-2xl shadow-xl shadow-slate-200/60 border border-slate-100 flex items-center gap-3"
-                  animate={{ y: [0, -8, 0] }}
-                  transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
-                >
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center">
-                    <MapPin className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <div className="text-xs font-bold text-slate-900">Géolocalisé</div>
-                    <div className="text-[10px] text-slate-500">Aéroport CDG · T4</div>
-                  </div>
-                </motion.div>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Feature cards - Full image with text overlay, clickable */}
-      <div className="bg-white border-t border-slate-100 py-10 mt-4">
-        <div className="max-w-7xl mx-auto px-5 sm:px-6">
-          <div className="flex flex-wrap justify-center gap-4 sm:gap-5">
-            {[
-              {
-                image: '/images/landing-v2/features/sans-app.jpg',
-                title: 'Sans application',
-                subtitle: 'Un scan suffit',
-                href: '/fonctionnalites/sans-application',
-              },
-              {
-                image: '/images/landing-v2/features/sans-batterie.jpg',
-                title: 'Sans batterie',
-                subtitle: 'Autonome à 100%',
-                href: '/fonctionnalites/sans-batterie',
-              },
-              {
-                image: '/images/landing-v2/features/geolocalisation.jpg',
-                title: 'Géolocalisation',
-                subtitle: 'Temps réel',
-                href: '/fonctionnalites/geolocalisation',
-              },
-              {
-                image: '/images/landing-v2/features/securise-rgpd.jpg',
-                title: 'Sécurisé RGPD',
-                subtitle: 'Données protégées',
-                href: '/fonctionnalites/securite-rgpd',
-              },
-              {
-                image: '/images/landing-v2/features/alertes-whatsapp.jpg',
-                title: 'Alertes WhatsApp',
-                subtitle: 'Notification instantanée',
-                href: '/fonctionnalites/alertes-whatsapp',
-              },
-            ].map((item, idx) => (
-              <Link
-                key={item.title}
-                href={item.href}
-                className="group relative w-[191px] h-[254px] rounded-2xl overflow-hidden shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl cursor-pointer"
-              >
-                {/* Full background image */}
-                <Image
-                  src={item.image}
-                  alt={item.title}
-                  fill
-                  className="object-cover transition-transform duration-500 group-hover:scale-110"
-                  sizes="191px"
-                />
-                {/* Dark gradient overlay for text readability */}
-                <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/60" />
-                {/* Title at top */}
-                <p className="absolute top-4 left-0 right-0 text-center text-white text-sm font-bold drop-shadow-lg px-2">
-                  {item.title}
-                </p>
-                {/* Subtitle at bottom */}
-                <p className="absolute bottom-4 left-0 right-0 text-center text-white/90 text-xs drop-shadow-md px-2">
-                  {item.subtitle}
-                </p>
-              </Link>
-            ))}
-          </div>
+          </Reveal>
         </div>
       </div>
     </section>
@@ -514,471 +626,93 @@ function HeroSection() {
 }
 
 /* ══════════════════════════════════════════════
-   CHECKLIST CTA SECTION — refonte-8
+   OBJECT CATEGORIES — What you can protect
    ══════════════════════════════════════════════ */
-function ChecklistCTASection() {
-  return (
-    <section className="py-16 md:py-20 bg-gradient-to-b from-slate-50/80 to-white relative overflow-hidden">
-      {/* Decorative blurred circles */}
-      <div className="absolute -top-20 -right-20 w-96 h-96 bg-blue-200/30 rounded-full blur-3xl" />
-      <div className="absolute -bottom-20 -left-20 w-96 h-96 bg-indigo-200/20 rounded-full blur-3xl" />
-
-      <div className="max-w-6xl mx-auto px-5 sm:px-6 lg:px-8 relative">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
-          {/* Left: Text + CTA */}
-          <FadeIn direction="left">
-            <div className="inline-flex items-center gap-2 bg-blue-600 text-white text-xs font-bold uppercase tracking-widest px-3 py-1.5 rounded-full mb-5">
-              <Sparkles className="w-3.5 h-3.5" />
-              Service gratuit
-            </div>
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-slate-900 mb-4 leading-tight">
-              Créez votre <span className="bg-gradient-to-r from-blue-600 via-indigo-500 to-violet-500 bg-clip-text text-transparent">checklist de voyage</span> certifiée QRTags
-            </h2>
-            <p className="text-slate-600 text-base md:text-lg mb-6 leading-relaxed">
-              Inventoriez vos objets en quelques clics, générez un PDF horodaté avec tampon officiel et QR code vérifiable. L'attestation est envoyée par email avec une page publique de consultation.
-            </p>
-
-            <ul className="space-y-2.5 mb-7">
-              {[
-                'PDF horodaté avec tampon de certification',
-                'QR code scannable pour vérification publique',
-                'Page protégée par clé de vérification à 8 caractères',
-                'Envoi automatique par email avec pièce jointe',
-              ].map((feature) => (
-                <li key={feature} className="flex items-start gap-2.5 text-slate-700">
-                  <CheckCircle2 className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                  <span className="text-sm md:text-base">{feature}</span>
-                </li>
-              ))}
-            </ul>
-
-            <Link
-              href="/checklist"
-              className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-7 py-4 rounded-full font-semibold text-base transition-all shadow-lg shadow-blue-600/20 hover:shadow-blue-600/30 hover:scale-[1.03]"
-            >
-              <ClipboardCheck className="w-5 h-5" />
-              Créer ma checklist gratuite
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-          </FadeIn>
-
-          {/* Right: Visual mockup */}
-          <FadeIn direction="right" delay={0.2}>
-            <div className="relative">
-              {/* PDF mockup */}
-              <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden rotate-2 hover:rotate-0 transition-transform duration-500">
-                <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-3 flex items-center justify-between">
-                  <div className="font-bold text-white">🏷️ QRTags</div>
-                  <div className="text-[10px] text-white/70 font-mono">RÉF: K7P3MQ</div>
-                </div>
-                <div className="p-5 space-y-3">
-                  <div className="text-center">
-                    <div className="text-[10px] uppercase tracking-widest text-slate-500">Attestation d&apos;inventaire</div>
-                    <div className="text-base font-bold text-slate-900">Voyage de Aïssatou</div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 text-[10px]">
-                    <div className="bg-blue-50 rounded-lg p-2 border border-blue-100">
-                      <div className="text-slate-500">Destination</div>
-                      <div className="font-bold text-slate-900">Paris, France</div>
-                    </div>
-                    <div className="bg-blue-50 rounded-lg p-2 border border-blue-100">
-                      <div className="text-slate-500">Départ</div>
-                      <div className="font-bold text-slate-900">15 août 2026</div>
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    {['T-shirts x3', 'Passeport', 'Chargeur téléphone', 'Médicaments'].map((item) => (
-                      <div key={item} className="flex items-center gap-2 text-xs">
-                        <CheckCircle2 className="w-3 h-3 text-blue-600" />
-                        <span className="text-slate-700">{item}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="flex items-end justify-between pt-2 border-t border-slate-100">
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg px-2 py-1">
-                      <div className="text-[8px] text-blue-700 font-bold">CERTIFIÉ</div>
-                      <div className="text-[8px] text-blue-600">QRTags</div>
-                    </div>
-                    <div className="bg-slate-900 p-1.5 rounded-lg">
-                      {/* Faux QR code visual */}
-                      <div className="grid grid-cols-5 gap-px w-12 h-12">
-                        {Array.from({ length: 25 }).map((_, i) => (
-                          <div key={i} className={`${Math.random() > 0.4 ? 'bg-blue-500' : 'bg-transparent'}`} />
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Floating badge */}
-              <div className="absolute -top-4 -right-4 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full px-4 py-2 shadow-lg shadow-blue-600/30 rotate-12">
-                <div className="text-[10px] font-bold text-white">GRATUIT</div>
-              </div>
-            </div>
-          </FadeIn>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ══════════════════════════════════════════════
-   QRTags EN ACTION SECTION
-   ══════════════════════════════════════════════ */
-function QRTagsEnActionSection() {
-  const features = [
-    'Scan instantané du QR code',
-    'Notification WhatsApp en temps réel',
-    'Géolocalisation précise de l\'objet',
-    'Interface intuitive sans application',
-  ];
-  const featureIcons: LucideIcon[] = [ScanLine, BellRing, MapPin, Smartphone];
-
-  return (
-    <section className="py-24 lg:py-32 px-5 bg-white" id="comment">
-      <div className="max-w-6xl mx-auto">
-        <div className="grid lg:grid-cols-2 gap-16 lg:gap-24 items-center">
-          <FadeIn direction="right">
-            <div className="relative">
-              <div className="absolute -inset-6 bg-gradient-to-br from-blue-100/40 to-indigo-100/40 rounded-[2rem] blur-[40px]" />
-              <div className="relative rounded-3xl overflow-hidden shadow-2xl shadow-slate-200/60 border border-slate-100">
-                <Image src="/images/landing-v2/qrcode-reel.jpg" alt="QR Code QRTags" width={1024} height={1024} className="w-full h-auto object-cover" />
-              </div>
-              <motion.div
-                className="absolute -bottom-4 -right-4 bg-white text-slate-900 px-5 py-3 rounded-2xl shadow-xl shadow-slate-200/60 border border-slate-100 font-bold text-sm flex items-center gap-2.5"
-                animate={{ y: [0, -6, 0] }}
-                transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-              >
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-400 to-emerald-500 flex items-center justify-center">
-                  <TrendingUp className="w-4 h-4 text-white" />
-                </div>
-                98% de récupération
-              </motion.div>
-            </div>
-          </FadeIn>
-
-          <FadeIn direction="left" delay={0.2}>
-            <div>
-              <span className="inline-flex items-center gap-2 text-xs font-bold tracking-[0.15em] uppercase text-blue-600 mb-5">
-                <Sparkles className="w-3.5 h-3.5" />
-                QRTags en action
-              </span>
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 mb-7 tracking-[-0.02em] leading-[1.1]">
-                Scannez, activez,{' '}
-                <span className="bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent">voyagez.</span>
-              </h2>
-              <p className="text-lg text-slate-500 leading-relaxed mb-10">
-                Notre technologie QR code brevetée permet à n&apos;importe qui de signaler un objet trouvé en un seul geste. Vous recevez instantanément une notification avec la localisation exacte de votre objet.
-              </p>
-              <div className="space-y-4">
-                {features.map((feature, i) => {
-                  const Icon = featureIcons[i];
-                  return (
-                    <motion.div key={feature} className="flex items-center gap-4 group" initial={{ opacity: 0, x: 20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ delay: 0.3 + i * 0.1, duration: 0.5 }}>
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 group-hover:from-blue-100 group-hover:to-indigo-100 flex items-center justify-center flex-shrink-0 transition-colors duration-300">
-                        <Icon className="w-4.5 h-4.5 text-blue-600" />
-                      </div>
-                      <span className="text-slate-700 font-medium text-[15px]">{feature}</span>
-                    </motion.div>
-                  );
-                })}
-              </div>
-              <div className="mt-12">
-                <Link href="/demo">
-                  <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-7 py-3.5 rounded-full font-semibold text-sm shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 transition-all duration-300 gap-2 hover:scale-[1.02]">
-                    <Play className="w-4 h-4" />
-                    Voir la démo
-                  </Button>
-                </Link>
-              </div>
-            </div>
-          </FadeIn>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ══════════════════════════════════════════════
-   TRANSPORT MODES SECTION
-   ══════════════════════════════════════════════ */
-function TransportModesSection() {
-  const modes = [
-    {
-      title: 'Avion',
-      image: '/images/landing-v2/transport-avion.jpg',
-      stat: '15M+ passagers/an',
-      icon: Plane,
-      gradient: 'from-blue-600 to-indigo-600',
-      lightBg: 'bg-blue-50',
-      borderColor: 'border-blue-200/60',
-      iconBg: 'bg-blue-600',
-      statColor: 'text-blue-600',
-      features: [
-        'Compagnie aérienne & n° de vol',
-        'Alerte WhatsApp dès la découverte',
-        'Géolocalisation automatique',
-      ],
-      useCase: 'Idéal pour vols long-courrier, Hajj & Omra',
-    },
-    {
-      title: 'Train',
-      image: '/images/landing-v2/transport-train.jpg',
-      stat: '4.5M voyageurs/jour',
-      icon: TrainFront,
-      gradient: 'from-violet-600 to-purple-600',
-      lightBg: 'bg-violet-50',
-      borderColor: 'border-violet-200/60',
-      iconBg: 'bg-violet-600',
-      statColor: 'text-violet-600',
-      features: [
-        'Compagnie ferroviaire & n° de train',
-        'Notification en gare d\'arrivée',
-        'Suivi en temps réel de l\'objet',
-      ],
-      useCase: 'Parfait pour TER, TGV & trains internationaux',
-    },
-    {
-      title: 'Bateau',
-      image: '/images/landing-v2/transport-bateau.jpg',
-      stat: '30M croisiéristes',
-      icon: Ship,
-      gradient: 'from-teal-600 to-cyan-600',
-      lightBg: 'bg-teal-50',
-      borderColor: 'border-teal-200/60',
-      iconBg: 'bg-teal-600',
-      statColor: 'text-teal-600',
-      features: [
-        'Nom du navire & n° de cabine',
-        'Alerte en cas de perte en mer',
-        'Protection maritime complète',
-      ],
-      useCase: 'Croisières, traversées & ferry internationaux',
-    },
-    {
-      title: 'Bus',
-      image: '/images/landing-v2/transport-bus.jpg',
-      stat: '200K trajets/jour',
-      icon: Bus,
-      gradient: 'from-orange-500 to-amber-500',
-      lightBg: 'bg-orange-50',
-      borderColor: 'border-orange-200/60',
-      iconBg: 'bg-orange-500',
-      statColor: 'text-orange-600',
-      features: [
-        'Compagnie & n° de ligne',
-        'Signalement rapide par QR code',
-        'Couverture réseaux inter-villes',
-      ],
-      useCase: 'Bus interurbains, cars & voyages organisés',
-    },
+function ObjectCategories() {
+  const categories = [
+    { icon: Luggage, label: 'Valises & Sacs', count: '40%' },
+    { icon: Laptop, label: 'Électronique', count: '25%' },
+    { icon: CreditCard, label: 'Portefeuilles', count: '15%' },
+    { icon: KeyRound, label: 'Clés & Accessoires', count: '12%' },
+    { icon: Globe, label: 'Documents', count: '8%' },
   ];
 
   return (
-    <section className="py-24 lg:py-32 px-5 bg-gradient-to-b from-slate-50/80 to-white">
-      <div className="max-w-6xl mx-auto">
-        <FadeIn className="text-center mb-16">
-          <span className="inline-flex items-center gap-2 text-xs font-bold tracking-[0.15em] uppercase text-blue-600 mb-5">
-            <Globe className="w-3.5 h-3.5" />
-            Tous les modes de transport
+    <section className="py-24 lg:py-32 px-5 bg-slate-50" id="objets">
+      <div className="max-w-[1400px] mx-auto">
+        <Reveal className="text-center mb-16">
+          <span className="inline-flex items-center gap-2 text-xs font-bold tracking-[0.15em] uppercase text-amber-600 mb-4">
+            <Tag className="w-3.5 h-3.5" />
+            Ce que vous pouvez protéger
           </span>
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 mb-6 tracking-[-0.02em]">
-            Une protection pour tous vos voyages
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-[-0.03em]">
+            Tout ce qui compte
           </h2>
-          <p className="text-lg text-slate-500 max-w-2xl mx-auto leading-relaxed">Avion, train, bateau, bus — QRTags vous suit partout.</p>
-        </FadeIn>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          {modes.map((mode, i) => (
-            <FadeIn key={mode.title} delay={i * 0.1}>
-              <div className={`group relative bg-white rounded-2xl overflow-hidden border ${mode.borderColor} shadow-sm hover:shadow-xl hover:shadow-slate-200/40 transition-all duration-500 hover:-translate-y-1 h-full flex flex-col`}>
-                {/* Image */}
-                <div className="relative aspect-[4/3] overflow-hidden">
-                  <Image src={mode.image} alt={mode.title} fill className="object-cover group-hover:scale-105 transition-transform duration-700 ease-out" />
-                  <div className={`absolute inset-0 bg-gradient-to-t ${mode.gradient} opacity-60 group-hover:opacity-50 transition-opacity duration-500`} />
-                  {/* Icon badge */}
-                  <div className="absolute top-3 left-3 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-sm">
-                    <mode.icon className={`w-5 h-5 ${mode.statColor}`} />
-                  </div>
-                  {/* Stat badge */}
-                  <div className="absolute top-3 right-3">
-                    <span className="text-[10px] font-bold text-white/90 bg-black/30 backdrop-blur-sm px-2.5 py-1 rounded-full">
-                      {mode.stat}
-                    </span>
-                  </div>
+          <p className="text-lg text-slate-500 mt-4 max-w-xl mx-auto">
+            Des valises aux clés, un QR code protège n&apos;importe quel objet.
+          </p>
+        </Reveal>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+          {categories.map((cat, i) => (
+            <Reveal key={cat.label} delay={i * 0.08}>
+              <div className="group bg-white rounded-2xl p-6 border border-slate-100 hover:border-amber-200 text-center hover:shadow-lg hover:shadow-amber-100/30 transition-all duration-500 hover:-translate-y-1 cursor-pointer">
+                <div className="w-14 h-14 mx-auto rounded-xl bg-amber-50 group-hover:bg-amber-100 flex items-center justify-center mb-4 transition-colors duration-300">
+                  <cat.icon className="w-6 h-6 text-amber-600" />
                 </div>
-
-                {/* Content */}
-                <div className="flex-1 p-5 flex flex-col">
-                  <h3 className="text-lg font-bold text-slate-900 mb-1">{mode.title}</h3>
-
-                  {/* Features */}
-                  <ul className="space-y-2 mt-3 mb-4 flex-1">
-                    {mode.features.map((feature) => (
-                      <li key={feature} className="flex items-start gap-2 text-sm text-slate-600">
-                        <CheckCircle className={`w-4 h-4 ${mode.statColor} flex-shrink-0 mt-0.5`} />
-                        <span className="leading-snug">{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-
-                  {/* Use case */}
-                  <p className="text-xs text-slate-400 italic leading-snug mb-4">{mode.useCase}</p>
-
-                  {/* CTA */}
-                  <Link
-                    href="/inscrire"
-                    className={`inline-flex items-center justify-center gap-1.5 w-full bg-gradient-to-r ${mode.gradient} hover:opacity-90 text-white text-sm font-semibold py-2.5 rounded-xl transition-all duration-300 hover:shadow-lg`}
-                  >
-                    Protéger mes objets
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </Link>
-                </div>
+                <h3 className="text-sm font-bold text-slate-900 mb-1">{cat.label}</h3>
+                <span className="text-xs text-slate-400 font-medium">{cat.count} des pertes</span>
               </div>
-            </FadeIn>
+            </Reveal>
           ))}
         </div>
+
+        <Reveal delay={0.4}>
+          <div className="mt-12 text-center">
+            <Link href="/inscrire">
+              <Button className="bg-black hover:bg-slate-800 text-white px-8 py-3.5 rounded-full font-bold text-sm transition-all duration-300 hover:scale-[1.02] shadow-lg gap-2">
+                Voir les 20 catégories
+                <ArrowRight className="w-4 h-4" />
+              </Button>
+            </Link>
+          </div>
+        </Reveal>
       </div>
     </section>
   );
 }
 
 /* ══════════════════════════════════════════════
-   POURQUOI QRTAGS
+   STATS — Dark section
    ══════════════════════════════════════════════ */
-function WhyQRTagsSection() {
-  const cards = [
-    { icon: Globe, title: 'Ancré en Afrique, pensé pour le monde', description: 'Né à Dakar, déployé dans 15 pays. QRTags comprend les réalités du voyage africain et international avec une solution adaptée à chaque contexte.', lightBg: 'bg-blue-50', iconColor: 'text-blue-600' },
-    { icon: Shield, title: 'Sécurité certifiée RGPD', description: 'Zéro donnée sensible stockée publiquement. Vos informations personnelles sont chiffrées et protégées selon les normes européennes les plus strictes.', lightBg: 'bg-orange-50', iconColor: 'text-orange-600' },
-    { icon: Heart, title: 'Pour les pèlerins, les voyageurs, les agences', description: "Hajj, Omra, tourisme, affaires — une seule solution qui s'adapte à chaque voyageur. Plus de 10 000 objets déjà protégés à travers le monde.", lightBg: 'bg-emerald-50', iconColor: 'text-emerald-600' },
-  ];
-
-  return (
-    <section className="py-24 lg:py-32 px-5 bg-white">
-      <div className="max-w-6xl mx-auto">
-        <FadeIn className="text-center mb-16">
-          <span className="inline-flex items-center gap-2 text-xs font-bold tracking-[0.15em] uppercase text-blue-600 mb-5"><BadgeCheck className="w-3.5 h-3.5" />Pourquoi QRTags</span>
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 mb-6 tracking-[-0.02em] leading-[1.1]">La confiance, au-delà<br className="hidden sm:block" /> des frontières</h2>
-          <p className="text-lg text-slate-500 max-w-2xl mx-auto leading-relaxed">Une technologie conçue avec soin pour servir les voyageurs les plus exigeants.</p>
-        </FadeIn>
-        <div className="grid md:grid-cols-3 gap-6">
-          {cards.map((card, i) => (
-            <FadeIn key={card.title} delay={i * 0.12}>
-              <div className="group h-full bg-white border border-slate-200/80 rounded-[2rem] p-9 hover:shadow-xl hover:shadow-slate-200/40 transition-all duration-500 hover:-translate-y-1.5">
-                <div className={`w-14 h-14 rounded-2xl ${card.lightBg} flex items-center justify-center mb-7`}><card.icon className={`w-6 h-6 ${card.iconColor}`} /></div>
-                <h3 className="text-lg font-bold text-slate-900 mb-3 leading-snug">{card.title}</h3>
-                <p className="text-[15px] text-slate-500 leading-relaxed">{card.description}</p>
-              </div>
-            </FadeIn>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ══════════════════════════════════════════════
-   SOLUTIONS
-   ══════════════════════════════════════════════ */
-function SolutionsSection() {
-  const solutions = [
-    { title: 'Hajj & Omra', description: 'Protection complète pour les pèlerins avec 3 objets inclus (cabine + 2 soutes). Gérée par votre agence de voyage partenaire.', icon: Shield, href: '/hajj-omra', gradient: 'from-amber-500 to-orange-500' },
-    { title: 'Voyageurs Standard', description: 'Protection flexible pour tous vos voyages. Choisissez 1 ou 2 objets avec une durée adaptée à vos besoins.', icon: Plane, href: '/voyageurs-standard', gradient: 'from-blue-600 to-indigo-600' },
-    { title: 'Devenir Partenaire', description: 'Agences de voyage, compagnies aériennes, hôtels — proposez QRTags à vos clients et générez des revenus complémentaires.', icon: Users, href: '/devenir-partenaire', gradient: 'from-violet-600 to-purple-600' },
-  ];
-
-  return (
-    <section className="py-24 lg:py-32 px-5 bg-slate-50/60" id="solutions">
-      <div className="max-w-6xl mx-auto">
-        <FadeIn className="text-center mb-16">
-          <span className="inline-flex items-center gap-2 text-xs font-bold tracking-[0.15em] uppercase text-blue-600 mb-5"><Tag className="w-3.5 h-3.5" />Solutions</span>
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 mb-6 tracking-[-0.02em]">Deux solutions, une protection</h2>
-          <p className="text-lg text-slate-500 max-w-2xl mx-auto leading-relaxed">Que vous soyez pèlerin ou voyageur, QRTags s&apos;adapte à vos besoins.</p>
-        </FadeIn>
-        <div className="grid md:grid-cols-3 gap-6">
-          {solutions.map((sol, i) => (
-            <FadeIn key={sol.title} delay={i * 0.12}>
-              <Link href={sol.href} className="group block h-full">
-                <div className={`h-full bg-gradient-to-br ${sol.gradient} rounded-[2rem] p-9 hover:shadow-2xl transition-all duration-500 hover:-translate-y-1.5`}>
-                  <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center mb-7"><sol.icon className="w-6 h-6 text-white" /></div>
-                  <h3 className="text-lg font-bold text-white mb-3">{sol.title}</h3>
-                  <p className="text-[15px] text-white/80 leading-relaxed mb-8">{sol.description}</p>
-                  <span className="inline-flex items-center gap-2 text-sm font-semibold text-white group-hover:text-white/90 transition-colors duration-300">En savoir plus <ArrowUpRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform duration-300" /></span>
-                </div>
-              </Link>
-            </FadeIn>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ══════════════════════════════════════════════
-   STATS SECTION
-   ══════════════════════════════════════════════ */
-function StatsSection() {
+function StatsDark() {
   const stats = [
-    { value: 10000, suffix: '+', label: 'Objets protégés', icon: Tag },
-    { value: 15, suffix: '', label: 'Pays couverts', icon: Globe },
-    { value: 98, suffix: '%', label: 'Taux de récupération', icon: TrendingUp },
-    { value: 0, suffix: '24/7', label: 'Disponibilité', icon: BellRing },
+    { value: 15000, suffix: '+', label: 'Objets protégés', icon: Tag },
+    { value: 9800, suffix: '+', label: 'Objets retrouvés', icon: CheckCircle2 },
+    { value: 150, suffix: '+', label: 'Partenaires', icon: Users },
+    { value: 50000, suffix: '+', label: 'Scans réalisés', icon: ScanLine },
   ];
 
   return (
-    <section className="py-20 lg:py-24 px-5 bg-gradient-to-b from-slate-50/80 to-white relative overflow-hidden">
-      <div className="absolute top-0 left-0 w-[400px] h-[400px] bg-blue-100/30 rounded-full blur-[80px] -translate-x-1/2 -translate-y-1/2" />
-      <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-indigo-100/30 rounded-full blur-[80px] translate-x-1/2 translate-y-1/2" />
-      <div className="max-w-6xl mx-auto relative z-10">
+    <section className="py-20 lg:py-24 px-5 bg-black relative overflow-hidden">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(245,158,11,0.08),transparent_60%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_50%,rgba(234,179,8,0.06),transparent_60%)]" />
+      <div className="max-w-[1400px] mx-auto relative z-10">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-16">
           {stats.map((stat, i) => (
-            <FadeIn key={stat.label} delay={i * 0.1}>
-              <div className="text-center group">
-                <div className="flex justify-center mb-4"><div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 flex items-center justify-center"><stat.icon className="w-5 h-5 text-blue-600" /></div></div>
-                <div className="text-4xl sm:text-5xl font-extrabold text-slate-900 mb-2 tracking-[-0.02em]">{stat.suffix === '24/7' ? <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">24/7</span> : <AnimatedCounter target={stat.value} suffix={stat.suffix} />}</div>
-                <div className="text-sm text-slate-500 font-medium">{stat.label}</div>
+            <Reveal key={stat.label} delay={i * 0.1}>
+              <div className="text-center">
+                <div className="flex justify-center mb-4">
+                  <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                    <stat.icon className="w-5 h-5 text-amber-400" />
+                  </div>
+                </div>
+                <div className="text-3xl sm:text-4xl font-black text-white mb-1 tracking-[-0.02em]">
+                  <Counter target={stat.value} suffix={stat.suffix} />
+                </div>
+                <div className="text-sm text-white/40 font-medium">{stat.label}</div>
               </div>
-            </FadeIn>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ══════════════════════════════════════════════
-   COMMENT ÇA MARCHE
-   ══════════════════════════════════════════════ */
-function HowItWorksSection() {
-  const steps = [
-    { step: '01', image: '/images/landing-v2/step-receive.jpg', title: 'Recevez votre QR', description: 'Commandez vos QR codes via notre formulaire B2B ou auprès de votre agence partenaire.', color: 'from-blue-500 to-blue-600', href: '/etapes/recevez-votre-qr' },
-    { step: '02', image: '/images/landing-v2/step-activate.jpg', title: 'Activez en 30 secondes', description: 'Scannez le QR code et remplissez le formulaire avec vos informations de voyage.', color: 'from-violet-500 to-violet-600', href: '/etapes/activez-30-secondes' },
-    { step: '03', image: '/images/landing-v2/step-travel.jpg', title: 'Voyagez serein', description: "Vos objets sont protégés. Collez simplement l'autocollant bien visible sur chaque objet.", color: 'from-emerald-500 to-emerald-600', href: '/etapes/voyagez-serein' },
-    { step: '04', image: '/images/landing-v2/step-notify.jpg', title: 'Soyez notifié instantanément', description: "Si quelqu'un trouve votre objet, vous recevez une alerte immédiatement via WhatsApp.", color: 'from-orange-500 to-orange-600', href: '/etapes/soyez-notifie' },
-  ];
-
-  return (
-    <section className="py-24 lg:py-32 px-5 bg-white">
-      <div className="max-w-6xl mx-auto">
-        <FadeIn className="text-center mb-16">
-          <span className="inline-flex items-center gap-2 text-xs font-bold tracking-[0.15em] uppercase text-blue-600 mb-5"><Zap className="w-3.5 h-3.5" />Comment ça marche</span>
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 mb-6 tracking-[-0.02em]">La protection en 4 étapes</h2>
-          <p className="text-lg text-slate-500 max-w-2xl mx-auto leading-relaxed">Simple, rapide, sans application à installer.</p>
-        </FadeIn>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          {steps.map((step, i) => (
-            <FadeIn key={step.step} delay={i * 0.1}>
-              <Link href={step.href} className="group block bg-white rounded-2xl overflow-hidden border border-slate-200/80 shadow-sm hover:shadow-xl hover:shadow-slate-200/40 transition-all duration-500 hover:-translate-y-1">
-                <div className="relative aspect-[3/4] overflow-hidden">
-                  <Image src={step.image} alt={step.title} fill className="object-cover group-hover:scale-105 transition-transform duration-700 ease-out" />
-                  <span className={`absolute top-3 right-3 w-9 h-9 bg-gradient-to-br ${step.color} text-white text-xs font-bold rounded-xl flex items-center justify-center shadow-lg`}>{step.step}</span>
-                </div>
-                <div className="p-5">
-                  <h3 className="text-base font-bold text-slate-900 mb-1.5">{step.title}</h3>
-                  <p className="text-sm text-slate-500 leading-relaxed">{step.description}</p>
-                </div>
-              </Link>
-            </FadeIn>
+            </Reveal>
           ))}
         </div>
       </div>
@@ -989,32 +723,64 @@ function HowItWorksSection() {
 /* ══════════════════════════════════════════════
    TESTIMONIALS
    ══════════════════════════════════════════════ */
-function TestimonialsSection() {
+function Testimonials() {
   const testimonials = [
-    { name: 'Fatou Diallo', role: 'Pèlerine Hajj 2025', content: "Grâce à QRTags, j'ai retrouvé ma valise à Djeddah en moins de 2 heures. Une invention géniale qui devrait être obligatoire pour tous les pèlerins.", avatar: 'FD', rating: 5 },
-    { name: 'Marc Dupont', role: 'Voyageur fréquent', content: "Simple, efficace et pas cher. J'ai utilisé QRTags pour tous mes voyages cette année. Plus de stress à l'aéroport, enfin !", avatar: 'MD', rating: 5 },
-    { name: 'Amina Benali', role: 'Directrice agence de voyage', content: "Nous avons adopté QRTags pour tous nos pèlerins. Le taux de perte d'objets a chuté de 90%. Nos clients sont ravis.", avatar: 'AB', rating: 5 },
+    {
+      quote: "J'ai perdu mon sac à main à l'aéroport de Dakar. 45 minutes plus tard, une femme me contacte sur WhatsApp via le QR code. Incroyable.",
+      name: 'Fatou Diallo',
+      role: 'Voyageuse fréquente',
+      initials: 'FD',
+    },
+    {
+      quote: "Mon ordinateur a glissé dans le TGV. Le lendemain, un passager l'a scanné et j'ai pu le récupérer. QRTags m'a sauvé la mise.",
+      name: 'Marc Dupont',
+      role: 'Homme d\'affaires',
+      initials: 'MD',
+    },
+    {
+      quote: "Nous proposons QRTags à tous nos clients. Le taux de perte d'objets a chuté de 90% en 6 mois.",
+      name: 'Amina Benali',
+      role: 'Directrice agence',
+      initials: 'AB',
+    },
   ];
 
   return (
-    <section className="py-24 lg:py-32 px-5 bg-gradient-to-b from-white via-slate-50/50 to-white">
-      <div className="max-w-6xl mx-auto">
-        <FadeIn className="text-center mb-16">
-          <span className="inline-flex items-center gap-2 text-xs font-bold tracking-[0.15em] uppercase text-blue-600 mb-5"><Star className="w-3.5 h-3.5" />Témoignages</span>
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 mb-6 tracking-[-0.02em]">Ils nous font confiance</h2>
-        </FadeIn>
-        <div className="grid md:grid-cols-3 gap-6">
+    <section className="py-24 lg:py-32 px-5 bg-white" id="temoignages">
+      <div className="max-w-[1600px] mx-auto">
+        <Reveal className="text-center mb-16">
+          <span className="inline-flex items-center gap-2 text-xs font-bold tracking-[0.15em] uppercase text-amber-600 mb-4">
+            <Star className="w-3.5 h-3.5" />
+            Témoignages
+          </span>
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-[-0.03em]">
+            Ils ont retrouvé leurs objets
+          </h2>
+        </Reveal>
+
+        <div className="grid md:grid-cols-3 gap-5">
           {testimonials.map((t, i) => (
-            <FadeIn key={t.name} delay={i * 0.12}>
-              <div className="h-full bg-white border border-slate-200/80 rounded-[2rem] p-8 hover:shadow-xl hover:shadow-slate-200/40 transition-all duration-500">
-                <div className="flex gap-1 mb-5">{Array.from({ length: t.rating }).map((_, j) => (<Star key={j} className="w-4 h-4 text-amber-400 fill-amber-400" />))}</div>
-                <p className="text-slate-600 text-[15px] leading-[1.7] mb-8">&ldquo;{t.content}&rdquo;</p>
-                <div className="flex items-center gap-3.5 pt-6 border-t border-slate-100">
-                  <div className="w-11 h-11 rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 text-white flex items-center justify-center text-xs font-bold shadow-lg">{t.avatar}</div>
-                  <div><p className="text-sm font-semibold text-slate-900">{t.name}</p><p className="text-xs text-slate-400 font-medium">{t.role}</p></div>
+            <Reveal key={t.name} delay={i * 0.12}>
+              <div className="h-full bg-slate-50 rounded-2xl p-8 hover:bg-slate-100/50 transition-all duration-500 flex flex-col">
+                <div className="flex gap-0.5 mb-6">
+                  {Array.from({ length: 5 }).map((_, j) => (
+                    <Star key={j} className="w-4 h-4 text-amber-400 fill-amber-400" />
+                  ))}
+                </div>
+                <p className="text-slate-700 text-[15px] leading-[1.8] flex-1 mb-8">
+                  &ldquo;{t.quote}&rdquo;
+                </p>
+                <div className="flex items-center gap-3 pt-6 border-t border-slate-200/60">
+                  <div className="w-10 h-10 rounded-full bg-black text-white flex items-center justify-center text-xs font-bold">
+                    {t.initials}
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-slate-900">{t.name}</p>
+                    <p className="text-xs text-slate-400">{t.role}</p>
+                  </div>
                 </div>
               </div>
-            </FadeIn>
+            </Reveal>
           ))}
         </div>
       </div>
@@ -1023,42 +789,88 @@ function TestimonialsSection() {
 }
 
 /* ══════════════════════════════════════════════
-   PRICING SECTION
+   PRICING
    ══════════════════════════════════════════════ */
-function PricingSection() {
+function Pricing() {
   const plans = [
-    { name: 'Solo', price: '5', period: '/an', description: 'Idéal pour un voyage ponctuel', features: ['2 objets QR codes', 'Activation en 30 secondes', 'Notifications WhatsApp', 'Géolocalisation temps réel'], popular: false, href: '/voyageurs-standard', accentColor: 'text-cyan-600', btnClass: 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white hover:from-cyan-600 hover:to-blue-600 shadow-cyan-500/25', popularBorder: 'border-slate-200/80' },
-    { name: 'Famille', price: '12', period: '/an', description: 'Pour les familles ou voyageurs fréquents', features: ['6 objets QR codes', 'Activation en 30 secondes', 'Notifications WhatsApp', 'Géolocalisation temps réel', 'Support prioritaire'], popular: true, href: '/voyageurs-standard', accentColor: 'text-orange-600', btnClass: 'bg-gradient-to-r from-orange-500 to-amber-500 text-white hover:from-orange-600 hover:to-amber-600 shadow-orange-500/25', popularBorder: 'border-orange-200 shadow-lg shadow-orange-100/50' },
-    { name: 'Hajj & Omra', price: '5', period: '/pèlerin', description: 'Protection complète pour les pèlerins', features: ['3 objets QR codes', 'Géré par votre agence', 'Notifications WhatsApp', 'Support 24/7 dédié', 'Couverture internationale'], popular: false, href: '/hajj-omra', accentColor: 'text-teal-600', btnClass: 'bg-gradient-to-r from-teal-500 to-emerald-500 text-white hover:from-teal-600 hover:to-emerald-600 shadow-teal-500/25', popularBorder: 'border-slate-200/80' },
+    {
+      name: 'QR Code',
+      price: '1 500',
+      period: 'CFA',
+      desc: 'Protection individuelle',
+      features: ['5 objets protégés', '1 an de protection', 'Activation en 30s', 'Alertes WhatsApp', 'Géolocalisation GPS'],
+      popular: true,
+      href: '/contact',
+    },
+    {
+      name: 'Agence',
+      price: '',
+      period: '',
+      desc: 'Pour les professionnels',
+      features: ['QR codes illimités', 'Dashboard gestion', 'Analytics avancés', 'Support dédié', 'Branding personnalisé', 'API intégrée'],
+      popular: false,
+      href: '/devenir-partenaire',
+    },
   ];
 
   return (
-    <section className="py-24 lg:py-32 px-5 bg-white" id="tarifs">
-      <div className="max-w-6xl mx-auto">
-        <FadeIn className="text-center mb-16">
-          <span className="inline-flex items-center gap-2 text-xs font-bold tracking-[0.15em] uppercase text-blue-600 mb-5"><Tag className="w-3.5 h-3.5" />Tarifs</span>
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 mb-6 tracking-[-0.02em]">Protégez vos objets à partir de 5€</h2>
-          <p className="text-lg text-slate-500 max-w-2xl mx-auto leading-relaxed">Des prix simples et transparents. Pas de frais cachés.</p>
-        </FadeIn>
-        <div className="grid md:grid-cols-3 gap-6 items-start">
+    <section className="py-24 lg:py-32 px-5 bg-slate-50" id="tarifs">
+      <div className="max-w-[1200px] mx-auto">
+        <Reveal className="text-center mb-16">
+          <span className="inline-flex items-center gap-2 text-xs font-bold tracking-[0.15em] uppercase text-amber-600 mb-4">
+            <Tag className="w-3.5 h-3.5" />
+            Tarifs
+          </span>
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-[-0.03em]">
+            Protégez vos objets dès <span className="text-amber-500">1 500 CFA</span>
+          </h2>
+          <p className="text-lg text-slate-500 mt-4">Pas de frais cachés.</p>
+        </Reveal>
+
+        <div className="grid md:grid-cols-2 gap-6 items-start">
           {plans.map((plan, i) => (
-            <FadeIn key={plan.name} delay={i * 0.12}>
-              <div className={`relative h-full bg-white rounded-[2rem] p-9 border transition-all duration-500 hover:-translate-y-2 hover:shadow-xl ${plan.popularBorder}`}>
-                {plan.popular && (<span className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-orange-500 to-amber-400 text-white text-xs font-bold px-5 py-1.5 rounded-full shadow-lg shadow-orange-500/30">Populaire</span>)}
-                <h3 className="text-xl font-bold mb-1.5 text-slate-900">{plan.name}</h3>
-                <p className="text-sm mb-6 text-slate-500">{plan.description}</p>
+            <Reveal key={plan.name} delay={i * 0.12}>
+              <div className={`relative h-full rounded-2xl p-8 lg:p-10 transition-all duration-500 hover:-translate-y-1 hover:shadow-2xl ${
+                plan.popular
+                  ? 'bg-black text-white shadow-xl shadow-black/20'
+                  : 'bg-white border border-slate-200'
+              }`}>
+                {plan.popular && (
+                  <span className="absolute -top-3 left-8 bg-amber-500 text-black text-xs font-bold px-4 py-1.5 rounded-full">
+                    Populaire
+                  </span>
+                )}
+                <h3 className={`text-xl font-bold mb-1 ${plan.popular ? 'text-white' : 'text-slate-900'}`}>{plan.name}</h3>
+                <p className={`text-sm mb-6 ${plan.popular ? 'text-white/50' : 'text-slate-500'}`}>{plan.desc}</p>
                 <div className="flex items-baseline gap-1 mb-8">
-                  <span className={`text-5xl font-extrabold tracking-[-0.02em] ${plan.accentColor}`}>{plan.price}€</span>
-                  <span className="text-sm text-slate-400">{plan.period}</span>
+                  {plan.price ? (
+                  <span className={`text-5xl font-black tracking-[-0.02em] ${plan.popular ? 'text-amber-400' : 'text-slate-900'}`}>
+                    {plan.price}{' '}{plan.period}
+                  </span>
+                  ) : (
+                  <span className={`text-3xl font-black tracking-[-0.02em] ${plan.popular ? 'text-amber-400' : 'text-slate-900'}`}>Nous consulter</span>
+                  )}
                 </div>
-                <ul className="space-y-3.5 mb-9">
-                  {plan.features.map((f) => (<li key={f} className="flex items-center gap-3 text-sm"><CheckCircle2 className={`w-4 h-4 flex-shrink-0 ${plan.accentColor}`} /><span className="text-slate-600">{f}</span></li>))}
+                <ul className="space-y-3 mb-9">
+                  {plan.features.map(f => (
+                    <li key={f} className="flex items-center gap-3 text-sm">
+                      <CheckCircle2 className={`w-4 h-4 flex-shrink-0 ${plan.popular ? 'text-amber-400' : 'text-amber-500'}`} />
+                      <span className={plan.popular ? 'text-white/80' : 'text-slate-600'}>{f}</span>
+                    </li>
+                  ))}
                 </ul>
                 <Link href={plan.href}>
-                  <Button className={`w-full py-3.5 rounded-full font-semibold text-sm transition-all duration-300 hover:scale-[1.02] shadow-lg ${plan.btnClass}`}>Choisir {plan.name}<ArrowRight className="w-4 h-4 ml-1" /></Button>
+                  <Button className={`w-full py-3.5 rounded-full font-bold text-sm transition-all duration-300 hover:scale-[1.02] ${
+                    plan.popular
+                      ? 'bg-amber-500 hover:bg-amber-400 text-black shadow-lg shadow-amber-500/25'
+                      : 'bg-black hover:bg-slate-800 text-white shadow-lg shadow-black/20'
+                  }`}>
+                    Choisir {plan.name}
+                    <ArrowRight className="w-4 h-4 ml-1" />
+                  </Button>
                 </Link>
               </div>
-            </FadeIn>
+            </Reveal>
           ))}
         </div>
       </div>
@@ -1067,44 +879,75 @@ function PricingSection() {
 }
 
 /* ══════════════════════════════════════════════
-   FINAL CTA
+   FINAL CTA — Dark, impactful
    ══════════════════════════════════════════════ */
-function FinalCTASection() {
+function FinalCTA() {
   return (
-    <section className="py-24 lg:py-32 px-5 bg-gradient-to-b from-white via-blue-50/40 to-white relative overflow-hidden">
-      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-100/20 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/4" />
-      <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-indigo-100/20 rounded-full blur-[100px] translate-y-1/4 -translate-x-1/4" />
+    <section className="py-24 lg:py-32 px-5 bg-black relative overflow-hidden">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(245,158,11,0.12),transparent_60%)]" />
+      <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-amber-500/5 rounded-full blur-[150px] -translate-x-1/2 -translate-y-1/2" />
+
       <div className="max-w-3xl mx-auto text-center relative z-10">
-        <FadeIn><span className="inline-flex items-center gap-2 text-xs font-bold tracking-[0.15em] uppercase text-blue-600 mb-6"><Sparkles className="w-3.5 h-3.5" />Prêt à voyager serein ?</span></FadeIn>
-        <FadeIn delay={0.15}><h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 mb-8 tracking-[-0.02em] leading-[1.1]">Rejoignez 10 000+ voyageurs qui protègent leurs objets</h2></FadeIn>
-        <FadeIn delay={0.3}><p className="text-lg text-slate-500 mb-12 leading-relaxed">Activation en 30 secondes, tranquillité pour tous vos voyages.</p></FadeIn>
-        <FadeIn delay={0.45}>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/contact"><Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-4 rounded-full font-semibold text-base shadow-lg shadow-blue-600/20 hover:shadow-blue-600/30 hover:scale-[1.03] transition-all duration-300 gap-2.5 h-14">Commander maintenant<ArrowRight className="w-4 h-4" /></Button></Link>
-            <Link href="/devenir-partenaire"><Button className="bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-300 text-slate-700 px-8 py-4 rounded-full font-semibold text-base shadow-sm transition-all duration-300 h-14 hover:scale-[1.03]">Devenir partenaire</Button></Link>
+        <Reveal>
+          <div className="w-16 h-16 mx-auto rounded-2xl bg-amber-500/10 flex items-center justify-center mb-8">
+            <QrCode className="w-8 h-8 text-amber-400" />
           </div>
-        </FadeIn>
+        </Reveal>
+        <Reveal delay={0.1}>
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-[-0.03em] leading-[1.1] mb-6">
+            Ne laissez plus vos objets<br />
+            <span className="text-amber-400">au hasard</span>
+          </h2>
+        </Reveal>
+        <Reveal delay={0.2}>
+          <p className="text-lg text-white/50 mb-12 leading-relaxed">
+            Collez, scannez, retrouvez. Rejoignez les 15 000+ personnes qui protègent déjà ce qui compte.
+          </p>
+        </Reveal>
+        <Reveal delay={0.3}>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link href="/contact">
+              <Button className="bg-amber-500 hover:bg-amber-400 text-black px-8 py-4 rounded-full font-bold text-base shadow-xl shadow-amber-500/20 hover:shadow-amber-500/30 hover:scale-[1.03] transition-all duration-300 gap-2.5 h-14">
+                Protéger mes objets
+                <ArrowRight className="w-4 h-4" />
+              </Button>
+            </Link>
+            <Link href="/devenir-partenaire">
+              <Button className="bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white px-8 py-4 rounded-full font-semibold text-base transition-all duration-300 h-14">
+                Devenir partenaire
+              </Button>
+            </Link>
+          </div>
+        </Reveal>
       </div>
     </section>
   );
 }
 
 /* ══════════════════════════════════════════════
-   CONTACT CTA
+   CONTACT BAR
    ══════════════════════════════════════════════ */
-function ContactCTASection() {
+function ContactBar() {
   return (
-    <section className="py-20 px-5 bg-slate-50/60">
-      <div className="max-w-4xl mx-auto">
-        <FadeIn>
-          <div className="bg-white rounded-[2rem] p-10 lg:p-14 flex flex-col md:flex-row items-center justify-between gap-8 border border-slate-200/80 shadow-sm">
-            <div className="flex items-center gap-5">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center flex-shrink-0"><Headphones className="w-6 h-6 text-blue-600" /></div>
-              <div><h3 className="text-lg font-bold text-slate-900">Besoin d&apos;aide ?</h3><p className="text-sm text-slate-500 mt-0.5">Notre équipe est disponible 24/7 pour vous accompagner.</p></div>
+    <section className="py-16 px-5 bg-white">
+      <div className="max-w-[1200px] mx-auto">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-6 p-8 rounded-2xl bg-slate-50 border border-slate-100">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center flex-shrink-0">
+              <Headphones className="w-5 h-5 text-amber-600" />
             </div>
-            <Link href="/contact"><Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-full font-semibold text-sm shadow-lg shadow-blue-500/20 hover:scale-[1.02] transition-all duration-300 gap-2 px-6 h-11"><Mail className="w-4 h-4" />Nous contacter</Button></Link>
+            <div>
+              <h3 className="font-bold text-slate-900">Une question ?</h3>
+              <p className="text-sm text-slate-500">Notre équipe est disponible 24/7.</p>
+            </div>
           </div>
-        </FadeIn>
+          <Link href="/contact">
+            <Button className="bg-black hover:bg-slate-800 text-white rounded-full font-bold text-sm shadow-lg transition-all duration-300 hover:scale-[1.02] gap-2 px-6 h-11">
+              <Mail className="w-4 h-4" />
+              Nous contacter
+            </Button>
+          </Link>
+        </div>
       </div>
     </section>
   );
@@ -1115,44 +958,107 @@ function ContactCTASection() {
    ══════════════════════════════════════════════ */
 function Footer() {
   const columns = [
-    { title: 'Produit', links: [{ label: 'Solutions', href: '/#solutions' }, { label: 'Comment ça marche', href: '/#comment' }, { label: 'Tarifs', href: '/#tarifs' }, { label: 'Démo', href: '/demo' }] },
-    { title: 'Entreprise', links: [{ label: 'À propos', href: '/#comment' }, { label: 'Partenaires', href: '/devenir-partenaire' }, { label: 'Espace Agence', href: '/agence/connexion' }, { label: 'Contact', href: '/contact' }] },
+    { title: 'Produit', links: [{ label: 'Fonctionnement', href: '#fonctionnement' }, { label: 'Objets', href: '#objets' }, { label: 'Tarifs', href: '#tarifs' }, { label: 'Démo', href: '/demo' }] },
+    { title: 'Entreprise', links: [{ label: 'À propos', href: '/a-propos' }, { label: 'Partenaires', href: '/devenir-partenaire' }, { label: 'Espace Agence', href: '/agence/connexion' }, { label: 'Contact', href: '/contact' }] },
     { title: 'Légal', links: [{ label: 'Mentions légales', href: '/mentions-legales' }, { label: 'Confidentialité', href: '/confidentialite' }, { label: 'CGU', href: '/cgu' }] },
-    { title: 'Contact', links: [{ label: 'Email', href: '/contact' }] },
   ];
 
   return (
-    <footer className="bg-white border-t border-slate-200 pt-16 pb-10">
-      <div className="max-w-6xl mx-auto px-5">
-        <div className="grid sm:grid-cols-2 lg:grid-cols-6 gap-12">
-          <div className="lg:col-span-2">
-            <div className="mb-5"><img src="/logo.png" alt="QRTags" className="h-14 w-auto object-contain" /></div>
-            <p className="text-base leading-relaxed max-w-xs text-slate-500 mb-7">Protection intelligente des objets pour voyageurs et pèlerins.</p>
+    <footer className="bg-slate-950 text-white pt-16 pb-10">
+      <div className="max-w-[1600px] mx-auto px-5">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-12">
+          <div>
+            <p className="text-sm leading-relaxed max-w-xs text-white/40 mb-7">
+              Protection intelligente par QR code. Retrouvez tout ce que vous perdez, partout dans le monde.
+            </p>
             <div className="flex items-center gap-2.5">
-              {[{ icon: Facebook, href: 'https://facebook.com/qrtags', label: 'Facebook' }, { icon: Instagram, href: 'https://instagram.com/qrtags', label: 'Instagram' }, { icon: Twitter, href: 'https://twitter.com/qrtags', label: 'Twitter' }].map(s => (
-                <a key={s.label} href={s.href} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-slate-100 hover:bg-blue-50 rounded-xl flex items-center justify-center transition-all duration-300" aria-label={s.label}><s.icon className="w-5 h-5 text-slate-400 hover:text-blue-600 transition-colors" /></a>
+              {[
+                { icon: Facebook, href: 'https://facebook.com/qrtags', label: 'Facebook' },
+                { icon: Instagram, href: 'https://instagram.com/qrtags', label: 'Instagram' },
+                { icon: Twitter, href: 'https://twitter.com/qrtags', label: 'Twitter' },
+              ].map(s => (
+                <a
+                  key={s.label}
+                  href={s.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-9 h-9 bg-white/5 hover:bg-amber-500/20 rounded-lg flex items-center justify-center transition-all duration-300"
+                  aria-label={s.label}
+                >
+                  <s.icon className="w-4 h-4 text-white/40 hover:text-amber-400 transition-colors" />
+                </a>
               ))}
             </div>
           </div>
           {columns.map(col => (
             <div key={col.title}>
-              <h4 className="text-sm font-bold tracking-[0.1em] uppercase text-slate-900 mb-5">{col.title}</h4>
-              <ul className="space-y-3">{col.links.map(link => (<li key={link.label}><Link href={link.href} className="text-sm text-slate-500 hover:text-blue-600 transition-colors duration-300">{link.label}</Link></li>))}</ul>
+              <h4 className="text-xs font-bold tracking-[0.1em] uppercase text-white/60 mb-5">{col.title}</h4>
+              <ul className="space-y-3">
+                {col.links.map(link => (
+                  <li key={link.label}>
+                    <Link href={link.href} className="text-sm text-white/40 hover:text-amber-400 transition-colors duration-300">
+                      {link.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
             </div>
           ))}
         </div>
-        <div className="mt-16 pt-8 border-t border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-4">
-          <p className="text-sm text-slate-400">&copy; {new Date().getFullYear()} QRTags. Tous droits réservés.</p>
-          <div className="flex items-center gap-4 text-sm">
-            <Link href="/mentions-legales" className="text-slate-400 hover:text-blue-600 transition-colors">Mentions légales</Link>
-            <span className="text-slate-300">·</span>
-            <Link href="/confidentialite" className="text-slate-400 hover:text-blue-600 transition-colors">Confidentialité</Link>
-            <span className="text-slate-300">·</span>
-            <Link href="/cgu" className="text-slate-400 hover:text-blue-600 transition-colors">CGU</Link>
+        <div className="mt-16 pt-8 border-t border-white/10 flex flex-col sm:flex-row justify-between items-center gap-4">
+          <p className="text-xs text-white/30">&copy; {new Date().getFullYear()} QRTags. Tous droits réservés.</p>
+          <div className="flex items-center gap-4 text-xs">
+            <Link href="/mentions-legales" className="text-white/30 hover:text-amber-400 transition-colors">Mentions légales</Link>
+            <span className="text-white/10">·</span>
+            <Link href="/confidentialite" className="text-white/30 hover:text-amber-400 transition-colors">Confidentialité</Link>
+            <span className="text-white/10">·</span>
+            <Link href="/cgu" className="text-white/30 hover:text-amber-400 transition-colors">CGU</Link>
           </div>
         </div>
       </div>
     </footer>
+  );
+}
+
+/* ══════════════════════════════════════════════
+   TRACKING WIDGET (inline, amber/black themed)
+   ══════════════════════════════════════════════ */
+function InlineTracker() {
+  const router = useRouter();
+  const [value, setValue] = useState('');
+  const [error, setError] = useState('');
+
+  const submit = () => {
+    const v = value.trim();
+    if (!v) { setError('Entrez votre référence'); return; }
+    router.push(`/suivi/${v.toUpperCase()}`);
+  };
+
+  return (
+    <section className="py-10 px-5 bg-gradient-to-r from-amber-500 to-yellow-500">
+      <div className="max-w-lg mx-auto">
+        <p className="text-black/60 text-sm font-semibold text-center mb-3">Suivez votre objet en temps réel</p>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={value}
+            onChange={e => { setValue(e.target.value.toUpperCase()); setError(''); }}
+            onKeyDown={e => e.key === 'Enter' && submit()}
+            placeholder="Ex: BAG26-XXXXXX"
+            maxLength={15}
+            className="flex-1 px-5 py-3.5 rounded-xl bg-black/10 border border-black/10 text-black placeholder:text-black/30 font-mono tracking-wider text-sm outline-none focus:ring-2 focus:ring-black/20 focus:border-black/20 transition-all"
+          />
+          <button
+            onClick={submit}
+            className="px-6 py-3.5 rounded-xl bg-black text-amber-400 font-bold text-sm hover:bg-slate-900 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2"
+          >
+            <ScanLine className="w-4 h-4" />
+            Suivre
+          </button>
+        </div>
+        {error && <p className="text-black/70 text-xs mt-2 text-center font-medium">{error}</p>}
+      </div>
+    </section>
   );
 }
 
@@ -1163,19 +1069,18 @@ export default function HomePage() {
   return (
     <main className="bg-white">
       <Navigation />
-      <HeroSection />
-      <ChecklistCTASection />
-      <TrackingWidget />
-      <QRTagsEnActionSection />
-      <TransportModesSection />
-      <WhyQRTagsSection />
-      <SolutionsSection />
-      <StatsSection />
-      <HowItWorksSection />
-      <TestimonialsSection />
-      <PricingSection />
-      <FinalCTASection />
-      <ContactCTASection />
+      <Hero />
+      <TrustMarquee />
+      <InlineTracker />
+      <ProblemSection />
+      <HowItWorks />
+      <BentoFeatures />
+      <ObjectCategories />
+      <StatsDark />
+      <Testimonials />
+      <Pricing />
+      <FinalCTA />
+      <ContactBar />
       <Footer />
       <LandingChatbotWidget />
     </main>

@@ -19,10 +19,10 @@ function LoginRedirect() {
   }, [router, role]);
 
   return (
-    <div className="min-h-screen bg-[#f9fafb] flex items-center justify-center">
+    <div className="min-h-screen bg-[#0a0e1a] flex items-center justify-center">
       <div className="flex items-center gap-3">
-        <div className="w-6 h-6 border-2 border-blue-600/30 border-t-blue-600 rounded-full animate-spin" />
-        <span className="text-slate-500">Redirection...</span>
+        <div className="w-6 h-6 border-2 border-amber-500/30 border-t-amber-500 rounded-full animate-spin" />
+        <span className="text-white/50">Redirection...</span>
       </div>
     </div>
   );
@@ -31,10 +31,10 @@ function LoginRedirect() {
 // Loading fallback
 function LoadingFallback() {
   return (
-    <div className="min-h-screen bg-[#f9fafb] flex items-center justify-center">
+    <div className="min-h-screen bg-[#0a0e1a] flex items-center justify-center">
       <div className="flex items-center gap-3">
-        <div className="w-6 h-6 border-2 border-blue-600/30 border-t-blue-600 rounded-full animate-spin" />
-        <span className="text-slate-500">Chargement...</span>
+        <div className="w-6 h-6 border-2 border-amber-500/30 border-t-amber-500 rounded-full animate-spin" />
+        <span className="text-white/50">Chargement...</span>
       </div>
     </div>
   );

@@ -5,10 +5,9 @@ import { GROQ_AI_ENABLED, GROQ_SCAN_GUARD_ENABLED, GROQ_AUTO_TRANSLATE_ENABLED }
 import { isFeatureEnabled } from '@/lib/features';
 import { logMetric } from '@/lib/logger';
 import { detectLocaleFromHeaders, LANGUAGE_COOKIE_NAME, LANGUAGE_COOKIE_MAX_AGE_DAYS } from '@/lib/i18n';
-import { detectScanContext } from '@/lib/scan-context';
 import type { Language } from '@/lib/i18n';
 
-// GET - Retrieve baggage info for scan page
+// GET - Retrieve baggage info for scan page (trouveur)
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ reference: string }> }
@@ -33,9 +32,9 @@ export async function GET(
     if (baggage.status === 'pending_activation') {
       return NextResponse.json({
         status: 'pending_activation',
-        type: baggage.type, // Important: return type for redirect
+        type: baggage.type,
         message: 'Cet objet doit être activé',
-        theme: baggage.type === 'hajj' ? 'hajj' : 'voyageur'
+        theme: 'standard'
       });
     }
 
@@ -65,7 +64,7 @@ export async function GET(
     // Check if baggage is declared lost (but not yet found)
     const isDeclaredLost = baggage.declaredLostAt && !baggage.foundAt;
 
-    // AI-FEATURE: Feature #3 — Detect locale and set cookie for server-side i18n
+    // AI-FEATURE: Detect locale and set cookie for server-side i18n
     let detectedLocale: Language = 'fr';
     try {
       if (GROQ_AI_ENABLED && GROQ_AUTO_TRANSLATE_ENABLED) {
@@ -78,46 +77,31 @@ export async function GET(
       // Silent fallback to 'fr'
     }
 
-    // Return baggage info
-    let theme;
-    if (isDeclaredLost) {
-      theme = 'lost-urgent'; // Special theme for declared lost baggage
-    } else {
-      theme = baggage.type === 'hajj'
-        ? (baggage.status === 'lost' ? 'lost-hajj' : 'hajj')
-        : (baggage.status === 'lost' ? 'lost-voyageur' : 'voyageur');
-    }
+    // Theme: lost-urgent for declared lost, standard otherwise
+    const theme = isDeclaredLost ? 'lost-urgent' : 'standard';
 
     const response = NextResponse.json(
       {
       status: isDeclaredLost ? 'lost' : 'active',
       theme,
       type: baggage.type,
-      // TRANSPORT-FEATURE: Include transportMode + conditional fields
       baggage: {
         reference: baggage.reference,
         type: baggage.type,
         travelerName: `${baggage.travelerFirstName} ${baggage.travelerLastName}`,
         baggageIndex: baggage.baggageIndex,
-        baggageType: baggage.baggageType,
         status: baggage.status,
-        transportMode: baggage.transportMode || 'flight',
-        airlineName: baggage.airlineName,
-        flightNumber: baggage.flightNumber,
-        trainCompany: baggage.trainCompany,
-        trainNumber: baggage.trainNumber,
-        shipName: baggage.shipName,
-        shipCabin: baggage.shipCabin,
-        busCompany: baggage.busCompany,
-        busLineNumber: baggage.busLineNumber,
-        destination: baggage.destination,
+        objectCategory: baggage.objectCategory,
+        // Lost baggage description fields
+        itemDescription: baggage.itemDescription,
+        itemColor: baggage.itemColor,
+        itemBrand: baggage.itemBrand,
+        identificationMark: baggage.identificationMark,
         agency: baggage.agency?.name || null,
         whatsappOwner: baggage.whatsappOwner || null,
         declaredLostAt: baggage.declaredLostAt,
         foundAt: baggage.foundAt,
         createdAt: baggage.createdAt?.toISOString() || null,
-        departureDate: baggage.departureDate?.toISOString() || null,
-        departureTime: baggage.departureTime || null,
       }
     },
     {
@@ -129,16 +113,16 @@ export async function GET(
     }
     );
 
-    // AI-FEATURE: Set qrtag_locale cookie (7 days) so server can detect language on next request
+    // Set locale cookie
     try {
       response.cookies.set(LANGUAGE_COOKIE_NAME, detectedLocale, {
         path: '/',
         maxAge: LANGUAGE_COOKIE_MAX_AGE_DAYS * 24 * 60 * 60,
         sameSite: 'lax',
-        httpOnly: false, // Client needs to read it for localStorage sync
+        httpOnly: false,
       });
     } catch {
-      // Cookie setting can fail in some environments — silent
+      // Cookie setting can fail — silent
     }
 
     return response;
@@ -161,7 +145,7 @@ export async function POST(
     const { reference } = await params;
     const body = await request.json();
 
-    const { location, finderName, finderPhone, message, latitude, longitude, country, city, ipAddress, context: manualContext } = body;
+    const { location, finderName, finderPhone, message, latitude, longitude, country, city, ipAddress } = body;
 
     const baggage = await db.baggage.findUnique({
       where: { reference }
@@ -174,7 +158,7 @@ export async function POST(
       );
     }
 
-    // AI-FEATURE: Feature #2 — Scan Guard (Anti-Doublon)
+    // AI-FEATURE: Scan Guard (Anti-Doublon)
     let isFlagged = false;
     let scanGuardAnalysis: Record<string, unknown> | undefined;
 
@@ -182,7 +166,6 @@ export async function POST(
       if (GROQ_AI_ENABLED && GROQ_SCAN_GUARD_ENABLED) {
         const scanGuardEnabled = await isFeatureEnabled('scan_guard').catch(() => false);
         if (scanGuardEnabled) {
-          // Fetch recent scans for this baggage (last 30 min)
           const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000);
           const recentScans = await db.scanLog.findMany({
             where: {
@@ -218,7 +201,6 @@ export async function POST(
             })),
           });
 
-          // Store analysis for ALL analyzed scans (not just flagged) for audit trail
           if (guardResult.analyzed && guardResult.analysis) {
             scanGuardAnalysis = {
               feature: 'scan_guard',
@@ -236,8 +218,6 @@ export async function POST(
 
             if (guardResult.analysis.isSuspicious) {
               isFlagged = true;
-
-              // Return discreet message — don't reveal that it was flagged
               return NextResponse.json({
                 success: true,
                 flagged: true,
@@ -253,17 +233,14 @@ export async function POST(
         }
       }
     } catch (error) {
-      // Scan guard failure = fail-open, never blocks the scan
       console.warn('[Groq/ScanGuard] Error → fail-open:', error instanceof Error ? error.message : 'unknown');
     }
 
     // ─── IA: Générer le message WhatsApp via Groq (si activé) ───
-    let aiMessageContent: string | null = null;
     let aiGenerated = false;
     let aiLatencyMs: number | null = null;
 
     try {
-      // ─── Double check: env var (kill switch) + DB feature flag ───
       if (!GROQ_AI_ENABLED) {
         console.log('[Groq/WhatsApp] Désactivé via GROQ_AI_ENABLED=false (env var)');
       } else {
@@ -273,69 +250,38 @@ export async function POST(
         });
 
         if (groqFlag?.enabled) {
-          // AI-FEATURE: Feature #3 — Detect locale for message language
           const detectedLocale = detectLocaleFromHeaders(request.headers);
-          const localeMap: Record<string, string> = { fr: 'fr-FR', en: 'en-US', ar: 'ar-SA' };
-          const localeStr = localeMap[detectedLocale] || 'fr-FR';
-
-          const scanTime = new Date().toLocaleTimeString(localeStr, {
-            hour: '2-digit',
-            minute: '2-digit',
-          });
 
           const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://qrtags.com';
 
           const aiResult = await generateWhatsAppMessage({
             reference: baggage.reference,
             location: {
-              city: city || baggage.destination || 'Inconnue',
+              city: city || 'Inconnue',
               country: country || '',
             },
-            time: scanTime,
+            time: new Date().toLocaleTimeString(),
             link: `${appUrl}/suivi/${baggage.reference}`,
             language: detectedLocale,
           });
 
-          if (aiResult.generated && aiResult.message) {
-            aiMessageContent = aiResult.message;
+          if (aiResult.generated) {
             aiGenerated = true;
             aiLatencyMs = aiResult.latencyMs;
             logMetric('groq', 'generate_message', aiResult.latencyMs, true, {
               key: baggage.reference,
             });
-          } else {
-            logMetric('groq', 'generate_message', aiResult.latencyMs, false, {
-              key: baggage.reference,
-              details: 'fallback',
-            });
           }
         }
       }
     } catch (error) {
-      // Ne bloque JAMAIS le flux de scan — fallback silencieux
       logMetric('groq', 'generate_message', 0, false, {
         key: baggage.reference,
         details: error instanceof Error ? error.message : 'unknown',
       });
     }
 
-    // ─── Détecter le contexte du scan (auto + manual override) ───
-    const detectedContext = manualContext
-      ? manualContext
-      : detectScanContext(
-          {
-            departureDate: baggage.departureDate,
-            destination: baggage.destination,
-          },
-          {
-            city: city || location,
-            address: location,
-            speed: null,
-            poiType: null,
-          }
-        ).context;
-
-    // Create scan log with AI tracking
+    // Create scan log
     await db.scanLog.create({
       data: {
         baggageId: baggage.id,
@@ -346,85 +292,62 @@ export async function POST(
         country,
         city,
         ipAddress,
-        // refonte-7: le message WhatsApp utilise désormais un template fixe (plus de message IA)
         aiMessageUsed: false,
         groqUsed: aiGenerated || !!scanGuardAnalysis,
         groqLatencyMs: aiLatencyMs,
-        // AI-FEATURE: Store scan guard analysis in aiAnalysis JSON
         aiAnalysis: scanGuardAnalysis ? JSON.parse(JSON.stringify(scanGuardAnalysis)) : undefined,
-        // Contexte du scan
-        context: detectedContext,
-        // Infos du trouveur (pour la page suivi)
+        context: 'static_location',
         finderName: finderName?.trim() || null,
         finderPhone: finderPhone?.trim() || null,
       }
     });
 
-    // Check if baggage is declared lost (urgent case)
     const isDeclaredLost = baggage.declaredLostAt && !baggage.foundAt;
 
-    // Update baggage with last scan info and founder information
     const updateData: Record<string, unknown> = {
       lastScanDate: new Date(),
       lastLocation: location,
       status: baggage.status === 'active' ? 'scanned' : baggage.status,
     };
 
-    // Store founder information if provided
     if (finderName && finderName.trim()) {
       updateData.founderName = finderName.trim();
       updateData.founderAt = new Date();
     }
-    
+
     if (finderPhone && finderPhone.trim()) {
       updateData.founderPhone = finderPhone.trim();
     }
-
-    // If baggage was declared lost and founder provides info, this is an important recovery step
-    // Keep the 'lost' status until agency confirms recovery
 
     await db.baggage.update({
       where: { id: baggage.id },
       data: updateData
     });
 
-    // ─── refonte-7: Nouveau template de message WhatsApp envoyé au propriétaire ───
-    // Le frontend construit sa propre URL wa.me via la clé i18n `whatsapp.found_message`.
-    // Ce `whatsappUrl` backend est retourné pour les consommateurs API / audit.
+    // ─── WhatsApp message template ───
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://qrtags.com';
     const trackingUrl = `${appUrl}/suivi/${reference}`;
 
-    // [Prénom] — prénom du propriétaire
     const ownerFirstName = baggage.travelerFirstName?.trim() || 'à toi';
-
-    // [Type] — label du type de bagage (FR par défaut côté backend)
-    const typeLabel = baggage.type === 'hajj' ? 'Hajj & Omra' : 'Voyageur';
-
-    // [Lieu] — où le bagage a été trouvé
     const lieu = city || location || 'lieu non précisé';
-
-    // [Adresse] — position précise (lien Google Maps si GPS, sinon lieu, sinon fallback)
     const address = latitude && longitude
       ? `https://www.google.com/maps?q=${latitude},${longitude}`
       : (location || 'non précisée');
-
-    // [Nom] + téléphone du trouveur (avec fallbacks sûrs)
     const finderNameDisplay = finderName?.trim() || 'Une personne';
     const finderPhoneDisplay = finderPhone?.trim() || 'numéro non précisé';
 
     const whatsappText =
       `🎉 Bonne nouvelle ${ownerFirstName} !\n\n` +
-      `Quelqu'un a trouvé ton objet ${typeLabel} à ${lieu} !\n` +
+      `Quelqu'un a trouvé votre objet à ${lieu} !\n` +
       `📍 Il est actuellement à ${address}\n` +
       `👤 La personne qui l'a trouvé s'appelle ${finderNameDisplay}\n` +
-      `📞 Appelle-le vite au ${finderPhoneDisplay}\n` +
-      `💬 Ou écris-lui sur WhatsApp\n` +
-      `Tu peux aussi voir tous les détails ici :\n` +
+      `📞 Contactez-le au ${finderPhoneDisplay}\n` +
+      `💬 Ou écrivez-lui sur WhatsApp\n` +
+      `Suivez tous les détails ici :\n` +
       `👉 ${trackingUrl}\n` +
-      `Ne panique pas, tout va bien se passer ! 💪\n` +
+      `Ne paniquez pas, tout va bien se passer ! 💪\n` +
       `L'équipe QRTags`;
 
-    // Clean phone number
     const phone = baggage.whatsappOwner.replace(/[^0-9]/g, '');
     const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(whatsappText)}`;
 

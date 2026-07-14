@@ -173,7 +173,7 @@ function ActivationsChart({ data }: { data: DailyActivation[] }) {
         </div>
         <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 dark:bg-blue-600/10 rounded-lg">
           <span className="w-3 h-3 rounded-full bg-blue-600"></span>
-          <span className="text-xs text-slate-600 dark:text-slate-300">Pèlerins</span>
+          <span className="text-xs text-slate-600 dark:text-slate-300">Pèlerins/Voyageurs</span>
         </div>
       </div>
 
@@ -360,7 +360,7 @@ export default function DashboardPage() {
       colorVariant: 'green' as const
     },
     { 
-      title: 'QR Voyageurs', 
+      title: 'QR Activés', 
       value: stats.qrActivatedVoyageur, 
       subtitle: 'Codes activés',
       icon: <Package className="w-6 h-6 text-white" />,
@@ -369,7 +369,7 @@ export default function DashboardPage() {
     { 
       title: 'Utilisateurs', 
       value: stats.totalPelerins + stats.totalVoyageurs, 
-      subtitle: `${stats.totalPelerins} Hajj + ${stats.totalVoyageurs} Voyageurs`,
+      subtitle: `${stats.totalPelerins} Hajj + ${stats.totalVoyageurs} Std/Voyageurs`,
       icon: <Users className="w-6 h-6 text-white" />,
       colorVariant: 'purple' as const
     },

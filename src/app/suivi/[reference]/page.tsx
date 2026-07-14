@@ -2,12 +2,10 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
-import Image from 'next/image';
 import {
   AlertCircle,
   Clock,
   Shield,
-  Navigation,
   CheckCircle,
   RefreshCw,
   Phone,
@@ -23,17 +21,15 @@ import {
 } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { Language, LANGUAGE_NAMES } from '@/lib/i18n';
-import type { ScanContext } from '@/lib/scan-context';
-import { CONTEXT_ICONS, CONTEXT_COLORS } from '@/lib/scan-context';
+import { OBJECT_ICONS, safeObjectCategory, getObjectLabel } from '@/lib/object-categories';
+import type { ObjectCategory } from '@/lib/object-categories';
 import { generatePreFilledMessage, buildWhatsAppUrl } from '@/lib/whatsapp-message';
-import { safeTransportMode, getTransportImage } from '@/lib/transport';
-import type { TransportMode } from '@/lib/transport';
 import { useAudioAlert, POLL_INTERVAL_MS } from '@/hooks/useAudioAlert';
 
 // ─── Brand constants (unified with /inscrire, /success, /scan) ───
-const BRAND = '#FFDE21'; // jaune vif
+const BRAND = '#F97316'; // jaune vif
 const INK = '#000000';   // ink black
-const CREAM = '#0147d5'; // blue background
+const CREAM = '#000000'; // blue background
 const URGENT_RED = '#EF4444';
 const URGENT_BG = '#FEF2F2';
 const QRBAG_SUPPORT_PHONE = '+33745349339';
@@ -47,7 +43,6 @@ interface ScanEntry {
   location: string | null;
   city: string | null;
   country: string | null;
-  context: string;
   finderName: string | null;
   finderPhone: string | null;
   message: string | null;
@@ -70,18 +65,9 @@ interface BaggageInfo {
   baggageIndex: number;
   baggageType: string;
   status: string;
-  airlineName: string | null;
-  flightNumber: string | null;
   destination: string | null;
   departureDate: string | null;
   departureTime: string | null;
-  transportMode: string;
-  trainCompany: string | null;
-  trainNumber: string | null;
-  shipName: string | null;
-  shipCabin: string | null;
-  busCompany: string | null;
-  busLineNumber: string | null;
   agency: string | null;
   createdAt: string | null;
   lastScanDate: string | null;
@@ -89,6 +75,12 @@ interface BaggageInfo {
   declaredLostAt: string | null;
   foundAt: string | null;
   expiresAt: string | null;
+  // Lost baggage description fields
+  objectCategory: string | null;
+  itemDescription: string | null;
+  itemColor: string | null;
+  itemBrand: string | null;
+  identificationMark: string | null;
 }
 
 interface SuiviData {
@@ -187,7 +179,7 @@ function LanguageSelector({ lang, setLang }: { lang: Language; setLang: (l: Lang
       </button>
 
       {isOpen && (
-        <div role="listbox" aria-label="Language" className="absolute top-full right-0 mt-1 sm:mt-2 bg-[#0147d5] border-2 border-white/30 rounded-xl shadow-lg overflow-hidden z-50 min-w-[140px] sm:min-w-[160px]">
+        <div role="listbox" aria-label="Language" className="absolute top-full right-0 mt-1 sm:mt-2 bg-black border-2 border-white/30 rounded-xl shadow-lg overflow-hidden z-50 min-w-[140px] sm:min-w-[160px]">
           {(['fr', 'en', 'ar'] as Language[]).map((l) => (
             <button
               key={l}
@@ -199,7 +191,7 @@ function LanguageSelector({ lang, setLang }: { lang: Language; setLang: (l: Lang
               }}
               className={`w-full px-4 py-2.5 sm:px-5 sm:py-3 text-left text-xs sm:text-sm md:text-base font-medium transition-colors ${
                 lang === l
-                  ? 'bg-[#FFDE21] text-black'
+                  ? 'bg-[#F97316] text-black'
                   : 'text-white hover:bg-white/10'
               }`}
             >
@@ -225,14 +217,92 @@ function DashedEncart({ children, className = '' }: { children: React.ReactNode;
 }
 
 // ═══════════════════════════════════════════════════════
+//  LOST BAGGAGE DESCRIPTION CARD (yellow dashed border)
+// ═══════════════════════════════════════════════════════
+
+function LostBaggageCard({
+  baggage,
+  lang,
+  t,
+}: {
+  baggage: BaggageInfo;
+  lang: Language;
+  t: (key: string) => string;
+}) {
+  const category = safeObjectCategory(baggage.objectCategory) as ObjectCategory;
+  const icon = OBJECT_ICONS[category] || '📦';
+  const label = getObjectLabel(category, lang);
+
+  const hasAnyInfo = baggage.itemDescription || baggage.itemColor || baggage.itemBrand || baggage.identificationMark;
+
+  if (!hasAnyInfo) return null;
+
+  return (
+    <div className="bg-white border-2 border-dashed border-[#F97316] rounded-2xl p-5 shadow-sm">
+      <h2 className="text-xs uppercase tracking-widest text-black font-bold mb-3 flex items-center gap-2">
+        <span>{icon}</span> {label}
+      </h2>
+
+      {baggage.itemColor && (
+        <DashedEncart>
+          <div className="flex items-center gap-3">
+            <span className="text-xl">🎨</span>
+            <div>
+              <p className="text-xs text-black/60 font-medium">{t('tracking.item_color') || 'Couleur'}</p>
+              <p className="text-base font-bold text-black">{baggage.itemColor}</p>
+            </div>
+          </div>
+        </DashedEncart>
+      )}
+
+      {baggage.itemBrand && (
+        <DashedEncart>
+          <div className="flex items-center gap-3">
+            <span className="text-xl">🏷️</span>
+            <div>
+              <p className="text-xs text-black/60 font-medium">{t('tracking.item_brand') || 'Marque'}</p>
+              <p className="text-base font-bold text-black">{baggage.itemBrand}</p>
+            </div>
+          </div>
+        </DashedEncart>
+      )}
+
+      {baggage.itemDescription && (
+        <DashedEncart>
+          <div className="flex items-center gap-3">
+            <span className="text-xl">📝</span>
+            <div>
+              <p className="text-xs text-black/60 font-medium">{t('tracking.item_description') || 'Description'}</p>
+              <p className="text-base font-bold text-black">{baggage.itemDescription}</p>
+            </div>
+          </div>
+        </DashedEncart>
+      )}
+
+      {baggage.identificationMark && (
+        <DashedEncart className="mb-0">
+          <div className="flex items-center gap-3">
+            <span className="text-xl">🔖</span>
+            <div>
+              <p className="text-xs text-black/60 font-medium">{t('tracking.identification_mark') || 'Marque d&apos;identification'}</p>
+              <p className="text-base font-bold text-black">{baggage.identificationMark}</p>
+            </div>
+          </div>
+        </DashedEncart>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════
 //  LOADING SCREEN (recoloré)
 // ═══════════════════════════════════════════════════════
 
 function LoadingScreen({ t }: { t: (key: string) => string }) {
   return (
-    <main className="min-h-screen bg-[#0147d5] flex items-center justify-center">
+    <main className="min-h-screen bg-black flex items-center justify-center">
       <div className="text-center">
-        <div className="animate-spin w-12 h-12 border-4 border-white/20 border-t-[#FFDE21] rounded-full mx-auto mb-4"></div>
+        <div className="animate-spin w-12 h-12 border-4 border-white/20 border-t-[#F97316] rounded-full mx-auto mb-4"></div>
         <p className="text-lg text-white">{t('common.loading')}</p>
       </div>
     </main>
@@ -271,7 +341,7 @@ function ErrorScreen({
       message: t('tracking.baggage_expired_desc'),
     },
     pending_activation: {
-      icon: <AlertCircle className="w-12 h-12 text-[#FFDE21]" />,
+      icon: <AlertCircle className="w-12 h-12 text-[#F97316]" />,
       title: t('tracking.baggage_not_found'),
       message: t('tracking.baggage_pending_desc'),
     },
@@ -280,18 +350,18 @@ function ErrorScreen({
   const config = errorConfig[type as keyof typeof errorConfig] || errorConfig.not_found;
 
   return (
-    <main className="min-h-screen bg-[#0147d5] flex items-center justify-center p-5 md:p-8 relative">
+    <main className="min-h-screen bg-black flex items-center justify-center p-5 md:p-8 relative">
       <div className="absolute top-4 right-4">
         <LanguageSelector lang={lang} setLang={setLang} />
       </div>
 
       <div className="max-w-md w-full bg-white border-2 border-dashed border-black rounded-2xl p-6 md:p-8 text-center shadow-xl">
-        <div className="w-20 h-20 bg-[#FFDE21]/30 border-2 border-dashed border-black rounded-full flex items-center justify-center mx-auto mb-6">
+        <div className="w-20 h-20 bg-[#F97316]/30 border-2 border-dashed border-black rounded-full flex items-center justify-center mx-auto mb-6">
           {config.icon}
         </div>
         <h1 className="text-2xl md:text-3xl font-bold text-black mb-3">{config.title}</h1>
         <p className="text-black text-base md:text-lg mb-6">{config.message}</p>
-        <div className="w-full py-4 px-6 bg-[#FFDE21]/20 border-2 border-dashed border-black text-black rounded-xl text-center text-base font-medium min-h-[56px]">
+        <div className="w-full py-4 px-6 bg-[#F97316]/20 border-2 border-dashed border-black text-black rounded-xl text-center text-base font-medium min-h-[56px]">
           {t('tracking.trust_note')}
         </div>
       </div>
@@ -324,7 +394,7 @@ function MapEmbed({
 
   if (!mapSrc) {
     return (
-      <div className="bg-[#FFDE21]/20 border-2 border-dashed border-black rounded-xl p-4 text-center text-black">
+      <div className="bg-[#F97316]/20 border-2 border-dashed border-black rounded-xl p-4 text-center text-black">
         <MapPin className="w-6 h-6 mx-auto mb-2" />
         <p className="text-base font-medium">{address || t('tracking.no_location')}</p>
         <p className="text-sm text-black/70 mt-1">{t('tracking.map_unavailable')}</p>
@@ -346,32 +416,6 @@ function MapEmbed({
         className="w-full h-full"
       />
     </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════
-//  CONTEXT BADGE (conservé, recoloré sur fond jaune/20)
-// ═══════════════════════════════════════════════════════
-
-function ContextBadge({ context, t }: { context: string; t: (key: string) => string }) {
-  const scanContext = context as ScanContext;
-  const icon = CONTEXT_ICONS[scanContext] || '📍';
-  // Map original color classes to neutral brand-aware classes
-  const colorClass = CONTEXT_COLORS[scanContext] || 'bg-black';
-
-  const contextKeyMap: Record<string, string> = {
-    departure_airport_urgent: 'tracking.context_departure',
-    arrival_airport: 'tracking.context_arrival',
-    in_transit: 'tracking.context_transit',
-    static_location: 'tracking.context_static',
-  };
-  const labelKey = contextKeyMap[scanContext] || 'tracking.context_static';
-
-  return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 ${colorClass} text-white text-xs font-bold rounded-full`}>
-      <span>{icon}</span>
-      <span>{t(labelKey)}</span>
-    </span>
   );
 }
 
@@ -405,13 +449,13 @@ function IOSInstallModal({
           <button
             onClick={onClose}
             aria-label={t('tracking.close')}
-            className="w-8 h-8 rounded-full hover:bg-[#FFDE21]/30 flex items-center justify-center"
+            className="w-8 h-8 rounded-full hover:bg-[#F97316]/30 flex items-center justify-center"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
         <ol className="space-y-2 text-sm text-black">
-          <li className="flex gap-2"><span>1.</span><span>{t('tracking.install_ios_step1')} <span className="inline-block px-1.5 py-0.5 bg-[#FFDE21] rounded text-xs font-bold">⬆️</span></span></li>
+          <li className="flex gap-2"><span>1.</span><span>{t('tracking.install_ios_step1')} <span className="inline-block px-1.5 py-0.5 bg-[#F97316] rounded text-xs font-bold">⬆️</span></span></li>
           <li className="flex gap-2"><span>2.</span><span>{t('tracking.install_ios_step2')}</span></li>
           <li className="flex gap-2"><span>3.</span><span>{t('tracking.install_ios_step3')}</span></li>
         </ol>
@@ -506,21 +550,13 @@ export default function SuiviPage() {
       baggage: {
         reference: data.baggage.reference,
         bagType: data.baggage.baggageType || 'cabine',
-        transportMode: (data.baggage.transportMode || 'flight') as 'flight' | 'train' | 'boat' | 'bus',
-        airlineName: data.baggage.airlineName || undefined,
-        flightNumber: data.baggage.flightNumber || undefined,
-        trainCompany: data.baggage.trainCompany || undefined,
-        trainNumber: data.baggage.trainNumber || undefined,
-        shipName: data.baggage.shipName || undefined,
-        shipCabin: data.baggage.shipCabin || undefined,
-        busCompany: data.baggage.busCompany || undefined,
-        busLineNumber: data.baggage.busLineNumber || undefined,
+        transportMode: 'flight' as const,
         destination: data.baggage.destination || undefined,
       },
       scanData: {
         city: data.lastPosition?.address || data.baggage?.lastLocation || '',
         address: data.lastPosition?.address || '',
-        context: (lastScan?.context || 'static_location') as ScanContext,
+        context: 'static_location',
       },
       finder: {
         name: data.lastFinder?.name || '',
@@ -595,13 +631,6 @@ export default function SuiviPage() {
     }
   }, [reference, t]);
 
-  // ─── Dynamic transport company name ───
-  const transportCompany = data?.baggage?.airlineName
-    || data?.baggage?.trainCompany
-    || data?.baggage?.shipName
-    || data?.baggage?.busCompany
-    || t('tracking.urgent_fallback_company');
-
   // Format date for display
   const formatDate = (dateStr?: string | null) => {
     if (!dateStr) return null;
@@ -661,20 +690,20 @@ export default function SuiviPage() {
     if (isFound) {
       return {
         title: `✅ ${t('tracking.badge_found')}`,
-        badgeClass: 'bg-[#FFDE21] text-black',
+        badgeClass: 'bg-[#F97316] text-black',
         desc: t('tracking.found_description'),
       };
     }
     if (isScanned) {
       return {
         title: t('tracking.bagage_localise'),
-        badgeClass: 'bg-[#FFDE21] text-black',
+        badgeClass: 'bg-[#F97316] text-black',
         desc: t('tracking.found_description'),
       };
     }
     return {
       title: t('tracking.bagage_protege'),
-      badgeClass: 'bg-black text-[#FFDE21]',
+      badgeClass: 'bg-black text-[#F97316]',
       desc: t('tracking.active_description'),
     };
   })();
@@ -700,15 +729,15 @@ export default function SuiviPage() {
 
   return (
     <main
-      className="min-h-screen bg-[#0147d5] flex flex-col"
+      className="min-h-screen bg-black flex flex-col"
       dir={dir}
     >
       {/* ─── Sticky Header ─── */}
-      <header className="sticky top-0 z-40 bg-[#0147d5] border-b-2 border-white/20 pt-[env(safe-area-inset-top,0px)] px-4 sm:px-5 md:px-8 py-2 sm:py-3">
+      <header className="sticky top-0 z-40 bg-black border-b-2 border-white/20 pt-[env(safe-area-inset-top,0px)] px-4 sm:px-5 md:px-8 py-2 sm:py-3">
         <div className="max-w-md mx-auto flex items-center justify-between">
           <button
             onClick={() => window.history.back()}
-            className="flex items-center gap-1 text-white hover:text-[#FFDE21] transition-colors text-sm font-medium min-h-[40px] px-2"
+            className="flex items-center gap-1 text-white hover:text-[#F97316] transition-colors text-sm font-medium min-h-[40px] px-2"
             aria-label={t('tracking.back_to_scan')}
           >
             <ArrowRight className="w-4 h-4 rtl:rotate-180" />
@@ -721,7 +750,7 @@ export default function SuiviPage() {
               onClick={toggleAudio}
               className={`flex items-center justify-center w-9 h-9 rounded-full border-2 transition-colors min-h-[40px] ${
                 audioEnabled
-                  ? 'border-[#FFDE21] bg-[#FFDE21] text-black'
+                  ? 'border-[#F97316] bg-[#F97316] text-black'
                   : 'border-white/30 text-white hover:bg-white/10'
               }`}
               aria-label={t('tracking.audio_alert_toggle_aria')}
@@ -744,7 +773,7 @@ export default function SuiviPage() {
 
       {/* ─── Refresh Toast ─── */}
       {refreshToast && (
-        <div className="fixed top-[calc(3.5rem+env(safe-area-inset-top,0px))] sm:top-[calc(4rem+env(safe-area-inset-top,0px))] left-1/2 -translate-x-1/2 bg-black text-[#FFDE21] px-4 py-2 rounded-lg shadow-lg z-50 animate-in fade-in slide-in-from-top-2 duration-300 text-sm font-medium flex items-center gap-1.5">
+        <div className="fixed top-[calc(3.5rem+env(safe-area-inset-top,0px))] sm:top-[calc(4rem+env(safe-area-inset-top,0px))] left-1/2 -translate-x-1/2 bg-black text-[#F97316] px-4 py-2 rounded-lg shadow-lg z-50 animate-in fade-in slide-in-from-top-2 duration-300 text-sm font-medium flex items-center gap-1.5">
           <CheckCircle className="w-4 h-4" />
           {t('tracking.refresh_success')}
         </div>
@@ -760,15 +789,15 @@ export default function SuiviPage() {
 
       {/* ─── Audio Alert Banner (show when not enabled AND baggage not yet scanned) ─── */}
       {!audioEnabled && data && data.scans.length === 0 && (
-        <div className="sticky top-[52px] sm:top-[56px] z-30 bg-[#0147d5] px-4 sm:px-5 md:px-8 py-2">
+        <div className="sticky top-[52px] sm:top-[56px] z-30 bg-black px-4 sm:px-5 md:px-8 py-2">
           <div className="max-w-md mx-auto">
-            <div className="bg-[#FFDE21] border-2 border-black rounded-2xl p-4 text-center">
+            <div className="bg-[#F97316] border-2 border-black rounded-2xl p-4 text-center">
               <p className="font-bold text-black text-base mb-2">
                 🔔 {t('tracking.audio_alert_banner_title')}
               </p>
               <button
                 onClick={enableAudio}
-                className="bg-black hover:bg-black text-[#FFDE21] py-2.5 px-6 rounded-xl font-bold transition-colors text-sm min-h-[44px] inline-flex items-center gap-2"
+                className="bg-black hover:bg-black text-[#F97316] py-2.5 px-6 rounded-xl font-bold transition-colors text-sm min-h-[44px] inline-flex items-center gap-2"
               >
                 <Volume2 className="w-4 h-4" />
                 {t('tracking.audio_alert_activate_btn')}
@@ -783,10 +812,10 @@ export default function SuiviPage() {
 
       {/* ─── Scanning indicator (show when audio is enabled AND no scans yet) ─── */}
       {audioEnabled && data && data.scans.length === 0 && (
-        <div className="sticky top-[52px] sm:top-[56px] z-30 bg-[#0147d5] px-4 sm:px-5 md:px-8 py-2">
+        <div className="sticky top-[52px] sm:top-[56px] z-30 bg-black px-4 sm:px-5 md:px-8 py-2">
           <div className="max-w-md mx-auto">
-            <div className="bg-[#FFDE21]/20 border-2 border-dashed border-[#FFDE21] rounded-xl px-4 py-2.5 flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-[#FFDE21] animate-pulse flex-shrink-0" />
+            <div className="bg-[#F97316]/20 border-2 border-dashed border-[#F97316] rounded-xl px-4 py-2.5 flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-[#F97316] animate-pulse flex-shrink-0" />
               <span className="text-sm font-medium text-white">{t('tracking.audio_alert_scanning')}</span>
             </div>
           </div>
@@ -795,7 +824,7 @@ export default function SuiviPage() {
 
       {/* ─── Sticky Map (h-56 mobile / h-64 tablet / h-72 desktop) ─── */}
       {data.lastPosition && (data.lastPosition.hasCoordinates || data.lastPosition.address) && (
-        <section className="sticky top-[52px] sm:top-[56px] z-30 bg-[#0147d5] px-4 sm:px-5 md:px-8 py-3">
+        <section className="sticky top-[52px] sm:top-[56px] z-30 bg-black px-4 sm:px-5 md:px-8 py-3">
           <div className="max-w-md mx-auto">
             <div className="bg-white border-2 border-dashed border-black rounded-2xl p-2.5 shadow-sm">
               <div className="flex items-center justify-between mb-2 px-1">
@@ -839,6 +868,9 @@ export default function SuiviPage() {
           )}
         </div>
 
+        {/* ═══ LOST BAGGAGE DESCRIPTION CARD ═══ */}
+        <LostBaggageCard baggage={baggage} lang={lang} t={t} />
+
         {/* ═══ PANNEAU URGENCE (mode perdu uniquement) ═══ */}
         {isDeclaredLost && (
           <div
@@ -857,7 +889,7 @@ export default function SuiviPage() {
               <li className="flex gap-3 items-start">
                 <span className="flex-shrink-0 w-7 h-7 bg-[#EF4444] text-white rounded-full flex items-center justify-center text-sm font-bold mt-0.5">1</span>
                 <p className="text-sm md:text-base text-black leading-relaxed">
-                  {t('tracking.urgent_step1', { company: transportCompany })}
+                  {t('tracking.urgent_step1', { company: 'QRTags' })}
                 </p>
               </li>
               <li className="flex gap-3 items-start">
@@ -937,20 +969,20 @@ export default function SuiviPage() {
           </div>
         ) : (
           <div className="bg-white border-2 border-dashed border-black rounded-2xl p-5 shadow-sm text-center">
-            <div className="w-14 h-14 bg-[#FFDE21]/20 border-2 border-dashed border-black rounded-full flex items-center justify-center mx-auto mb-3">
+            <div className="w-14 h-14 bg-[#F97316]/20 border-2 border-dashed border-black rounded-full flex items-center justify-center mx-auto mb-3">
               <Clock className="w-7 h-7 text-black/60" />
             </div>
             <p className="text-black/70 text-sm">{t('tracking.no_finder')}</p>
           </div>
         )}
 
-        {/* ═══ CTA CHECKLIST (jaune #FFDE21 + dashed) ═══ */}
-        <div className="bg-[#FFDE21] border-2 border-dashed border-black rounded-2xl p-4 shadow-sm">
+        {/* ═══ CTA CHECKLIST (jaune #F97316 + dashed) ═══ */}
+        <div className="bg-[#F97316] border-2 border-dashed border-black rounded-2xl p-4 shadow-sm">
           <h3 className="text-base font-bold text-black mb-1">{t('tracking.checklist_title')}</h3>
           <p className="text-sm text-black/80 mb-3 leading-relaxed">{t('tracking.checklist_desc')}</p>
           <a
             href={checklistHref}
-            className="block w-full text-center py-3 px-4 bg-black hover:bg-black text-[#FFDE21] rounded-xl font-bold transition-colors min-h-[44px]"
+            className="block w-full text-center py-3 px-4 bg-black hover:bg-black text-[#F97316] rounded-xl font-bold transition-colors min-h-[44px]"
           >
             {t('tracking.checklist_cta')}
           </a>
@@ -977,14 +1009,11 @@ export default function SuiviPage() {
                   <DashedEncart key={scan.id} className={index === visibleScans.length - 1 && !showAllScans ? 'mb-0' : ''}>
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <span className="text-xs text-black/70">
-                            {formatDateTime(scan.scannedAt)}
-                          </span>
-                          <ContextBadge context={scan.context} t={t} />
-                        </div>
+                        <span className="text-xs text-black/70">
+                          {formatDateTime(scan.scannedAt)}
+                        </span>
                         {scan.location && (
-                          <p className="text-black font-medium text-sm truncate">
+                          <p className="text-black font-medium text-sm truncate mt-1">
                             📍 {scan.location}
                           </p>
                         )}
@@ -994,7 +1023,7 @@ export default function SuiviPage() {
                           </p>
                         )}
                       </div>
-                      <div className="w-7 h-7 rounded-full bg-[#FFDE21]/20 border border-black/40 flex items-center justify-center flex-shrink-0">
+                      <div className="w-7 h-7 rounded-full bg-[#F97316]/20 border border-black/40 flex items-center justify-center flex-shrink-0">
                         <span className="text-xs font-bold text-black">{index + 1}</span>
                       </div>
                     </div>
@@ -1004,7 +1033,7 @@ export default function SuiviPage() {
                 {hiddenScansCount > 0 && !showAllScans && (
                   <button
                     onClick={() => setShowAllScans(true)}
-                    className="w-full py-2.5 text-center text-sm font-medium text-black hover:text-[#FFDE21] border-2 border-dashed border-black/40 rounded-xl transition-colors min-h-[40px]"
+                    className="w-full py-2.5 text-center text-sm font-medium text-black hover:text-[#F97316] border-2 border-dashed border-black/40 rounded-xl transition-colors min-h-[40px]"
                   >
                     {t('tracking.see_more', { count: String(hiddenScansCount) })} ▼
                   </button>
@@ -1012,7 +1041,7 @@ export default function SuiviPage() {
                 {showAllScans && hiddenScansCount > 0 && (
                   <button
                     onClick={() => setShowAllScans(false)}
-                    className="w-full py-2.5 text-center text-sm font-medium text-black/70 hover:text-[#FFDE21] transition-colors min-h-[40px]"
+                    className="w-full py-2.5 text-center text-sm font-medium text-black/70 hover:text-[#F97316] transition-colors min-h-[40px]"
                   >
                     ▲ Réduire
                   </button>
@@ -1059,121 +1088,13 @@ export default function SuiviPage() {
                 </div>
               </DashedEncart>
 
-              {/* TRANSPORT-FEATURE: Conditional transport info with real PNG images */}
-              {(() => {
-                const mode = safeTransportMode(baggage.transportMode) as TransportMode;
-                const transportImg = getTransportImage(mode);
-
-                if (mode === 'flight' && (baggage.airlineName || baggage.flightNumber)) {
-                  return (
-                    <DashedEncart>
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          {baggage.airlineName && (
-                            <div className="mb-1">
-                              <p className="text-xs text-black/60 font-medium">{t('transport.airline')}</p>
-                              <p className="text-base font-bold text-black">{baggage.airlineName}</p>
-                            </div>
-                          )}
-                          {baggage.flightNumber && (
-                            <div>
-                              <p className="text-xs text-black/60 font-medium">{t('transport.flight_number')}</p>
-                              <p className="text-xl font-bold text-black font-mono tracking-widest">{baggage.flightNumber}</p>
-                            </div>
-                          )}
-                        </div>
-                        <div className="h-12 w-12 rounded-full bg-[#FFDE21]/20 border border-black/20 flex items-center justify-center ml-4 flex-shrink-0">
-                          <Image src={transportImg} alt="flight" width={28} height={28} className="mix-blend-multiply" />
-                        </div>
-                      </div>
-                    </DashedEncart>
-                  );
-                }
-                if (mode === 'train' && (baggage.trainCompany || baggage.trainNumber)) {
-                  return (
-                    <DashedEncart>
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          {baggage.trainCompany && (
-                            <div className="mb-1">
-                              <p className="text-xs text-black/60 font-medium">{t('transport.train_company')}</p>
-                              <p className="text-base font-bold text-black">{baggage.trainCompany}</p>
-                            </div>
-                          )}
-                          {baggage.trainNumber && (
-                            <div>
-                              <p className="text-xs text-black/60 font-medium">{t('transport.train_number')}</p>
-                              <p className="text-xl font-bold text-black font-mono tracking-widest">{baggage.trainNumber}</p>
-                            </div>
-                          )}
-                        </div>
-                        <div className="h-12 w-12 rounded-full bg-[#FFDE21]/20 border border-black/20 flex items-center justify-center ml-4 flex-shrink-0">
-                          <Image src={transportImg} alt="train" width={28} height={28} className="mix-blend-multiply" />
-                        </div>
-                      </div>
-                    </DashedEncart>
-                  );
-                }
-                if (mode === 'boat' && (baggage.shipName || baggage.shipCabin)) {
-                  return (
-                    <DashedEncart>
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          {baggage.shipName && (
-                            <div className="mb-1">
-                              <p className="text-xs text-black/60 font-medium">{t('transport.ship_name')}</p>
-                              <p className="text-base font-bold text-black">{baggage.shipName}</p>
-                            </div>
-                          )}
-                          {baggage.shipCabin && (
-                            <div>
-                              <p className="text-xs text-black/60 font-medium">{t('transport.ship_cabin')}</p>
-                              <p className="text-base font-bold text-black">{baggage.shipCabin}</p>
-                            </div>
-                          )}
-                        </div>
-                        <div className="h-12 w-12 rounded-full bg-[#FFDE21]/20 border border-black/20 flex items-center justify-center ml-4 flex-shrink-0">
-                          <Image src={transportImg} alt="boat" width={28} height={28} className="mix-blend-multiply" />
-                        </div>
-                      </div>
-                    </DashedEncart>
-                  );
-                }
-                if (mode === 'bus' && (baggage.busCompany || baggage.busLineNumber)) {
-                  return (
-                    <DashedEncart>
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          {baggage.busCompany && (
-                            <div className="mb-1">
-                              <p className="text-xs text-black/60 font-medium">{t('transport.bus_company')}</p>
-                              <p className="text-base font-bold text-black">{baggage.busCompany}</p>
-                            </div>
-                          )}
-                          {baggage.busLineNumber && (
-                            <div>
-                              <p className="text-xs text-black/60 font-medium">{t('transport.bus_line')}</p>
-                              <p className="text-base font-bold text-black">{baggage.busLineNumber}</p>
-                            </div>
-                          )}
-                        </div>
-                        <div className="h-12 w-12 rounded-full bg-[#FFDE21]/20 border border-black/20 flex items-center justify-center ml-4 flex-shrink-0">
-                          <Image src={transportImg} alt="bus" width={28} height={28} className="mix-blend-multiply" />
-                        </div>
-                      </div>
-                    </DashedEncart>
-                  );
-                }
-                return null;
-              })()}
-
               {/* Destination */}
               {baggage.destination && (
                 <DashedEncart>
                   <div className="flex items-center gap-3">
                     <span className="text-xl">📍</span>
                     <div>
-                      <p className="text-xs text-black/60 font-medium">{t('transport.common_destination')}</p>
+                      <p className="text-xs text-black/60 font-medium">{t('tracking.destination') || 'Destination'}</p>
                       <p className="text-base font-bold text-black">{baggage.destination}</p>
                     </div>
                   </div>
@@ -1186,7 +1107,7 @@ export default function SuiviPage() {
                   <div className="flex items-center gap-3">
                     <span className="text-xl">📅</span>
                     <div>
-                      <p className="text-xs text-black/60 font-medium">{t('transport.common_departure_date')}</p>
+                      <p className="text-xs text-black/60 font-medium">{t('tracking.departure_date') || 'Date de départ'}</p>
                       <p className="text-base font-bold text-black">
                         {formatDate(baggage.departureDate || baggage.createdAt)}{baggage.departureTime ? ` — ${baggage.departureTime}` : ''}
                       </p>
@@ -1202,7 +1123,7 @@ export default function SuiviPage() {
         <div className="text-center py-2">
           <a
             href={supportHref}
-            className="text-sm text-[#FFDE21] underline hover:text-white transition-colors"
+            className="text-sm text-[#F97316] underline hover:text-white transition-colors"
           >
             {t('tracking.support_cta')}
           </a>
@@ -1256,7 +1177,7 @@ export default function SuiviPage() {
           <div className="max-w-md mx-auto flex gap-3">
             <button
               onClick={handlePhoneCall}
-              className="flex-1 bg-black hover:bg-black text-[#FFDE21] py-3 rounded-lg font-bold transition-colors flex items-center justify-center gap-2 text-base min-h-[48px]"
+              className="flex-1 bg-black hover:bg-black text-[#F97316] py-3 rounded-lg font-bold transition-colors flex items-center justify-center gap-2 text-base min-h-[48px]"
               aria-label={t('tracking.by_phone')}
             >
               <Phone className="w-5 h-5" />

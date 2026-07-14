@@ -97,11 +97,7 @@ export function PublicFooter() {
     <footer className="bg-slate-900 py-12 px-4">
       <div className="max-w-6xl mx-auto">
         <div className="grid md:grid-cols-4 gap-8 mb-8">
-          {/* Logo */}
           <div>
-            <div className="mb-4">
-              <img src="/logo.png" alt="QRTags" className="h-12 w-auto object-contain" />
-            </div>
             <p className="text-white/50 text-sm">
               Protection intelligente des bagages pour voyageurs et pèlerins.
             </p>

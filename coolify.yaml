@@ -1,0 +1,50 @@
+# ═══════════════════════════════════════════════════════════════
+# QRTags — Coolify Configuration
+# ═══════════════════════════════════════════════════════════════
+# Place this file at the root of your repository.
+# Coolify will auto-detect it when you add a new resource.
+# ═══════════════════════════════════════════════════════════════
+
+type: docker
+
+# Build configuration
+build:
+  builder: dockerfile
+  dockerfile: ./Dockerfile
+
+# Port exposed by the container
+port: 3000
+
+# Domains — update with your actual domain
+# Coolify will auto-generate SSL via Let's Encrypt
+domains:
+  - qrtags.example.com
+
+# Persistent volumes for SQLite database and uploads
+volumes:
+  - source: qrtags_data
+    target: /app/data
+  - source: qrtags_uploads
+    target: /app/public/uploads
+
+# Health check
+healthcheck:
+  test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]
+  interval: 30s
+  timeout: 10s
+  retries: 3
+  start_period: 60s
+
+# Resource limits (adjust based on your server)
+# deploy:
+#   resources:
+#     limits:
+#       memory: 512M
+#       cpus: "1.0"
+
+# Environment variables — set these in Coolify UI for security
+# DO NOT put secrets here. Use Coolify → Service → Environment.
+# Required vars:
+#   NEXT_PUBLIC_BASE_URL  — e.g. https://qrtags.com
+#   NEXTAUTH_SECRET        — generate: openssl rand -base64 32
+#   ENCRYPTION_KEY         — generate: openssl rand -base64 32

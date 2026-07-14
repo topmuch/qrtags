@@ -92,7 +92,13 @@
     "finder_form_help": "املأ بياناتك لإبلاغ المالك.",
     "contact_choice": "اختر كيفية الاتصال بالمالك",
     "owner_section": "المالك",
-    "travel_section": "الرحلة"
+    "travel_section": "الرحلة",
+    "object_section": "وصف الجهاز",
+    "object_type": "نوع الجهاز",
+    "item_description": "الوصف",
+    "item_color": "اللون",
+    "item_brand": "العلامة التجارية",
+    "identification_mark": "علامة التعريف"
   },
   "whatsapp": {
     "found_message": "🎉 أخبار سارة {firstName}!\n\nشخص ما وجد جهازك {type} في {location}!\n📍 هو حالياً في {address}\n👤 الشخص الذي وجده اسمه {name}\n📞 اتصل به بسرعة على {phone}\n💬 أو راسله على واتساب\nيمكنك أيضاً رؤية جميع التفاصيل هنا:\n👉 {url}\nلا تقلق، كل شيء سيكون على ما يرام! 💪\nفريق QRTags",

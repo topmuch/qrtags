@@ -71,44 +71,42 @@ model Agency {
   invoices  Invoice[]
 }
 
-// Baggage model - main entity for object tracking
+// Baggage model - main entity for lost object tracking
 model Baggage {
   id                String    @id @default(cuid())
-  reference         String    @unique // HAJJ26-MLQGY7, VOL26-K9X2P4
-  type              String    // "hajj" or "voyageur"
+  reference         String    @unique // BAG26-MLQGY7
+  type              String    @default("standard") // "standard" (legacy: "hajj" | "voyageur")
   setId             String?   // Groups QR codes together (e.g., SET-2026-0966)
   agencyId          String?
-  travelerFirstName String?
-  travelerLastName  String?
+  travelerFirstName String? // Owner first name
+  travelerLastName  String? // Owner last name
   whatsappOwner     String?
-  baggageIndex      Int       @default(1) // 1, 2, 3 (order: 1 = cabine)
-  baggageType       String    @default("cabine") // "cabine" or "soute"
+  baggageIndex      Int       @default(1) // 1, 2, 3 (order: 1 = primary)
   objectCategory    String?   // "ordinateur" | "telephone" | "ecouteurs" | "passeport" | "carte_identite" | etc.
   status            String    @default("pending_activation") // pending_activation, active, scanned, lost, found, blocked
 
-  // TRANSPORT-FEATURE: Multi-context transport mode (flight/train/boat/bus)
-  transportMode     String    @default("flight") // "flight" | "train" | "boat" | "bus"
+  // ─── LOST-BAGGAGE-FEATURE: Description fields ───
+  itemDescription   String?   // Free text description of the item
+  itemColor         String?   // Color of the item (e.g., "Noir", "Rouge", "Bleu marine")
+  itemBrand         String?   // Brand of the item (e.g., "Samsonite", "Apple", "Louis Vuitton")
+  identificationMark String?  // Distinguishing mark (e.g., "Bandana rouge sur la poignée", "Sticker émoji")
 
-  // Flight-specific fields (transportMode = "flight")
-  airlineName       String?   // ex: "Air France", "Royal Air Maroc"
+  // ─── Legacy transport fields (kept for backward compatibility) ───
+  transportMode     String?   // Legacy: "flight" | "train" | "boat" | "bus"
+  airlineName       String?
   flightNumber      String?
+  trainCompany      String?
+  trainNumber       String?
+  shipName          String?
+  shipCabin         String?
+  busCompany        String?
+  busLineNumber     String?
+  baggageType       String?   // Legacy: "cabine" or "soute"
+  destination       String?   // Legacy
+  departureDate     DateTime? // Legacy
+  departureTime     String?   // Legacy
 
-  // Train-specific fields (transportMode = "train")
-  trainCompany      String?   // ex: "SNCF", "Renfe", "ONCF"
-  trainNumber       String?   // ex: "TGV 6123"
-
-  // Boat-specific fields (transportMode = "boat")
-  shipName          String?   // ex: "MSC Fantasia"
-  shipCabin         String?   // ex: "Pont 4, Cabine 312"
-
-  // Bus-specific fields (transportMode = "bus")
-  busCompany        String?   // ex: "CTM", "Supratours"
-  busLineNumber     String?   // ex: "Ligne 45", "Casablanca → Marrakech"
-
-  // Universal fields (all modes)
-  destination       String?
-  departureDate     DateTime? // Date de départ saisie lors de l'activation
-  departureTime     String?   // Heure de départ saisie lors de l'activation (ex: "08:30")
+  // ─── Tracking fields ───
   createdAt         DateTime  @default(now())
   expiresAt         DateTime?
   lastScanDate      DateTime?

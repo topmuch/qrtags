@@ -14,8 +14,10 @@ import {
   CheckCircle,
   Building,
   Luggage,
-  Send
+  Send,
+  Tag
 } from 'lucide-react';
+import { OBJECT_ICONS, safeObjectCategory, getObjectLabel } from '@/lib/object-categories';
 
 interface BaggageData {
   id: string;
@@ -39,7 +41,13 @@ interface BaggageData {
   lastScanDate: string | null;
   lastLocation: string | null;
   createdAt: string;
-  // TRANSPORT-FEATURE: Transport mode + conditional fields
+  // Lost baggage description fields
+  objectCategory?: string | null;
+  itemColor?: string | null;
+  itemBrand?: string | null;
+  itemDescription?: string | null;
+  identificationMark?: string | null;
+  // TRANSPORT-FEATURE: Transport mode + conditional fields (legacy)
   transportMode?: string;
   airlineName?: string | null;
   flightNumber?: string | null;
@@ -126,6 +134,14 @@ export default function AdminBaggageDetailPage() {
     return <span className={`px-3 py-1 rounded-full text-sm font-medium ${className}`}>{label}</span>;
   };
 
+  const getTypeLabel = (type: string) => {
+    if (type === 'standard') return 'Standard (Bagages perdus)';
+    if (type === 'hajj') return 'Hajj 2026';
+    return 'Voyageur';
+  };
+
+  const hasObjectDescription = baggage?.objectCategory || baggage?.itemColor || baggage?.itemBrand || baggage?.itemDescription || baggage?.identificationMark;
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#080c1a] flex items-center justify-center">
@@ -187,7 +203,7 @@ export default function AdminBaggageDetailPage() {
         <div className="p-6 border-b border-[#1a2238] bg-[#080c1a]">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-[#b8860b] text-sm font-medium">{baggage.type === 'hajj' ? 'Hajj 2026' : 'Voyageur'}</p>
+              <p className="text-[#b8860b] text-sm font-medium">{getTypeLabel(baggage.type)}</p>
               <h2 className="text-xl font-bold text-white font-mono">{baggage.reference}</h2>
             </div>
             {getStatusBadge(baggage.status)}
@@ -240,6 +256,58 @@ export default function AdminBaggageDetailPage() {
             </div>
           )}
 
+          {/* DESCRIPTION DE L'OBJET */}
+          {hasObjectDescription && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                <Tag className="w-5 h-5 text-[#b8860b]" />
+                DESCRIPTION DE L&apos;OBJET
+              </h3>
+              <div className="bg-[#111827] rounded-lg p-4 border-2 border-dashed border-[#FFDE21]/40">
+                <div className="grid md:grid-cols-2 gap-4">
+                  {/* Object Category */}
+                  {baggage.objectCategory && (
+                    <div className="flex items-start gap-3">
+                      <span className="text-2xl mt-0.5">{OBJECT_ICONS[safeObjectCategory(baggage.objectCategory)]}</span>
+                      <div>
+                        <p className="text-[#a0a8b8] text-sm">Catégorie d&apos;objet</p>
+                        <p className="text-white font-medium mt-1">{getObjectLabel(safeObjectCategory(baggage.objectCategory), 'fr')}</p>
+                      </div>
+                    </div>
+                  )}
+                  {/* Color */}
+                  {baggage.itemColor && (
+                    <div>
+                      <p className="text-[#a0a8b8] text-sm">Couleur</p>
+                      <p className="text-white font-medium mt-1">{baggage.itemColor}</p>
+                    </div>
+                  )}
+                  {/* Brand */}
+                  {baggage.itemBrand && (
+                    <div>
+                      <p className="text-[#a0a8b8] text-sm">Marque</p>
+                      <p className="text-white font-medium mt-1">{baggage.itemBrand}</p>
+                    </div>
+                  )}
+                  {/* Description */}
+                  {baggage.itemDescription && (
+                    <div className="md:col-span-2">
+                      <p className="text-[#a0a8b8] text-sm">Description</p>
+                      <p className="text-white font-medium mt-1">{baggage.itemDescription}</p>
+                    </div>
+                  )}
+                  {/* Identification Mark */}
+                  {baggage.identificationMark && (
+                    <div className="md:col-span-2">
+                      <p className="text-[#a0a8b8] text-sm">Marque d&apos;identification</p>
+                      <p className="text-white font-medium mt-1">{baggage.identificationMark}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Baggage Details */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-white flex items-center gap-2">
@@ -264,7 +332,7 @@ export default function AdminBaggageDetailPage() {
             </div>
           </div>
 
-          {/* TRANSPORT-FEATURE: Transport mode info */}
+          {/* TRANSPORT-FEATURE: Transport mode info (legacy) */}
           {baggage.transportMode && (
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-white flex items-center gap-2">

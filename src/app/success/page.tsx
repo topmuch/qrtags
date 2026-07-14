@@ -9,7 +9,7 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { toast } from '@/hooks/use-toast';
 
 // ─── Brand constants (unifié avec /inscrire) ───
-const BRAND = '#FFDE21';
+const BRAND = '#F97316';
 const INK = '#000000';
 
 interface ActivationData {
@@ -103,9 +103,9 @@ function SuccessContent() {
   // ─── Empty state : pas d'activation data ───
   if (!activationData) {
     return (
-      <main className="min-h-screen bg-[#0147d5] flex items-center justify-center p-4">
+      <main className="min-h-screen bg-black flex items-center justify-center p-4">
         <div className="max-w-md w-full">
-          <div className="bg-[#FFDE21] border-2 border-dashed border-[#000000] rounded-2xl p-8 text-center">
+          <div className="bg-[#F97316] border-2 border-dashed border-[#000000] rounded-2xl p-8 text-center">
             <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-[#000000]">
               <CheckCircle className="w-8 h-8" style={{ color: INK }} />
             </div>
@@ -129,7 +129,7 @@ function SuccessContent() {
   }
 
   return (
-    <main className="min-h-screen bg-[#0147d5] flex items-center justify-center p-4">
+    <main className="min-h-screen bg-black flex items-center justify-center p-4">
       <SuccessOverlay show={activationConfirmed} messageKey="activation.success" t={t} />
 
       <div className="max-w-md w-full py-6">
@@ -208,13 +208,13 @@ function SuccessContent() {
             rel="noopener noreferrer"
             aria-label="Suivre mon objet dans un nouvel onglet"
             className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl font-bold transition-colors min-h-[52px] border-2"
-            style={{ backgroundColor: '#0147d5', color: '#FFFFFF', borderColor: '#0147d5' }}
+            style={{ backgroundColor: '#000000', color: '#FFFFFF', borderColor: '#000000' }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#FFDE21';
+              e.currentTarget.style.backgroundColor = '#F97316';
               e.currentTarget.style.color = '#000000';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = '#0147d5';
+              e.currentTarget.style.backgroundColor = '#000000';
               e.currentTarget.style.color = '#FFFFFF';
             }}
           >
@@ -225,13 +225,13 @@ function SuccessContent() {
             onClick={handleShare}
             aria-label="Partager le lien de suivi"
             className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl font-bold transition-colors min-h-[52px] border-2 cursor-pointer"
-            style={{ backgroundColor: '#0147d5', color: '#FFFFFF', borderColor: '#0147d5' }}
+            style={{ backgroundColor: '#000000', color: '#FFFFFF', borderColor: '#000000' }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#FFDE21';
+              e.currentTarget.style.backgroundColor = '#F97316';
               e.currentTarget.style.color = '#000000';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = '#0147d5';
+              e.currentTarget.style.backgroundColor = '#000000';
               e.currentTarget.style.color = '#FFFFFF';
             }}
           >
