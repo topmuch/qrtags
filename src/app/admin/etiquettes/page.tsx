@@ -9,8 +9,6 @@ import {
   Download,
   Share2,
   Trash2,
-  Plane,
-  Luggage,
   QrCode,
   X,
   AlertTriangle,
@@ -18,7 +16,7 @@ import {
   FileText,
   Building2,
   ChevronDown,
-  ChevronRight
+  Package,
 } from "lucide-react";
 
 interface QRSet {
@@ -47,8 +45,7 @@ interface AgencyGroup {
 interface Stats {
   totalSets: number;
   totalQr: number;
-  hajjSets: number;
-  voyageurSets: number;
+  totalAgencies: number;
 }
 
 export default function EtiquettesPage() {
@@ -59,12 +56,10 @@ export default function EtiquettesPage() {
   const [stats, setStats] = useState<Stats>({
     totalSets: 0,
     totalQr: 0,
-    hajjSets: 0,
-    voyageurSets: 0,
+    totalAgencies: 0,
   });
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [activeTab, setActiveTab] = useState<'voyageur' | 'hajj'>('voyageur');
 
   // Modals
   const [showDetailModal, setShowDetailModal] = useState(false);
@@ -74,13 +69,12 @@ export default function EtiquettesPage() {
 
   useEffect(() => {
     fetchSets();
-  }, [activeTab, search]);
+  }, [search]);
 
   const fetchSets = async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      params.set('type', activeTab);
       if (search) params.set('search', search);
 
       const response = await fetch(`/api/qrcodes?${params}`);
@@ -92,14 +86,11 @@ export default function EtiquettesPage() {
         activationStatus: getActivationStatus(set.status)
       }));
 
-      // Filter to only show sets matching the active tab type
-      const filteredSets = setsWithStatus.filter((set: QRSet) => set.type === activeTab);
-      
-      setSets(filteredSets);
+      setSets(setsWithStatus);
       setStats(data.stats);
 
       // Group by agency
-      const groupedByAgency = groupByAgency(filteredSets);
+      const groupedByAgency = groupByAgency(setsWithStatus);
       setAgencyGroups(groupedByAgency);
     } catch (error) {
       console.error('Error fetching QR sets:', error);
@@ -145,9 +136,9 @@ export default function EtiquettesPage() {
   };
 
   const toggleAgencyGroup = (agencyId: string | null) => {
-    setAgencyGroups(prev => 
-      prev.map(group => 
-        group.agencyId === agencyId 
+    setAgencyGroups(prev =>
+      prev.map(group =>
+        group.agencyId === agencyId
           ? { ...group, isExpanded: !group.isExpanded }
           : group
       )
@@ -198,8 +189,8 @@ export default function EtiquettesPage() {
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Header
-      ctx.fillStyle = set.type === 'hajj' ? '#1D4ED8' : '#f59e0b';
+      // Header - unified green color
+      ctx.fillStyle = '#16a34a';
       ctx.fillRect(0, 0, canvas.width, headerHeight);
 
       ctx.fillStyle = '#ffffff';
@@ -208,7 +199,7 @@ export default function EtiquettesPage() {
       ctx.fillText('QRTags - Étiquettes', canvas.width / 2, 35);
 
       ctx.font = '16px Arial';
-      ctx.fillText(`${set.setId} | ${set.type === 'hajj' ? 'Hajj 2026' : 'Voyageur'} | ${set.qrCount} QR`, canvas.width / 2, 65);
+      ctx.fillText(`${set.setId} | ${set.qrCount} QR codes`, canvas.width / 2, 65);
       if (set.agencyName) {
         ctx.font = '14px Arial';
         ctx.fillText(`Agence: ${set.agencyName}`, canvas.width / 2, 85);
@@ -225,13 +216,10 @@ export default function EtiquettesPage() {
         ctx.fillRect(x, y, qrSize, qrSize);
 
         const qrUrl = `${window.location.origin}/scan/${set.references[i]}`;
-        const svgElement = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        const qrSvg = <QRCodeSVG value={qrUrl} size={qrSize - 40} level="H" fgColor={set.type === 'hajj' ? '#1D4ED8' : '#f59e0b'} />;
 
-        // Use a promise-based approach to render SVG to canvas
         const svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="${qrSize - 40}" height="${qrSize - 40}">
           <rect width="100%" height="100%" fill="white"/>
-          ${generateQRPath(qrUrl, qrSize - 40, set.type === 'hajj' ? '#1D4ED8' : '#f59e0b')}
+          ${generateQRPath(qrUrl, qrSize - 40, '#16a34a')}
         </svg>`;
 
         const img = new Image();
@@ -316,7 +304,7 @@ export default function EtiquettesPage() {
         <div>
           <h1 className="text-2xl font-bold text-slate-800 dark:text-white">Étiquettes QR</h1>
           <p className="text-slate-500 dark:text-slate-400 text-sm">
-            {stats.totalSets} sets • {stats.totalQr} QR codes
+            {stats.totalSets} sets • {stats.totalQr} QR codes • {stats.totalAgencies} agences
           </p>
         </div>
 
@@ -349,47 +337,6 @@ export default function EtiquettesPage() {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-2 mb-6">
-        <button
-          onClick={() => setActiveTab('voyageur')}
-          className={`flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all ${
-            activeTab === 'voyageur'
-              ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
-              : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
-          }`}
-        >
-          <Plane className="w-5 h-5" />
-          Voyageurs
-          <span className={`px-2 py-0.5 rounded-full text-xs ${
-            activeTab === 'voyageur' 
-              ? 'bg-white/20 text-white' 
-              : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
-          }`}>
-            {stats.voyageurSets}
-          </span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('hajj')}
-          className={`flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all ${
-            activeTab === 'hajj'
-              ? 'bg-blue-700 text-white shadow-lg shadow-blue-700/30'
-              : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
-          }`}
-        >
-          <Luggage className="w-5 h-5" />
-          Hajj
-          <span className={`px-2 py-0.5 rounded-full text-xs ${
-            activeTab === 'hajj' 
-              ? 'bg-white/20 text-white' 
-              : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
-          }`}>
-            {stats.hajjSets}
-          </span>
-        </button>
-      </div>
-
       {/* Content */}
       {loading ? (
         <div className="flex items-center justify-center py-20">
@@ -397,20 +344,14 @@ export default function EtiquettesPage() {
         </div>
       ) : agencyGroups.length === 0 ? (
         <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-12 text-center">
-          <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center ${
-            activeTab === 'hajj' ? 'bg-emerald-100 dark:bg-blue-600/20' : 'bg-amber-100 dark:bg-blue-600/20'
-          }`}>
-            {activeTab === 'hajj' ? (
-              <Luggage className="w-8 h-8 text-blue-700" />
-            ) : (
-              <Plane className="w-8 h-8 text-amber-600" />
-            )}
+          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center bg-green-100 dark:bg-green-600/20">
+            <Package className="w-8 h-8 text-green-600" />
           </div>
           <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-2">
-            Aucun QR code {activeTab === 'hajj' ? 'Hajj' : 'Voyageur'}
+            Aucune étiquette QR
           </h3>
           <p className="text-slate-500 dark:text-slate-400 mb-4">
-            {search ? 'Aucun résultat pour votre recherche' : 'Commencez par générer des QR codes'}
+            {search ? 'Aucun résultat pour votre recherche' : 'Commencez par générer des QR codes pour une agence'}
           </p>
           {!search && (
             <Link
@@ -435,14 +376,8 @@ export default function EtiquettesPage() {
                 className="w-full flex items-center justify-between p-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
               >
                 <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                    activeTab === 'hajj' 
-                      ? 'bg-emerald-100 dark:bg-blue-600/20' 
-                      : 'bg-amber-100 dark:bg-blue-600/20'
-                  }`}>
-                    <Building2 className={`w-5 h-5 ${
-                      activeTab === 'hajj' ? 'text-blue-700' : 'text-amber-600'
-                    }`} />
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-green-100 dark:bg-green-600/20">
+                    <Building2 className="w-5 h-5 text-green-600" />
                   </div>
                   <div className="text-left">
                     <h3 className="font-semibold text-slate-800 dark:text-white">
@@ -469,14 +404,8 @@ export default function EtiquettesPage() {
                       >
                         <div className="flex items-center gap-4">
                           {/* QR Icon */}
-                          <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                            activeTab === 'hajj'
-                              ? 'bg-emerald-100 dark:bg-blue-600/20'
-                              : 'bg-amber-100 dark:bg-blue-600/20'
-                          }`}>
-                            <QrCode className={`w-6 h-6 ${
-                              activeTab === 'hajj' ? 'text-blue-700' : 'text-amber-600'
-                            }`} />
+                          <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-green-50 dark:bg-green-600/10">
+                            <QrCode className="w-6 h-6 text-green-600" />
                           </div>
 
                           {/* Info */}
@@ -519,7 +448,7 @@ export default function EtiquettesPage() {
                           </button>
                           <button
                             onClick={() => handleDownloadPDF(set)}
-                            className="p-2 text-slate-400 hover:text-blue-600 hover:bg-emerald-50 dark:hover:bg-blue-600/10 rounded-lg transition-colors"
+                            className="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-600/10 rounded-lg transition-colors"
                             title="Télécharger"
                           >
                             <Download className="w-4 h-4" />
@@ -560,7 +489,7 @@ export default function EtiquettesPage() {
               <div>
                 <h2 className="text-lg font-bold text-slate-800 dark:text-white">{selectedSet.setId}</h2>
                 <p className="text-slate-500 dark:text-slate-400 text-sm">
-                  {selectedSet.type === 'hajj' ? 'Hajj 2026' : 'Voyageur'} • {selectedSet.qrCount} QR codes
+                  {selectedSet.qrCount} QR codes
                   {selectedSet.agencyName && ` • ${selectedSet.agencyName}`}
                 </p>
               </div>
@@ -591,16 +520,13 @@ export default function EtiquettesPage() {
                       level="H"
                       includeMargin={true}
                       bgColor="#f8fafc"
-                      fgColor={selectedSet.type === 'hajj' ? '#1D4ED8' : '#f59e0b'}
+                      fgColor="#16a34a"
                     />
                     <p className="text-slate-800 dark:text-white font-mono font-bold mt-2 text-sm">
                       {ref}
                     </p>
                     <p className="text-slate-500 dark:text-slate-400 text-xs">
-                      {selectedSet.type === 'hajj' 
-                        ? (index === 0 ? 'Cabine' : `Soute #${index}`)
-                        : `Bagage #${index + 1}`
-                      }
+                      Objet #{index + 1}
                     </p>
                   </div>
                 ))}
@@ -615,7 +541,7 @@ export default function EtiquettesPage() {
                 <div className="bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4">
                   <p className="text-slate-500 dark:text-slate-400 text-sm">Statut</p>
                   <p className="text-slate-800 dark:text-white font-medium capitalize">
-                    {selectedSet.activationStatus === 'activated' ? 'Activé' : 
+                    {selectedSet.activationStatus === 'activated' ? 'Activé' :
                      selectedSet.activationStatus === 'partial' ? 'Partiel' : 'Nouveau'}
                   </p>
                 </div>
@@ -625,14 +551,14 @@ export default function EtiquettesPage() {
               <div className="mt-6 flex gap-3">
                 <button
                   onClick={() => handleDownloadPDF(selectedSet)}
-                  className="flex-1 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2"
+                  className="flex-1 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
                 >
                   <FileText className="w-4 h-4" />
-                  Télécharger PDF
+                  Télécharger
                 </button>
                 <button
                   onClick={() => handleShareSet(selectedSet)}
-                  className="flex-1 py-3 bg-blue-700 text-white rounded-xl hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2"
+                  className="flex-1 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
                 >
                   <Share2 className="w-4 h-4" />
                   Partager

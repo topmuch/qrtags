@@ -63,10 +63,8 @@ export default function GenererQRPage() {
   
   // Agency form
   const [agencyForm, setAgencyForm] = useState({
-    type: 'standard' as string,
     agencyId: '',
     travelerCount: 1,
-    baggagePerTraveler: 2 as 1 | 2,
   });
 
   useEffect(() => {
@@ -167,7 +165,7 @@ export default function GenererQRPage() {
       } catch (fetchError) {
         clearTimeout(timeoutId);
         if (fetchError instanceof DOMException && fetchError.name === 'AbortError') {
-          throw new Error('Délai d\'attente dépassé. L\'export est trop volumineux. Essayez de filtrer par type (standard/hajj/voyageur).');
+          throw new Error('Délai d\'attente dépassé. L\'export est trop volumineux. Réduisez le nombre de voyageurs.');
         }
         throw fetchError;
       }
@@ -246,10 +244,10 @@ export default function GenererQRPage() {
           }
         : {
             context: 'agency',
-            type: agencyForm.type,
+            type: 'standard' as const,
             agencyId: agencyForm.agencyId,
             travelerCount: agencyForm.travelerCount,
-            count: agencyForm.type === 'hajj' ? 3 : agencyForm.type === 'standard' ? 1 : agencyForm.baggagePerTraveler,
+            count: 1,
           };
       
       const response = await fetch('/api/admin/baggages/generate', {
@@ -349,8 +347,8 @@ export default function GenererQRPage() {
           >
             <User className="w-5 h-5" />
             <div className="text-left">
-              <p className="font-medium">Voyageur individuel</p>
-              <p className="text-xs opacity-80">1 voyageur, sans agence</p>
+              <p className="font-medium">Utilisateur individuel</p>
+              <p className="text-xs opacity-80">1 utilisateur, sans agence</p>
             </div>
           </button>
           <button
@@ -377,7 +375,7 @@ export default function GenererQRPage() {
           <CardHeader>
             <CardTitle className="text-slate-800 dark:text-white flex items-center gap-2">
               <QrCode className="w-5 h-5 text-blue-600" />
-              {context === 'individual' ? 'Voyageur individuel' : 'Génération agence'}
+              {context === 'individual' ? 'Utilisateur individuel' : 'Génération agence'}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -448,12 +446,12 @@ export default function GenererQRPage() {
                   </div>
                 </div>
 
-                <div className="bg-amber-50 dark:bg-blue-600/10 border border-amber-200 dark:border-amber-800 rounded-xl p-4 text-sm text-amber-700 dark:text-blue-500">
-                  <p className="font-medium">ℹ️ Le QR sera actif immédiatement avec les informations du voyageur.</p>
+                <div className="bg-green-50 dark:bg-green-600/10 border border-green-200 dark:border-green-800 rounded-xl p-4 text-sm text-green-700 dark:text-green-500">
+                  <p className="font-medium">ℹ️ Le QR sera actif immédiatement avec les informations de l&apos;utilisateur.</p>
                 </div>
 
                 <div className="bg-slate-50 dark:bg-slate-800 rounded-xl p-4 text-sm text-slate-600 dark:text-slate-300">
-                  <p><strong>Statut :</strong> Actif immédiatement • les infos voyageur sont pré-remplies.</p>
+                  <p><strong>Statut :</strong> Actif immédiatement • les infos sont pré-remplies.</p>
                   <p><strong>Expiration :</strong> {individualForm.duration === '7d' ? '7 jours' : '1 an'} à partir de la génération</p>
                 </div>
               </>
@@ -479,25 +477,22 @@ export default function GenererQRPage() {
                   </Select>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-slate-700 dark:text-slate-300">
-                      {'Nombre de voyageurs'}
-                    </Label>
-                    <Input 
-                      type="number"
-                      min={1}
-                      max={1000}
-                      value={agencyForm.travelerCount}
-                      onChange={(e) => setAgencyForm({ ...agencyForm, travelerCount: parseInt(e.target.value) || 1 })}
-                      className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white"
-                    />
-                  </div>
-
+                <div className="space-y-2">
+                  <Label className="text-slate-700 dark:text-slate-300">
+                    {'Nombre d\'utilisateurs'}
+                  </Label>
+                  <Input 
+                    type="number"
+                    min={1}
+                    max={1000}
+                    value={agencyForm.travelerCount}
+                    onChange={(e) => setAgencyForm({ ...agencyForm, travelerCount: parseInt(e.target.value) || 1 })}
+                    className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white"
+                  />
                 </div>
 
                 <div className="bg-slate-50 dark:bg-slate-800 rounded-xl p-4 text-sm text-slate-600 dark:text-slate-300">
-                  <p>ℹ️ Chaque voyageur reçoit 1 objet protégé • Protection 365 jours • Référence préfixe BAG</p>
+                  <p>ℹ️ Chaque utilisateur reçoit 1 objet protégé • Protection 365 jours • Référence préfixe BAG</p>
                 </div>
               </>
             )}

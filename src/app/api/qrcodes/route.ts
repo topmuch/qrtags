@@ -1,25 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 
-// GET - List all QR code sets, optionally filtered by type and grouped by agency
+// GET - List all QR code sets, optionally filtered by agency or search, grouped by agency
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const type = searchParams.get('type'); // 'hajj' or 'voyageur'
     const search = searchParams.get('search');
     const agencyId = searchParams.get('agencyId');
 
-    // Build where clause
+    // Build where clause - no type filtering
     const where: Record<string, unknown> = {};
-    
-    if (type && type !== 'all') {
-      where.type = type;
-    }
-    
+
     if (agencyId) {
       where.agencyId = agencyId;
     }
-    
+
     if (search) {
       where.OR = [
         { reference: { contains: search.toUpperCase() } },
@@ -36,7 +31,7 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: 'desc' },
     });
 
-    // Group by setId or create virtual sets based on reference prefix (first part before -)
+    // Group by setId
     const setsMap = new Map<string, {
       id: string;
       setId: string;
@@ -52,9 +47,9 @@ export async function GET(request: NextRequest) {
     }>();
 
     baggages.forEach((baggage) => {
-      // Use setId if available, otherwise group by reference prefix (e.g., HAJJ26)
+      // Use setId if available, otherwise group by reference prefix
       const setId = baggage.setId || baggage.reference.split('-')[0];
-      
+
       if (!setsMap.has(setId)) {
         setsMap.set(setId, {
           id: setId,
@@ -66,13 +61,13 @@ export async function GET(request: NextRequest) {
           qrCount: 0,
           references: [],
           status: 'generated',
-          travelerName: baggage.travelerFirstName 
+          travelerName: baggage.travelerFirstName
             ? `${baggage.travelerFirstName} ${baggage.travelerLastName || ''}`.trim()
             : null,
           baggageIds: [],
         });
       }
-      
+
       const set = setsMap.get(setId)!;
       set.qrCount++;
       set.references.push(baggage.reference);
@@ -80,16 +75,18 @@ export async function GET(request: NextRequest) {
     });
 
     // Convert to array and sort by date
-    const sets = Array.from(setsMap.values()).sort((a, b) => 
+    const sets = Array.from(setsMap.values()).sort((a, b) =>
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
+
+    // Count unique agencies
+    const uniqueAgencies = new Set(sets.filter(s => s.agencyId).map(s => s.agencyId));
 
     // Calculate stats
     const stats = {
       totalSets: sets.length,
       totalQr: baggages.length,
-      hajjSets: sets.filter(s => s.type === 'hajj').length,
-      voyageurSets: sets.filter(s => s.type === 'voyageur').length,
+      totalAgencies: uniqueAgencies.size,
     };
 
     return NextResponse.json({
@@ -148,14 +145,14 @@ export async function DELETE(request: NextRequest) {
     const baggageIds = baggages.map(b => b.id);
 
     // Delete baggages (ScanLogs will be cascade deleted automatically)
-    const deleteResult = await db.baggage.deleteMany({ 
-      where: { id: { in: baggageIds } } 
+    const deleteResult = await db.baggage.deleteMany({
+      where: { id: { in: baggageIds } }
     });
 
     console.log(`[DELETE QR] Successfully deleted ${deleteResult.count} baggages`);
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       deletedCount: deleteResult.count,
       setId,
       deletedReferences: baggages.map(b => b.reference)

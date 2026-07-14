@@ -6,7 +6,7 @@ import { db } from '@/lib/db';
 // Schema for individual generation
 const individualSchema = z.object({
   context: z.literal('individual'),
-  type: z.enum(['hajj', 'voyageur', 'standard']),
+  type: z.literal('standard'),
   firstName: z.string().min(2).max(50),
   lastName: z.string().min(2).max(50),
   whatsapp: z.string().min(6).max(20),
@@ -17,7 +17,7 @@ const individualSchema = z.object({
 // Schema for agency generation
 const agencySchema = z.object({
   context: z.literal('agency'),
-  type: z.enum(['hajj', 'voyageur', 'standard']),
+  type: z.literal('standard'),
   agencyId: z.string().min(1),
   count: z.number().min(1).max(3),
   travelerCount: z.number().min(1).max(1000),
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
       });
     } else {
       // Generate for agency - use batch insert for performance
-      const bagCount = validatedData.type === 'hajj' ? 3 : validatedData.count as 1 | 2 | 3;
+      const bagCount = validatedData.count as 1 | 2 | 3;
       const result = await generateBaggagesBatch({
         type: validatedData.type,
         agencyId: validatedData.agencyId,
