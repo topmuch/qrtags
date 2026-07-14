@@ -21,6 +21,10 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV DATABASE_URL=file:/app/data/qrtags.db
 RUN bun run build
 
+# Copy static files to standalone output (required for standalone mode)
+RUN cp -r .next/static .next/standalone/.next/static
+RUN cp -r public .next/standalone/public
+
 # Create data directory
 RUN mkdir -p /app/data
 
