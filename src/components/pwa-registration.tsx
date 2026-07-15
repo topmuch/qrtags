@@ -21,9 +21,7 @@ export function ServiceWorkerRegistration() {
           if (newWorker) {
             newWorker.addEventListener('statechange', () => {
               if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                console.log('New content available, reloading...');
-                // Auto-reload to get fresh content from new SW
-                window.location.reload();
+                console.log('New content available — skip auto-reload to prevent loop.');
               }
             });
           }
