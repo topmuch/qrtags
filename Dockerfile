@@ -1,38 +1,90 @@
-# QRTags - Dockerfile for Coolify
-FROM node:20-alpine
+# ─── QRTags — Dockerfile for Coolify (Multi-stage) ───
+# ─── deps → build → runner (standalone output) ───
 
-# Install required packages
-RUN apk add --no-cache git libc6-compat sqlite
-RUN npm install -g bun
+# ─── Base ───
+FROM node:20-slim AS base
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    openssl \
+    sqlite3 \
+    && rm -rf /var/lib/apt/lists/*
 
+# ─── Stage 1: Dependencies ───
+FROM base AS deps
 WORKDIR /app
 
-# Clone the repository
-RUN git clone https://github.com/topmuch/qrtags.git .
+COPY package.json bun.lock* package-lock.json* ./
+RUN npm install --legacy-peer-deps
 
-# Install dependencies
-RUN bun install
+# ─── Stage 2: Build ───
+FROM base AS builder
+WORKDIR /app
 
-# Generate Prisma Client
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+# Generate Prisma Client (before build so imports resolve)
 RUN npx prisma generate
 
-# Build the application
+# Build Next.js
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV DATABASE_URL=file:/app/data/qrtags.db
-RUN bun run build
+ENV NODE_ENV=production
+RUN npx next build
 
-# Copy static files to standalone output (required for standalone mode)
-RUN cp -r .next/static .next/standalone/.next/static
-RUN cp -r public .next/standalone/public
+# ─── Stage 3: Production runner ───
+FROM base AS runner
+WORKDIR /app
 
-# Create data directory
-RUN mkdir -p /app/data
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Non-root user
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+# Copy standalone output
+COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# Copy Prisma runtime (schema + generated client + engine)
+COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/bcryptjs ./node_modules/bcryptjs
+
+# Copy package.json
+COPY --from=builder /app/package.json ./package.json
+
+# Copy admin creation script
+COPY --from=builder --chown=nextjs:nodejs /app/scripts/create-admin.cjs ./scripts/create-admin.cjs
+
+# Persistent data directory for SQLite
+RUN mkdir -p /app/data && chown -R nextjs:nodejs /app/data
+
+# ─── Entrypoint: migrate + create admin + start ───
+RUN echo '#!/bin/sh' > /app/entrypoint.sh && \
+    echo 'set -e' >> /app/entrypoint.sh && \
+    echo '' >> /app/entrypoint.sh && \
+    echo 'echo "══ QRTags Container ══"' >> /app/entrypoint.sh && \
+    echo '' >> /app/entrypoint.sh && \
+    echo '# Auto-migrate database' >> /app/entrypoint.sh && \
+    echo 'export DATABASE_URL="file:/app/data/qrtags.db"' >> /app/entrypoint.sh && \
+    echo 'npx prisma db push --skip-generate 2>/dev/null || true' >> /app/entrypoint.sh && \
+    echo 'echo "Database ready"' >> /app/entrypoint.sh && \
+    echo '' >> /app/entrypoint.sh && \
+    echo '# Create admin user if not exists' >> /app/entrypoint.sh && \
+    echo 'node /app/scripts/create-admin.cjs 2>/dev/null || true' >> /app/entrypoint.sh && \
+    echo '' >> /app/entrypoint.sh && \
+    echo 'echo "Starting QRTags on port ${PORT:-3000}..."' >> /app/entrypoint.sh && \
+    echo 'exec node server.js' >> /app/entrypoint.sh && \
+    chmod +x /app/entrypoint.sh
+
+RUN chown -R nextjs:nodejs /app
+
+USER nextjs
 
 EXPOSE 3000
-
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
-ENV DATABASE_URL=file:/app/data/qrtags.db
 
-# Start command - create admin and start server
-CMD sh -c "mkdir -p /app/data && export DATABASE_URL=file:/app/data/qrtags.db && npx prisma db push --skip-generate 2>/dev/null || true && node scripts/create-admin.cjs 2>/dev/null || true && exec node .next/standalone/server.js"
+CMD ["/app/entrypoint.sh"]
