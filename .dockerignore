@@ -1,19 +1,58 @@
-Dockerfile
-.dockerignore
+# Dependencies (installed inside Docker)
 .git
 .next
 node_modules
-*.log
-dev.log
-server.log
+
+# Database files (persisted via volume)
 db/*.db
 db/*.db-journal
+prisma/*.db
+prisma/*.db-journal
+
+# Environment
 .env
 .env.local
 .env.production
-README.md
-test
-local-*
+.env.*.local
+
+# Logs
+*.log
+dev.log
+dev-err.log
+dev-out.log
+server.log
+
+# Docker
+Dockerfile
+Dockerfile.coolify
+docker-compose.yml
+coolify.yaml
+.dockerignore
+
+# Tests
+__tests__
+*.test.ts
+*.test.tsx
+*.spec.ts
+
+# Examples / mini-services
+examples/
+mini-services/
+
+# Editor / IDE
 .vscode
 .idea
-mini-services
+*.swp
+*.swo
+
+# Misc
+README.md
+LICENSE
+test
+local-*
+landing-top.png
+login-agence.png
+login-admin.png
+
+# Messages (not used at runtime — using public/locales)
+messages/

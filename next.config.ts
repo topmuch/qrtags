@@ -12,7 +12,7 @@ const nextConfig: NextConfig = {
     formats: ['image/webp'],
     qualities: [75, 90],
   },
-  serverExternalPackages: ['bcryptjs', 'archiver', 'nodemailer', 'qrcode', 'pdfkit'],
+  serverExternalPackages: ['@prisma/client', 'bcryptjs', 'archiver', 'nodemailer', 'qrcode', 'pdfkit'],
 };
 
 export default nextConfig;

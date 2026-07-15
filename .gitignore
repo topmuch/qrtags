@@ -88,4 +88,4 @@ start.sh
 download/
 Caddyfile
 worklog.md
-.zscripts/
+.zscripts/prod-test.log
