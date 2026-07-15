@@ -2,44 +2,73 @@
 
 import { useEffect } from 'react';
 
+// Version key — increment to force cache clear on all clients
+const SW_VERSION = 'v2';
+
 export function ServiceWorkerRegistration() {
   useEffect(() => {
     if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
 
+    // On version change, clear all caches and unregister old SW immediately
+    const lastVersion = localStorage.getItem('qrtag_sw_version');
+    if (lastVersion !== SW_VERSION) {
+      console.log('[SW] Version mismatch, clearing caches...', lastVersion, '→', SW_VERSION);
+      localStorage.setItem('qrtag_sw_version', SW_VERSION);
+
+      // Clear all caches
+      if ('caches' in window) {
+        caches.keys().then((names) => {
+          names.forEach((name) => caches.delete(name));
+          console.log('[SW] All caches cleared');
+        });
+      }
+
+      // Unregister old SW before registering new one
+      navigator.serviceWorker.getRegistrations().then((registrations) => {
+        registrations.forEach((reg) => {
+          reg.unregister().then(() => console.log('[SW] Old SW unregistered'));
+        });
+      });
+    }
+
     const registerSW = async () => {
       try {
         const registration = await navigator.serviceWorker.register('/sw.js', {
-          // Force update check on every page load
           updateViaCache: 'none',
         });
 
-        console.log('SW registered:', registration.scope);
+        console.log('[SW] Registered:', registration.scope);
 
-        // Check for updates
+        // When a new SW is found, tell it to activate immediately
         registration.addEventListener('updatefound', () => {
           const newWorker = registration.installing;
           if (newWorker) {
+            // Tell the new SW to skip waiting
+            newWorker.postMessage({ type: 'SKIP_WAITING' });
+
             newWorker.addEventListener('statechange', () => {
-              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                console.log('New content available — skip auto-reload to prevent loop.');
+              if (newWorker.state === 'activated') {
+                console.log('[SW] New version activated, clearing caches...');
+                caches.keys().then((names) => {
+                  names.forEach((name) => caches.delete(name));
+                });
               }
             });
           }
         });
       } catch (error) {
-        // Silently fail - service worker is not critical for app functionality
-        console.warn('SW registration skipped:', error);
+        // Service worker is not critical — fail silently
+        console.warn('[SW] Registration skipped:', error);
       }
     };
 
-    // Register after page load to not block rendering
+    // Register after page load
     if (document.readyState === 'complete') {
       registerSW();
     } else {
       window.addEventListener('load', registerSW, { once: true });
     }
 
-    // Handle offline/online status
     const handleOnline = () => console.log('Back online');
     const handleOffline = () => console.log('Gone offline');
 
