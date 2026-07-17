@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
+import { withAuthHandler } from '@/lib/auth-middleware';
+import { SessionUser } from '@/lib/session';
 
 // Validation schema
 const userSchema = z.object({
@@ -18,7 +20,7 @@ async function hashPassword(password: string): Promise<string> {
 }
 
 // GET - List all users
-export async function GET() {
+async function getHandler(_request: NextRequest, _user: SessionUser) {
   try {
     const users = await db.user.findMany({
       include: { agency: true },
@@ -40,7 +42,7 @@ export async function GET() {
 }
 
 // POST - Create new user
-export async function POST(request: NextRequest) {
+async function postHandler(request: NextRequest, _user: SessionUser) {
   try {
     const body = await request.json();
     const validatedData = userSchema.parse(body);
@@ -91,7 +93,7 @@ export async function POST(request: NextRequest) {
 }
 
 // PUT - Update user
-export async function PUT(request: NextRequest) {
+async function putHandler(request: NextRequest, _user: SessionUser) {
   try {
     const body = await request.json();
     const { id, password, ...data } = body;
@@ -121,7 +123,7 @@ export async function PUT(request: NextRequest) {
 }
 
 // DELETE - Delete user
-export async function DELETE(request: NextRequest) {
+async function deleteHandler(request: NextRequest, _user: SessionUser) {
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
@@ -147,3 +149,8 @@ export async function DELETE(request: NextRequest) {
     );
   }
 }
+
+export const GET = withAuthHandler(getHandler, { requiredRole: 'superadmin' });
+export const POST = withAuthHandler(postHandler, { requiredRole: 'superadmin' });
+export const PUT = withAuthHandler(putHandler, { requiredRole: 'superadmin' });
+export const DELETE = withAuthHandler(deleteHandler, { requiredRole: 'superadmin' });

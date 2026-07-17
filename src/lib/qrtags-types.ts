@@ -12,11 +12,13 @@ export interface AgencyTypeConfig {
   useCases: string[];
 }
 
+export type AgencyPlan = 'free' | 'pro' | 'enterprise';
+
 export interface Agency {
   id: string;
   name: string;
   slug: string;
-  email: string;
+  email: string | null;
   phone: string | null;
   address: string | null;
   agencyType: AgencyType;
@@ -24,8 +26,11 @@ export interface Agency {
   primaryColor: string;
   secondaryColor: string;
   customMessage: string | null;
-  plan: 'free' | 'pro' | 'enterprise';
-  isActive: boolean;
+  active: boolean;
+  plan: AgencyPlan;
+  onboardingCompleted: boolean;
+  maxTags: number;
+  tagsUsed: number;
   createdAt: string;
   _count?: {
     baggageSets: number;

@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withAuthHandler } from '@/lib/auth-middleware';
+import type { SessionUser } from '@/lib/session';
 import { db } from '@/lib/db';
 
 // GET - Export baggages to CSV
-export async function GET(request: NextRequest) {
+async function getHandler(request: NextRequest, _user: SessionUser) {
   try {
     const { searchParams } = new URL(request.url);
     const agencyId = searchParams.get('agencyId');
@@ -102,3 +104,5 @@ function getStatusLabel(status: string): string {
   };
   return labels[status] || status;
 }
+
+export const GET = withAuthHandler(getHandler);

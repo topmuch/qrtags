@@ -3,8 +3,29 @@ import prisma from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { createSession, logLoginAttempt } from '@/lib/session';
 
+// Role access matrix: which user.role can log in via which login context
+const LOGIN_CONTEXT_ROLES: Record<string, string[]> = {
+  admin: ['superadmin', 'admin', 'agent'],
+  agency: ['agency', 'superadmin', 'admin', 'agent'],
+  agent: ['superadmin', 'admin', 'agent'],
+};
+
+// Redirect URLs by role
+function getRedirectUrl(role: string): string {
+  switch (role) {
+    case 'superadmin':
+    case 'admin':
+    case 'agent':
+      return '/admin/tableau-de-bord';
+    case 'agency':
+      return '/agence/tableau-de-bord';
+    default:
+      return '/';
+  }
+}
+
 export async function POST(request: NextRequest) {
-  const { email, password, role } = await request.json();
+  const { email, password, role: loginContext } = await request.json();
 
   try {
     if (!email || !password) {
@@ -23,7 +44,6 @@ export async function POST(request: NextRequest) {
     });
 
     if (!user) {
-      // Log failed attempt - user not found
       await logLoginAttempt({
         email,
         success: false,
@@ -39,7 +59,6 @@ export async function POST(request: NextRequest) {
     // Vérifier le mot de passe
     const isValidPassword = user.password ? await bcrypt.compare(password, user.password) : false;
     if (!isValidPassword) {
-      // Log failed attempt - wrong password
       await logLoginAttempt({
         userId: user.id,
         email,
@@ -53,31 +72,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Vérifier le rôle
-    if (role === 'admin' && user.role !== 'superadmin') {
+    // Vérifier le contexte de connexion (rôle demandé vs rôle réel)
+    const allowedRoles = LOGIN_CONTEXT_ROLES[loginContext];
+    if (allowedRoles && !allowedRoles.includes(user.role)) {
       await logLoginAttempt({
         userId: user.id,
         email,
         success: false,
-        failureReason: 'Accès admin non autorisé',
+        failureReason: `Accès ${loginContext} non autorisé pour le rôle ${user.role}`,
       });
 
       return NextResponse.json(
-        { error: 'Accès non autorisé - Administrateur requis' },
-        { status: 403 }
-      );
-    }
-
-    if (role === 'agency' && user.role !== 'agency' && user.role !== 'superadmin') {
-      await logLoginAttempt({
-        userId: user.id,
-        email,
-        success: false,
-        failureReason: 'Accès agence non autorisé',
-      });
-
-      return NextResponse.json(
-        { error: 'Accès non autorisé - Agence requise' },
+        { error: 'Accès non autorisé - Vérifiez vos identifiants' },
         { status: 403 }
       );
     }
@@ -101,14 +107,22 @@ export async function POST(request: NextRequest) {
         name: user.name,
         role: user.role,
         agencyId: user.agencyId,
-        agency: user.agency,
+        agency: user.agency ? {
+          id: user.agency.id,
+          name: user.agency.name,
+          slug: user.agency.slug,
+          email: user.agency.email,
+          phone: user.agency.phone,
+          address: user.agency.address,
+          agencyType: user.agency.agencyType,
+          plan: user.agency.plan,
+        } : null,
       },
-      redirectUrl: user.role === 'superadmin' ? '/admin/tableau-de-bord' : '/agence/tableau-de-bord',
+      redirectUrl: getRedirectUrl(user.role),
     });
   } catch (error) {
     console.error('Login error:', error);
 
-    // Log error
     await logLoginAttempt({
       email,
       success: false,

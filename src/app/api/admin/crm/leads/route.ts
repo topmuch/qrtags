@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { z } from 'zod';
 import { sendEmail, getEmailSettings, getNewLeadEmailTemplate } from '@/lib/email';
+import { withAuthHandler } from '@/lib/auth-middleware';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,7 +20,7 @@ const leadSchema = z.object({
 });
 
 // GET - List all leads
-export async function GET() {
+async function getHandler() {
   try {
     const leads = await db.lead.findMany({
       include: {
@@ -45,7 +46,7 @@ export async function GET() {
 }
 
 // POST - Create new lead
-export async function POST(request: NextRequest) {
+async function postHandler(request: NextRequest) {
   try {
     const body = await request.json();
     console.log('Received lead data:', body);
@@ -127,7 +128,7 @@ export async function POST(request: NextRequest) {
 }
 
 // PUT - Update lead
-export async function PUT(request: NextRequest) {
+async function putHandler(request: NextRequest) {
   try {
     const body = await request.json();
     const { id, name, email, phone, company, status, source, notes, agencyId, assignedToId } = body;
@@ -168,7 +169,7 @@ export async function PUT(request: NextRequest) {
 }
 
 // DELETE - Delete lead
-export async function DELETE(request: NextRequest) {
+async function deleteHandler(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
@@ -194,3 +195,8 @@ export async function DELETE(request: NextRequest) {
     );
   }
 }
+
+export const GET = withAuthHandler(getHandler, { requiredRole: 'superadmin' });
+export const POST = withAuthHandler(postHandler, { requiredRole: 'superadmin' });
+export const PUT = withAuthHandler(putHandler, { requiredRole: 'superadmin' });
+export const DELETE = withAuthHandler(deleteHandler, { requiredRole: 'superadmin' });

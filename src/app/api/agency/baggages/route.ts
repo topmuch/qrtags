@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withAuthHandler } from '@/lib/auth-middleware';
+import type { SessionUser } from '@/lib/session';
 import { db } from '@/lib/db';
 import { normalizeStatus, isPending, isActive, statusFilterIn } from '@/lib/status';
 import { generateReference, calculateExpirationDate, generateSetId } from '@/lib/qr';
 
 // GET - List all baggages for an agency
-export async function GET(request: NextRequest) {
+async function getHandler(request: NextRequest, _user: SessionUser) {
   try {
     const { searchParams } = new URL(request.url);
     const agencyId = searchParams.get('agencyId');
@@ -70,7 +72,7 @@ export async function GET(request: NextRequest) {
 }
 
 // POST - Create a new baggage for an agency
-export async function POST(request: NextRequest) {
+async function postHandler(request: NextRequest, _user: SessionUser) {
   try {
     const body = await request.json();
     const { agencyId, travelerFirstName, travelerLastName, travelerPhone, travelerEmail, customData } = body;
@@ -113,7 +115,7 @@ export async function POST(request: NextRequest) {
 }
 
 // PUT - Update a baggage (e.g. customData)
-export async function PUT(request: NextRequest) {
+async function putHandler(request: NextRequest, _user: SessionUser) {
   try {
     const body = await request.json();
     const { id, agencyId, customData, ...rest } = body;
@@ -163,7 +165,7 @@ export async function PUT(request: NextRequest) {
 
 // DELETE - Bulk delete baggages for an agency
 // Body: { agencyId: string, ids: string[] } or { agencyId: string, status: 'pending_activation' }
-export async function DELETE(request: NextRequest) {
+async function deleteHandler(request: NextRequest, _user: SessionUser) {
   try {
     const body = await request.json();
     const { agencyId, ids, status } = body;
@@ -217,3 +219,8 @@ export async function DELETE(request: NextRequest) {
     );
   }
 }
+
+export const GET = withAuthHandler(getHandler);
+export const POST = withAuthHandler(postHandler);
+export const PUT = withAuthHandler(putHandler);
+export const DELETE = withAuthHandler(deleteHandler);

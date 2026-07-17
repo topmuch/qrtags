@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withAuthHandler } from '@/lib/auth-middleware';
+import type { SessionUser } from '@/lib/session';
 import { db } from '@/lib/db';
 
 // GET - Fetch Voyageurs (type: voyageur)
-export async function GET() {
+async function getHandler(_request: NextRequest, _user: SessionUser) {
   try {
     // Get all Voyageur baggages
     const baggages = await db.baggage.findMany({
@@ -107,7 +109,7 @@ export async function GET() {
 }
 
 // DELETE - Delete a traveler and all their baggages
-export async function DELETE(request: NextRequest) {
+async function deleteHandler(request: NextRequest, _user: SessionUser) {
   try {
     const { searchParams } = new URL(request.url);
     const travelerKey = searchParams.get('id');
@@ -177,3 +179,6 @@ export async function DELETE(request: NextRequest) {
     );
   }
 }
+
+export const GET = withAuthHandler(getHandler, { requiredRoles: ['superadmin', 'admin', 'agent'] });
+export const DELETE = withAuthHandler(deleteHandler, { requiredRoles: ['superadmin', 'admin', 'agent'] });

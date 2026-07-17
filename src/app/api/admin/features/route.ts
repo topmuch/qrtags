@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { withAuthHandler } from '@/lib/auth-middleware';
 
 // Feature definitions inline
 const FEATURE_DEFINITIONS = [
@@ -120,7 +121,7 @@ const FEATURE_DEFINITIONS = [
 ];
 
 // GET - Fetch all feature flags
-export async function GET() {
+async function getHandler() {
   try {
     type FeatureFlagType = {
       id: string;
@@ -215,7 +216,7 @@ export async function GET() {
 }
 
 // PUT - Toggle a feature flag
-export async function PUT(request: NextRequest) {
+async function putHandler(request: NextRequest) {
   try {
     const body = await request.json();
     const { key, enabled } = body;
@@ -267,3 +268,6 @@ export async function PUT(request: NextRequest) {
     );
   }
 }
+
+export const GET = withAuthHandler(getHandler, { requiredRole: 'superadmin' });
+export const PUT = withAuthHandler(putHandler, { requiredRole: 'superadmin' });

@@ -1,23 +1,13 @@
 import { NextResponse } from 'next/server';
-import { getSession, getActiveSessions } from '@/lib/session';
+import { getActiveSessions } from '@/lib/session';
+import { withAuthHandler } from '@/lib/auth-middleware';
 
 /**
  * GET /api/admin/security/sessions
- * Get all active sessions (SuperAdmin only)
+ * Get all active sessions
  */
-export async function GET() {
+async function getHandler() {
   try {
-    // Check authentication and authorization
-    const user = await getSession();
-
-    if (!user || user.role !== 'superadmin') {
-      return NextResponse.json(
-        { error: 'Non autorisé' },
-        { status: 401 }
-      );
-    }
-
-    // Get all active sessions with user data
     const sessions = await getActiveSessions();
 
     return NextResponse.json({ sessions });
@@ -29,3 +19,5 @@ export async function GET() {
     );
   }
 }
+
+export const GET = withAuthHandler(getHandler, { requiredRole: 'superadmin' });

@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withAuthHandler } from '@/lib/auth-middleware';
+import type { SessionUser } from '@/lib/session';
 import { db } from '@/lib/db';
 import { sendEmail, getEmailSettings } from '@/lib/email';
 
 // Messages API - Contact, Partenaire, Commande Agence
 // GET - Fetch all messages with filters
-export async function GET(request: NextRequest) {
+async function getHandler(request: NextRequest, _user: SessionUser) {
   try {
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type');
@@ -37,7 +39,7 @@ export async function GET(request: NextRequest) {
 }
 
 // POST - Create a new message
-export async function POST(request: NextRequest) {
+async function postHandler(request: NextRequest, _user: SessionUser) {
   try {
     const body = await request.json();
     const { type, senderName, senderEmail, senderPhone, agencyId, recipientAgencyId, subject, content } = body;
@@ -105,7 +107,7 @@ export async function POST(request: NextRequest) {
 }
 
 // PUT - Update message status
-export async function PUT(request: NextRequest) {
+async function putHandler(request: NextRequest, _user: SessionUser) {
   try {
     const body = await request.json();
     const { id, status } = body;
@@ -133,7 +135,7 @@ export async function PUT(request: NextRequest) {
 }
 
 // DELETE - Delete a message
-export async function DELETE(request: NextRequest) {
+async function deleteHandler(request: NextRequest, _user: SessionUser) {
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
@@ -158,3 +160,8 @@ export async function DELETE(request: NextRequest) {
     );
   }
 }
+
+export const GET = withAuthHandler(getHandler);
+export const POST = withAuthHandler(postHandler);
+export const PUT = withAuthHandler(putHandler);
+export const DELETE = withAuthHandler(deleteHandler);

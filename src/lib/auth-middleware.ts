@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession, SessionUser } from '@/lib/session';
 
+// Roles that can access /api/admin routes
+const ADMIN_ALLOWED_ROLES = ['superadmin', 'admin', 'agent'];
+// Roles that can access /api/agency routes
+const AGENCY_ALLOWED_ROLES = ['agency', 'superadmin', 'admin', 'agent'];
+
 // Routes that require authentication
 const PROTECTED_ROUTES = [
   '/api/admin',
@@ -9,12 +14,16 @@ const PROTECTED_ROUTES = [
   '/api/reports',
   '/api/notifications',
   '/api/messages',
+  '/api/qrcodes',
+  '/api/scans',
+  '/api/voyageurs',
+  '/api/dashboard',
 ];
 
 // Routes that require specific roles
-const ROLE_RESTRICTED_ROUTES: Record<string, 'superadmin' | 'agency'> = {
-  '/api/admin': 'superadmin',
-  '/api/agency': 'agency',
+const ROLE_RESTRICTED_ROUTES: Record<string, string[]> = {
+  '/api/admin': ADMIN_ALLOWED_ROLES,
+  '/api/agency': AGENCY_ALLOWED_ROLES,
 };
 
 // Public routes that don't require authentication
@@ -25,76 +34,45 @@ const PUBLIC_ROUTES = [
   '/api/detect-country',
   '/api/cron',
   '/api/init-demo',
+  '/api/seed',
+  '/api/suivi',
+  '/api/blog',
+  '/api/agencies',
+  '/api/baggage-status',
+  '/api/checklist',
+  '/api/advertisements/track',
+  '/api/landing',
+  '/api/baggage-sets',
+  '/api/agency-types',
 ];
 
 /**
  * Check if a route requires authentication
  */
 function isProtectedRoute(pathname: string): boolean {
-  // Check if it's a public route
   if (PUBLIC_ROUTES.some(route => pathname.startsWith(route))) {
     return false;
   }
-
-  // Check if it matches protected routes
   return PROTECTED_ROUTES.some(route => pathname.startsWith(route));
 }
 
 /**
- * Get required role for a route
+ * Get required roles for a route
  */
-function getRequiredRole(pathname: string): 'superadmin' | 'agency' | null {
-  for (const [route, role] of Object.entries(ROLE_RESTRICTED_ROUTES)) {
+function getRequiredRoles(pathname: string): string[] | null {
+  for (const [route, roles] of Object.entries(ROLE_RESTRICTED_ROUTES)) {
     if (pathname.startsWith(route)) {
-      return role;
+      return roles;
     }
   }
   return null;
 }
 
 /**
- * Middleware to protect API routes
- * Use in route handlers or as global middleware
+ * Check if user has an allowed role
  */
-export async function withAuth(
-  request: NextRequest,
-  handler: (user: SessionUser) => Promise<NextResponse>
-): Promise<NextResponse> {
-  const pathname = request.nextUrl.pathname;
-
-  // Skip auth for non-protected routes
-  if (!isProtectedRoute(pathname)) {
-    // For public routes, we pass null user
-    return handler(null as unknown as SessionUser);
-  }
-
-  try {
-    const user = await getSession();
-
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Non autorisé - Connexion requise' },
-        { status: 401 }
-      );
-    }
-
-    // Check role restrictions
-    const requiredRole = getRequiredRole(pathname);
-    if (requiredRole && user.role !== requiredRole) {
-      return NextResponse.json(
-        { error: 'Accès interdit - Permissions insuffisantes' },
-        { status: 403 }
-      );
-    }
-
-    return handler(user);
-  } catch (error) {
-    console.error('Auth middleware error:', error);
-    return NextResponse.json(
-      { error: 'Erreur d\'authentification' },
-      { status: 500 }
-    );
-  }
+function hasAllowedRole(userRole: string, allowedRoles: string[]): boolean {
+  return allowedRoles.includes(userRole);
 }
 
 /**
@@ -104,14 +82,19 @@ export async function withAuth(
  * export const GET = withAuthHandler(async (request, user) => {
  *   // user is guaranteed to be authenticated
  *   return NextResponse.json({ data: '...' });
- * });
+ * }, { requiredRoles: ['superadmin', 'admin'] });
  */
 export function withAuthHandler(
   handler: (request: NextRequest, user: SessionUser) => Promise<NextResponse>,
-  options?: { requiredRole?: 'superadmin' | 'agency' }
+  options?: { requiredRoles?: string[]; allowPublic?: boolean }
 ): (request: NextRequest) => Promise<NextResponse> {
   return async (request: NextRequest) => {
     const pathname = request.nextUrl.pathname;
+
+    // If explicitly marked as public, pass null user
+    if (options?.allowPublic && !isProtectedRoute(pathname)) {
+      return handler(request, null as unknown as SessionUser);
+    }
 
     // Skip auth for non-protected routes
     if (!isProtectedRoute(pathname)) {
@@ -129,8 +112,8 @@ export function withAuthHandler(
       }
 
       // Check role restrictions
-      const requiredRole = options?.requiredRole || getRequiredRole(pathname);
-      if (requiredRole && user.role !== requiredRole) {
+      const requiredRoles = options?.requiredRoles || getRequiredRoles(pathname);
+      if (requiredRoles && !hasAllowedRole(user.role, requiredRoles)) {
         return NextResponse.json(
           { error: 'Accès interdit - Permissions insuffisantes' },
           { status: 403 }
@@ -141,7 +124,7 @@ export function withAuthHandler(
     } catch (error) {
       console.error('Auth handler error:', error);
       return NextResponse.json(
-        { error: 'Erreur d\'authentification' },
+        { error: "Erreur d'authentification" },
         { status: 500 }
       );
     }
@@ -150,7 +133,6 @@ export function withAuthHandler(
 
 /**
  * Utility to get current user in API routes
- * Returns null if not authenticated
  */
 export async function getCurrentUser(): Promise<SessionUser | null> {
   return getSession();
@@ -158,7 +140,6 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
 
 /**
  * Utility to require authentication in API routes
- * Throws an error if not authenticated
  */
 export async function requireAuthApi(): Promise<SessionUser> {
   const user = await getSession();
@@ -169,13 +150,19 @@ export async function requireAuthApi(): Promise<SessionUser> {
 }
 
 /**
- * Utility to require specific role in API routes
- * Throws an error if not authorized
+ * Utility to require one of specific roles
  */
-export async function requireRoleApi(role: 'superadmin' | 'agency'): Promise<SessionUser> {
+export async function requireRolesApi(roles: string[]): Promise<SessionUser> {
   const user = await requireAuthApi();
-  if (user.role !== role) {
+  if (!roles.includes(user.role)) {
     throw new Error('FORBIDDEN');
   }
   return user;
+}
+
+/**
+ * Legacy compat — single role version
+ */
+export async function requireRoleApi(role: string): Promise<SessionUser> {
+  return requireRolesApi([role]);
 }

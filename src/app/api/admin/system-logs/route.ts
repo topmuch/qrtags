@@ -1,14 +1,9 @@
-import { NextResponse } from 'next/server';
-import { getSession } from '@/lib/session';
+import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { withAuthHandler } from '@/lib/auth-middleware';
 
 // GET: List system logs with filters and pagination
-export async function GET(req: Request) {
-  const user = await getSession();
-  if (!user || user.role !== 'superadmin') {
-    return NextResponse.json({ error: 'Non autorisé' }, { status: 403 });
-  }
-
+async function getHandler(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const level = searchParams.get('level') || undefined;
   const source = searchParams.get('source') || undefined;
@@ -49,12 +44,7 @@ export async function GET(req: Request) {
 }
 
 // DELETE: Purge logs older than 30 days
-export async function DELETE(req: Request) {
-  const user = await getSession();
-  if (!user || user.role !== 'superadmin') {
-    return NextResponse.json({ error: 'Non autorisé' }, { status: 403 });
-  }
-
+async function deleteHandler() {
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
   const result = await db.systemLog.deleteMany({
@@ -67,3 +57,6 @@ export async function DELETE(req: Request) {
     message: `${result.count} logs supprimés (plus de 30 jours)`,
   });
 }
+
+export const GET = withAuthHandler(getHandler, { requiredRole: 'superadmin' });
+export const DELETE = withAuthHandler(deleteHandler, { requiredRole: 'superadmin' });

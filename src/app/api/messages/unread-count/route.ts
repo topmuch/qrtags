@@ -1,8 +1,10 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { withAuthHandler } from '@/lib/auth-middleware';
+import type { SessionUser } from '@/lib/session';
 import { db } from '@/lib/db';
 
 // Unread messages count for notifications
-export async function GET() {
+async function getHandler(_request: NextRequest, _user: SessionUser) {
   try {
     const count = await db.message.count({
       where: { status: 'non_lu' },
@@ -14,3 +16,5 @@ export async function GET() {
     return NextResponse.json({ count: 0 });
   }
 }
+
+export const GET = withAuthHandler(getHandler);

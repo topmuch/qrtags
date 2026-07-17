@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { z } from 'zod';
 import { sendEmail, getEmailSettings, getNewAgencyEmailTemplate } from '@/lib/email';
+import { withAuthHandler } from '@/lib/auth-middleware';
 
 // Validation schema
 const agencySchema = z.object({
@@ -18,7 +19,7 @@ const agencySchema = z.object({
 });
 
 // GET - List all agencies
-export async function GET() {
+async function getHandler(_request: NextRequest) {
   try {
     const agencies = await db.agency.findMany({
       include: {
@@ -41,7 +42,7 @@ export async function GET() {
 }
 
 // POST - Create new agency
-export async function POST(request: NextRequest) {
+async function postHandler(request: NextRequest) {
   try {
     const body = await request.json();
     const validatedData = agencySchema.parse(body);
@@ -130,7 +131,7 @@ export async function POST(request: NextRequest) {
 }
 
 // PUT - Update agency
-export async function PUT(request: NextRequest) {
+async function putHandler(request: NextRequest) {
   try {
     const body = await request.json();
     const { id, active, ...data } = body;
@@ -187,7 +188,7 @@ export async function PUT(request: NextRequest) {
 }
 
 // DELETE - Delete agency
-export async function DELETE(request: NextRequest) {
+async function deleteHandler(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
@@ -213,3 +214,8 @@ export async function DELETE(request: NextRequest) {
     );
   }
 }
+
+export const GET = withAuthHandler(getHandler, { requiredRole: 'superadmin' });
+export const POST = withAuthHandler(postHandler, { requiredRole: 'superadmin' });
+export const PUT = withAuthHandler(putHandler, { requiredRole: 'superadmin' });
+export const DELETE = withAuthHandler(deleteHandler, { requiredRole: 'superadmin' });

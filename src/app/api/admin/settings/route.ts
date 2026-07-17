@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { withAuthHandler } from '@/lib/auth-middleware';
 
 // Default settings
 const defaultSettings = {
@@ -21,7 +22,7 @@ const defaultSettings = {
 };
 
 // GET - Get all settings
-export async function GET() {
+async function getHandler() {
   try {
     const settings = await db.setting.findMany();
     
@@ -46,7 +47,7 @@ export async function GET() {
 }
 
 // PUT - Update settings
-export async function PUT(request: NextRequest) {
+async function putHandler(request: NextRequest) {
   try {
     const body = await request.json();
     const { settings } = body;
@@ -78,3 +79,6 @@ export async function PUT(request: NextRequest) {
     );
   }
 }
+
+export const GET = withAuthHandler(getHandler, { requiredRole: 'superadmin' });
+export const PUT = withAuthHandler(putHandler, { requiredRole: 'superadmin' });

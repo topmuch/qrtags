@@ -357,17 +357,18 @@ export async function getActiveSessions(): Promise<(Session & { user: { email: s
  * Redirects to login if not authenticated
  * Returns the user if authenticated
  */
-export async function requireAuth(allowedRole?: 'superadmin' | 'agency'): Promise<SessionUser> {
+export async function requireAuth(allowedRoles?: string[]): Promise<SessionUser> {
   const user = await getSession();
 
   if (!user) {
-    const loginPath = allowedRole === 'superadmin' ? '/admin/connexion' : '/agence/connexion';
+    const isAdminRoute = allowedRoles?.some(r => ['superadmin', 'admin', 'agent'].includes(r));
+    const loginPath = isAdminRoute ? '/admin/connexion' : '/agence/connexion';
     throw new Error(`REDIRECT:${loginPath}`);
   }
 
-  if (allowedRole && user.role !== allowedRole) {
+  if (allowedRoles && allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
     // User has wrong role, redirect to their correct area
-    if (user.role === 'superadmin') {
+    if (['superadmin', 'admin', 'agent'].includes(user.role)) {
       throw new Error('REDIRECT:/admin/tableau-de-bord');
     } else {
       throw new Error('REDIRECT:/agence/tableau-de-bord');

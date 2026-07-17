@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getEmailSettings, saveEmailSettings } from '@/lib/email';
+import { withAuthHandler } from '@/lib/auth-middleware';
 
 // GET - Retrieve email settings
-export async function GET() {
+async function getHandler() {
   try {
     const settings = await getEmailSettings();
     
@@ -23,7 +24,7 @@ export async function GET() {
 }
 
 // PUT - Update email settings
-export async function PUT(request: NextRequest) {
+async function putHandler(request: NextRequest) {
   try {
     const body = await request.json();
     
@@ -91,3 +92,6 @@ export async function PUT(request: NextRequest) {
     );
   }
 }
+
+export const GET = withAuthHandler(getHandler, { requiredRole: 'superadmin' });
+export const PUT = withAuthHandler(putHandler, { requiredRole: 'superadmin' });

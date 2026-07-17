@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withAuthHandler } from '@/lib/auth-middleware';
+import type { SessionUser } from '@/lib/session';
 import { db } from '@/lib/db';
+import bcrypt from 'bcryptjs';
 
-// GET - Fetch agency profile
-export async function GET(request: NextRequest) {
+// GET - Fetch agency profile (uses user's agencyId)
+async function getHandler(request: NextRequest, user: SessionUser) {
   try {
-    const { searchParams } = new URL(request.url);
-    const agencyId = searchParams.get('agencyId');
-
+    const agencyId = user.agencyId;
     if (!agencyId) {
       return NextResponse.json(
-        { error: 'Agency ID is required' },
+        { error: 'Aucune agence associée à ce compte' },
         { status: 400 }
       );
     }
@@ -29,13 +30,17 @@ export async function GET(request: NextRequest) {
         secondaryColor: true,
         customMessage: true,
         active: true,
+        plan: true,
+        onboardingCompleted: true,
+        maxTags: true,
+        tagsUsed: true,
         createdAt: true,
       },
     });
 
     if (!agency) {
       return NextResponse.json(
-        { error: 'Agency not found' },
+        { error: 'Agence non trouvée' },
         { status: 404 }
       );
     }
@@ -51,27 +56,66 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// PUT - Update agency profile
-export async function PUT(request: NextRequest) {
+// PUT - Update agency profile or change password
+async function putHandler(request: NextRequest, user: SessionUser) {
   try {
     const body = await request.json();
-    const { agencyId, name, email, phone, address } = body;
+    const agencyId = user.agencyId;
 
     if (!agencyId) {
       return NextResponse.json(
-        { error: 'Agency ID is required' },
+        { error: 'Aucune agence associée à ce compte' },
         { status: 400 }
       );
     }
 
+    // Password change flow
+    if (body.currentPassword && body.newPassword) {
+      const { currentPassword, newPassword, confirmPassword } = body;
+
+      if (!confirmPassword) {
+        return NextResponse.json({ error: 'Confirmez le nouveau mot de passe' }, { status: 400 });
+      }
+      if (newPassword !== confirmPassword) {
+        return NextResponse.json({ error: 'Les mots de passe ne correspondent pas' }, { status: 400 });
+      }
+      if (newPassword.length < 6) {
+        return NextResponse.json({ error: 'Le mot de passe doit contenir au moins 6 caractères' }, { status: 400 });
+      }
+
+      // Verify current password
+      const dbUser = await db.user.findUnique({ where: { id: user.id } });
+      if (!dbUser?.password) {
+        return NextResponse.json({ error: 'Aucun mot de passe défini' }, { status: 400 });
+      }
+
+      const isValid = await bcrypt.compare(currentPassword, dbUser.password);
+      if (!isValid) {
+        return NextResponse.json({ error: 'Mot de passe actuel incorrect' }, { status: 401 });
+      }
+
+      // Hash and save new password
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      await db.user.update({
+        where: { id: user.id },
+        data: { password: hashedPassword },
+      });
+
+      return NextResponse.json({ success: true, message: 'Mot de passe mis à jour' });
+    }
+
+    // Profile update flow
+    const { name, email, phone, address } = body;
+
+    const updateData: Record<string, unknown> = {};
+    if (name !== undefined) updateData.name = name;
+    if (email !== undefined) updateData.email = email || null;
+    if (phone !== undefined) updateData.phone = phone || null;
+    if (address !== undefined) updateData.address = address || null;
+
     const agency = await db.agency.update({
       where: { id: agencyId },
-      data: {
-        name,
-        email,
-        phone,
-        address,
-      },
+      data: updateData,
     });
 
     return NextResponse.json({ success: true, agency });
@@ -84,3 +128,6 @@ export async function PUT(request: NextRequest) {
     );
   }
 }
+
+export const GET = withAuthHandler(getHandler);
+export const PUT = withAuthHandler(putHandler);

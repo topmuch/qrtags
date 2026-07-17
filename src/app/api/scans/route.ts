@@ -1,6 +1,8 @@
-import { NextResponse } from 'next/server'
-import { z } from 'zod/v4'
-import { db } from '@/lib/db'
+import { NextRequest, NextResponse } from 'next/server';
+import { withAuthHandler } from '@/lib/auth-middleware';
+import type { SessionUser } from '@/lib/session';
+import { z } from 'zod/v4';
+import { db } from '@/lib/db';
 
 // ─── Schemas ───────────────────────────────────────────────────────────────────
 
@@ -14,7 +16,7 @@ const createScanSchema = z.object({
 
 // ─── GET: List scan logs ───────────────────────────────────────────────────────
 
-export async function GET(request: Request) {
+async function getHandler(request: NextRequest, _user: SessionUser) {
   try {
     const { searchParams } = new URL(request.url)
     const agencyId = searchParams.get('agencyId')
@@ -70,7 +72,7 @@ export async function GET(request: Request) {
 
 // ─── POST: Create a scan log ───────────────────────────────────────────────────
 
-export async function POST(request: Request) {
+async function postHandler(request: NextRequest, _user: SessionUser) {
   try {
     const body = await request.json()
 
@@ -152,3 +154,6 @@ export async function POST(request: Request) {
     )
   }
 }
+
+export const GET = withAuthHandler(getHandler);
+export const POST = withAuthHandler(postHandler);

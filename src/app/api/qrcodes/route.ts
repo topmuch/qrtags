@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withAuthHandler } from '@/lib/auth-middleware';
+import type { SessionUser } from '@/lib/session';
 import { db } from '@/lib/db';
 
 // GET - List all QR code sets, optionally filtered by agency or search, grouped by agency
-export async function GET(request: NextRequest) {
+async function getHandler(request: NextRequest, _user: SessionUser) {
   try {
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search');
@@ -104,7 +106,7 @@ export async function GET(request: NextRequest) {
 }
 
 // DELETE - Delete a QR code set
-export async function DELETE(request: NextRequest) {
+async function deleteHandler(request: NextRequest, _user: SessionUser) {
   try {
     const { searchParams } = new URL(request.url);
     const setId = searchParams.get('setId');
@@ -166,3 +168,6 @@ export async function DELETE(request: NextRequest) {
     );
   }
 }
+
+export const GET = withAuthHandler(getHandler);
+export const DELETE = withAuthHandler(deleteHandler);

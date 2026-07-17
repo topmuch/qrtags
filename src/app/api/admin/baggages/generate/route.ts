@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withAuthHandler } from '@/lib/auth-middleware';
+import type { SessionUser } from '@/lib/session';
 import { z } from 'zod';
 import { generateReference, generateReferencesBulk, generateSetId, calculateExpirationDate } from '@/lib/qr';
 import { db } from '@/lib/db';
@@ -29,7 +31,7 @@ const combinedSchema = z.discriminatedUnion('context', [
   agencySchema
 ]);
 
-export async function POST(request: NextRequest) {
+async function postHandler(request: NextRequest, _user: SessionUser) {
   try {
     const body = await request.json();
     const validatedData = combinedSchema.parse(body);
@@ -185,7 +187,7 @@ async function generateBaggagesBatch(options: {
 }
 
 // GET - Get all baggages (for QR codes list)
-export async function GET(request: NextRequest) {
+async function getHandler(request: NextRequest, _user: SessionUser) {
   try {
     const { searchParams } = new URL(request.url);
     const agencyId = searchParams.get('agencyId');
@@ -223,3 +225,6 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+export const POST = withAuthHandler(postHandler, { requiredRoles: ['superadmin', 'admin', 'agent'] });
+export const GET = withAuthHandler(getHandler, { requiredRoles: ['superadmin', 'admin', 'agent'] });

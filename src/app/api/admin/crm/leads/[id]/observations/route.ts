@@ -1,15 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { withAuthHandler } from '@/lib/auth-middleware';
+import { SessionUser } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
 
 // POST - Add observation to lead
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+async function postHandler(request: NextRequest, _user: SessionUser) {
   try {
-    const { id } = await params;
+    const url = new URL(request.url);
+    const pathParts = url.pathname.split('/');
+    const id = pathParts[pathParts.length - 3]; // .../leads/[id]/observations => get [id]
+    
     const body = await request.json();
     const { type, content, date, userId } = body;
 
@@ -56,12 +58,11 @@ export async function POST(
 }
 
 // GET - Get observations for lead
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+async function getHandler(request: NextRequest, _user: SessionUser) {
   try {
-    const { id } = await params;
+    const url = new URL(request.url);
+    const pathParts = url.pathname.split('/');
+    const id = pathParts[pathParts.length - 3]; // .../leads/[id]/observations => get [id]
     
     const observations = await db.observation.findMany({
       where: { leadId: id },
@@ -83,3 +84,6 @@ export async function GET(
     );
   }
 }
+
+export const POST = withAuthHandler(postHandler, { requiredRole: 'superadmin' });
+export const GET = withAuthHandler(getHandler, { requiredRole: 'superadmin' });

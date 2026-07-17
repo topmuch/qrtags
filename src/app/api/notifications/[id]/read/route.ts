@@ -1,13 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withAuthHandler } from '@/lib/auth-middleware';
+import type { SessionUser } from '@/lib/session';
 import { db } from '@/lib/db';
 
 // POST - Mark notification as read
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+async function postHandler(request: NextRequest, _user: SessionUser) {
   try {
-    const { id } = await params;
+    // Extract notification ID from URL path: /api/notifications/[id]/read
+    const pathname = request.nextUrl.pathname;
+    const pathParts = pathname.split('/');
+    const id = pathParts[3]; // /api/notifications/{id}/read
+
+    if (!id) {
+      return NextResponse.json(
+        { error: 'Notification ID is required' },
+        { status: 400 }
+      );
+    }
 
     const notification = await db.notification.update({
       where: { id },
@@ -23,3 +32,5 @@ export async function POST(
     );
   }
 }
+
+export const POST = withAuthHandler(postHandler);

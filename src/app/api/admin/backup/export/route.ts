@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import fs from 'fs';
 import path from 'path';
+import { withAuthHandler } from '@/lib/auth-middleware';
 
 // GET - Export database as JSON file
-export async function GET(request: NextRequest) {
+async function getHandler(_request: NextRequest) {
   try {
     // Fetch all data from database
     const [
@@ -78,3 +79,5 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+export const GET = withAuthHandler(getHandler, { requiredRole: 'superadmin' });

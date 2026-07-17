@@ -19,7 +19,7 @@ export async function GET() {
       recentScans,
     ] = await Promise.all([
       db.agency.count(),
-      db.agency.count({ where: { isActive: true } }),
+      db.agency.count({ where: { active: true } }),
       db.baggageSet.count(),
       db.baggage.count(),
       db.scanLog.count(),

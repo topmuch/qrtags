@@ -1,15 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { withAuthHandler } from '@/lib/auth-middleware';
 
 export const dynamic = 'force-dynamic';
 
 // GET - Get lead details with observations
-export async function GET(
+async function getHandler(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  _params: unknown,
+  _user: unknown
 ) {
   try {
-    const { id } = await params;
+    const url = new URL(request.url);
+    const pathParts = url.pathname.split('/');
+    const id = pathParts[pathParts.length - 2]; // .../leads/[id] => get [id]
     
     const lead = await db.lead.findUnique({
       where: { id },
@@ -44,12 +48,16 @@ export async function GET(
 }
 
 // PUT - Update lead
-export async function PUT(
+async function putHandler(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  _params: unknown,
+  _user: unknown
 ) {
   try {
-    const { id } = await params;
+    const url = new URL(request.url);
+    const pathParts = url.pathname.split('/');
+    const id = pathParts[pathParts.length - 2];
+
     const body = await request.json();
     const { status, assignedToId, notes, company, phone, email, name } = body;
 
@@ -82,3 +90,6 @@ export async function PUT(
     );
   }
 }
+
+export const GET = withAuthHandler(getHandler, { requiredRole: 'superadmin' });
+export const PUT = withAuthHandler(putHandler, { requiredRole: 'superadmin' });

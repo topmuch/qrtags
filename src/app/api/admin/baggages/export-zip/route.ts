@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withAuthHandler } from '@/lib/auth-middleware';
+import type { SessionUser } from '@/lib/session';
 import { ZipArchive } from 'archiver';
 import { Readable } from 'stream';
 import { db } from '@/lib/db';
@@ -27,7 +29,7 @@ import {
 // Max QR codes per export to prevent server overload
 const MAX_EXPORT_SIZE = 5000;
 
-export async function POST(request: NextRequest) {
+async function postHandler(request: NextRequest, _user: SessionUser) {
   try {
     const body = await request.json();
     const { agencyId, type, setId, setIds, status } = body;
@@ -325,3 +327,5 @@ function generateManifest(
 
   return lines.join('\n');
 }
+
+export const POST = withAuthHandler(postHandler, { requiredRoles: ['superadmin', 'admin', 'agent'] });

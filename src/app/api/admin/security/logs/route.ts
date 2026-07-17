@@ -1,23 +1,13 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { getSession } from '@/lib/session';
+import { withAuthHandler } from '@/lib/auth-middleware';
 
 /**
  * GET /api/admin/security/logs
- * Get login audit logs (SuperAdmin only)
+ * Get login audit logs
  */
-export async function GET() {
+async function getHandler() {
   try {
-    // Check authentication and authorization
-    const user = await getSession();
-
-    if (!user || user.role !== 'superadmin') {
-      return NextResponse.json(
-        { error: 'Non autorisé' },
-        { status: 401 }
-      );
-    }
-
     // Get login logs from last 30 days
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
@@ -26,7 +16,7 @@ export async function GET() {
         createdAt: { gte: thirtyDaysAgo },
       },
       orderBy: { createdAt: 'desc' },
-      take: 200, // Limit to last 200 entries
+      take: 200,
     });
 
     return NextResponse.json({ logs });
@@ -38,3 +28,5 @@ export async function GET() {
     );
   }
 }
+
+export const GET = withAuthHandler(getHandler, { requiredRole: 'superadmin' });

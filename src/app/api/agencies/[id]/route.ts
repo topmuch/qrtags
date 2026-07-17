@@ -23,7 +23,7 @@ const updateAgencySchema = z.object({
   secondaryColor: z.string().optional(),
   customMessage: z.string().nullable().optional(),
   plan: z.string().optional(),
-  isActive: z.boolean().optional(),
+  active: z.boolean().optional(),
 })
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

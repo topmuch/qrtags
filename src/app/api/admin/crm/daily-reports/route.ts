@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { withAuthHandler } from '@/lib/auth-middleware';
 
 export const dynamic = 'force-dynamic';
 
 // GET - Get daily report for a specific date
-export async function GET(request: NextRequest) {
+async function getHandler(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const dateStr = searchParams.get('date');
@@ -54,7 +55,7 @@ export async function GET(request: NextRequest) {
 }
 
 // POST - Create or update daily report
-export async function POST(request: NextRequest) {
+async function postHandler(request: NextRequest) {
   try {
     const body = await request.json();
     const { userId, content, date } = body;
@@ -110,3 +111,6 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+export const GET = withAuthHandler(getHandler, { requiredRole: 'superadmin' });
+export const POST = withAuthHandler(postHandler, { requiredRole: 'superadmin' });

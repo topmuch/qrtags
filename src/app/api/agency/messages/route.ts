@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withAuthHandler } from '@/lib/auth-middleware';
+import type { SessionUser } from '@/lib/session';
 import { db } from '@/lib/db';
 import { sendEmail, getEmailSettings, getAgencyMessageEmailTemplate } from '@/lib/email';
 
 // GET - Fetch messages for agency
-export async function GET(request: NextRequest) {
+async function getHandler(request: NextRequest, _user: SessionUser) {
   try {
     const { searchParams } = new URL(request.url);
     const agencyId = searchParams.get('agencyId');
@@ -77,7 +79,7 @@ export async function GET(request: NextRequest) {
 }
 
 // POST - Create a new message from agency to superadmin
-export async function POST(request: NextRequest) {
+async function postHandler(request: NextRequest, _user: SessionUser) {
   try {
     const body = await request.json();
     const { type, agencyId, senderName, subject, content } = body;
@@ -152,7 +154,7 @@ export async function POST(request: NextRequest) {
 }
 
 // PUT - Update message status (mark as read)
-export async function PUT(request: NextRequest) {
+async function putHandler(request: NextRequest, _user: SessionUser) {
   try {
     const body = await request.json();
     const { id, status } = body;
@@ -179,3 +181,7 @@ export async function PUT(request: NextRequest) {
     );
   }
 }
+
+export const GET = withAuthHandler(getHandler);
+export const POST = withAuthHandler(postHandler);
+export const PUT = withAuthHandler(putHandler);

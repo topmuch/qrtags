@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { getSession } from '@/lib/session';
+import { withAuthHandler } from '@/lib/auth-middleware';
+import { SessionUser } from '@/lib/session';
 
 // Helper to generate slug from title
 function generateSlug(title: string): string {
@@ -12,20 +13,9 @@ function generateSlug(title: string): string {
     .replace(/(^-|-$)/g, '');
 }
 
-// GET - List all blog posts (Admin/SuperAdmin only)
-export async function GET(request: NextRequest) {
+// GET - List all blog posts
+async function getHandler(request: NextRequest, _user: SessionUser) {
   try {
-    const user = await getSession();
-    
-    if (!user) {
-      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
-    }
-
-    const isAdmin = ['superadmin', 'admin'].includes(user.role);
-    if (!isAdmin) {
-      return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
-    }
-
     // Parse query parameters
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
@@ -83,20 +73,9 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - Create new blog post (Admin/SuperAdmin only)
-export async function POST(request: NextRequest) {
+// POST - Create new blog post
+async function postHandler(request: NextRequest, user: SessionUser) {
   try {
-    const user = await getSession();
-    
-    if (!user) {
-      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
-    }
-
-    const isAdmin = ['superadmin', 'admin'].includes(user.role);
-    if (!isAdmin) {
-      return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
-    }
-
     const body = await request.json();
     const {
       title,
@@ -153,20 +132,9 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// PUT - Update blog post (Admin/SuperAdmin only)
-export async function PUT(request: NextRequest) {
+// PUT - Update blog post
+async function putHandler(request: NextRequest, _user: SessionUser) {
   try {
-    const user = await getSession();
-    
-    if (!user) {
-      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
-    }
-
-    const isAdmin = ['superadmin', 'admin'].includes(user.role);
-    if (!isAdmin) {
-      return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
-    }
-
     const body = await request.json();
     const {
       id,
@@ -239,20 +207,9 @@ export async function PUT(request: NextRequest) {
   }
 }
 
-// DELETE - Delete blog post (SuperAdmin only)
-export async function DELETE(request: NextRequest) {
+// DELETE - Delete blog post
+async function deleteHandler(request: NextRequest, _user: SessionUser) {
   try {
-    const user = await getSession();
-    
-    if (!user) {
-      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
-    }
-
-    // Only superadmin can delete
-    if (user.role !== 'superadmin') {
-      return NextResponse.json({ error: 'Accès refusé - SuperAdmin requis' }, { status: 403 });
-    }
-
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 
@@ -276,3 +233,8 @@ export async function DELETE(request: NextRequest) {
     );
   }
 }
+
+export const GET = withAuthHandler(getHandler, { requiredRole: 'superadmin' });
+export const POST = withAuthHandler(postHandler, { requiredRole: 'superadmin' });
+export const PUT = withAuthHandler(putHandler, { requiredRole: 'superadmin' });
+export const DELETE = withAuthHandler(deleteHandler, { requiredRole: 'superadmin' });

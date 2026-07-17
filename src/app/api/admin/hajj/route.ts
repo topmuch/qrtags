@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { withAuthHandler } from '@/lib/auth-middleware';
 
 // GET - Fetch Hajj pilgrims with their baggages
-export async function GET() {
+async function getHandler(_request: NextRequest) {
   try {
     // Get all Hajj baggages
     const baggages = await db.baggage.findMany({
@@ -93,7 +94,7 @@ export async function GET() {
 }
 
 // DELETE - Delete a pilgrim and all their baggages
-export async function DELETE(request: NextRequest) {
+async function deleteHandler(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const pilgrimKey = searchParams.get('id');
@@ -125,3 +126,6 @@ export async function DELETE(request: NextRequest) {
     );
   }
 }
+
+export const GET = withAuthHandler(getHandler, { requiredRole: 'superadmin' });
+export const DELETE = withAuthHandler(deleteHandler, { requiredRole: 'superadmin' });

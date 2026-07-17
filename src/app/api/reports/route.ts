@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withAuthHandler } from '@/lib/auth-middleware';
+import type { SessionUser } from '@/lib/session';
 import { db } from '@/lib/db';
 import { isPending, isActive } from '@/lib/status';
 
 // GET - Fetch report statistics
-export async function GET(request: NextRequest) {
+async function getHandler(request: NextRequest, _user: SessionUser) {
   try {
     const { searchParams } = new URL(request.url);
     const agencyId = searchParams.get('agencyId');
@@ -157,3 +159,5 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+export const GET = withAuthHandler(getHandler);

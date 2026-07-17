@@ -19,6 +19,8 @@ model User {
   role            String        @default("agency") // "superadmin" | "admin" | "agent" | "agency"
   agencyId        String?
   agency          Agency?       @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  roleId          String?
+  roleRelation    Role?         @relation(fields: [roleId], references: [id])
   sessions        Session[]
   loginLogs       LoginLog[]
   assignedLeads   Lead[]        @relation("AssignedLeads")
@@ -70,11 +72,20 @@ model Agency {
   secondaryColor  String    @default("#F97316")
   customMessage   String?   // Message personnalisé page de scan
   active          Boolean   @default(true)
+  plan            String    @default("free") // "free" | "pro" | "enterprise"
+  onboardingCompleted Boolean  @default(false)
+  maxTags         Int       @default(5) // Max QR tags based on plan
+  tagsUsed        Int       @default(0) // Currently used tags
   createdAt       DateTime  @default(now())
   baggages        Baggage[]
   users           User[]
   invoices        Invoice[]
   customFields    AgencyCustomField[]
+  subscriptions   Subscription[]
+  payments        Payment[]
+  wallet          Wallet?
+  smsCredits      SmsCredit[]
+  bookings        Booking[]
 }
 
 // Baggage model - main entity for lost object tracking
@@ -293,20 +304,23 @@ model EmailToken {
 
 // Invoice model - for agency billing
 model Invoice {
-  id            String   @id @default(cuid())
-  number        String   @unique
-  agencyId      String
-  agency        Agency   @relation(fields: [agencyId], references: [id])
-  amount        Float
-  currency      String   @default("EUR")
-  status        String   @default("pending") // "pending", "paid", "cancelled"
-  description   String?
-  items         String   // JSON array of invoice items
-  dueDate       DateTime?
-  paidAt        DateTime?
-  paymentMethod String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id              String   @id @default(cuid())
+  number          String   @unique
+  agencyId        String
+  agency          Agency   @relation(fields: [agencyId], references: [id])
+  amount          Float
+  currency        String   @default("EUR")
+  status          String   @default("pending") // "pending", "paid", "cancelled"
+  description     String?
+  items           String   // JSON array of invoice items
+  dueDate         DateTime?
+  paidAt          DateTime?
+  paymentMethod   String?
+  subscriptionId  String?
+  subscription    Subscription?  @relation(fields: [subscriptionId], references: [id])
+  payments        Payment[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 // Lead model - CRM leads/prospects
@@ -486,6 +500,165 @@ model SystemLog {
   @@index([level])
   @@index([source])
   @@index([createdAt])
+}
+
+// Subscription model - agency subscription plans
+model Subscription {
+  id            String   @id @default(cuid())
+  agencyId      String
+  agency        Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  plan          String   @default("free") // "free" | "pro" | "enterprise"
+  status        String   @default("active") // "active" | "paused" | "cancelled" | "expired"
+  startDate     DateTime @default(now())
+  endDate       DateTime?
+  amount        Float    @default(0)
+  currency      String   @default("XOF") // FCFA
+  paymentMethod String?  // "wave" | "orange_money" | "mtn_money" | "cinetpay" | "card"
+  autoRenew     Boolean  @default(false)
+  cancelledAt   DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  invoices      Invoice[]
+  payments      Payment[]
+}
+
+// Payment model - payment transactions
+model Payment {
+  id              String   @id @default(cuid())
+  agencyId        String?
+  agency          Agency?  @relation(fields: [agencyId], references: [id], onDelete: SetNull)
+  subscriptionId  String?
+  subscription    Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  amount          Float
+  currency        String   @default("XOF")
+  method          String   // "wave" | "orange_money" | "mtn_money" | "cinetpay" | "card" | "wallet"
+  status          String   @default("pending") // "pending" | "processing" | "success" | "failed" | "refunded"
+  transactionId   String?  // External transaction ID from payment provider
+  provider        String?  // "cinetpay" | "wave" etc.
+  description     String?
+  metadata        String?  // JSON with provider-specific data
+  paidAt          DateTime?
+  createdAt       DateTime @default(now())
+
+  invoiceId       String?
+  invoice         Invoice?  @relation(fields: [invoiceId], references: [id])
+  bookings        Booking[]
+}
+
+// Wallet model - agency prepaid wallet
+model Wallet {
+  id              String   @id @default(cuid())
+  agencyId        String   @unique
+  agency          Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  balance         Float    @default(0)
+  totalRecharged  Float    @default(0)
+  totalSpent      Float    @default(0)
+  currency        String   @default("XOF")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  transactions    WalletTransaction[]
+}
+
+// WalletTransaction model - wallet movements
+model WalletTransaction {
+  id              String   @id @default(cuid())
+  walletId        String
+  wallet          Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  type            String   // "recharge" | "purchase" | "refund" | "adjustment"
+  amount          Float
+  balanceBefore   Float
+  balanceAfter    Float
+  description     String?
+  referenceId     String?  // Link to Payment or other entity
+  referenceType   String?  // "payment" | "subscription" | "manual"
+  createdAt       DateTime @default(now())
+
+  @@index([walletId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+// SmsCredit model - SMS credits management
+model SmsCredit {
+  id              String   @id @default(cuid())
+  agencyId        String
+  agency          Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  balance         Int      @default(0)
+  totalPurchased  Int      @default(0)
+  totalUsed       Int      @default(0)
+  lowBalanceAlert Boolean  @default(true)
+  alertThreshold  Int      @default(10)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([agencyId])
+}
+
+// Booking model - tag orders/purchases
+model Booking {
+  id              String   @id @default(cuid())
+  agencyId        String?
+  agency          Agency?  @relation(fields: [agencyId], references: [id], onDelete: SetNull)
+  reference       String   @unique // "CMD-2025-XXXXX"
+  plan            String   @default("pro") // what was ordered
+  quantity        Int      @default(1) // number of tags
+  amountPerTag    Float
+  totalAmount     Float
+  currency        String   @default("XOF")
+  status          String   @default("pending") // "pending" | "paid" | "processing" | "completed" | "cancelled"
+  paymentId       String?
+  payment         Payment? @relation(fields: [paymentId], references: [id])
+  paymentMethod   String?
+  paidAt          DateTime?
+  completedAt     DateTime?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([agencyId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// Role model - stored in DB for flexibility
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique // "superadmin" | "admin" | "agent" | "agency"
+  label       String   // Display name
+  description String?
+  level       Int      @default(0) // Higher = more permissions (superadmin=100, admin=80, agent=50, agency=10)
+  isSystem    Boolean  @default(false) // System roles cannot be deleted
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users       User[]
+  rolePermissions RolePermission[]
+}
+
+// Permission model - granular permissions stored in DB
+model Permission {
+  id          String   @id @default(cuid())
+  key         String   @unique // "view_dashboard", "manage_baggages", etc.
+  label       String   // Display name "Voir le dashboard"
+  category    String   @default("general") // "general" | "baggage" | "agency" | "user" | "report" | "message" | "setting" | "crm" | "monitoring"
+  description String?
+  createdAt   DateTime @default(now())
+
+  rolePermissions RolePermission[]
+}
+
+// RolePermission - many-to-many junction
+model RolePermission {
+  id           String   @id @default(cuid())
+  roleId       String
+  role         Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permissionId String
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+
+  @@unique([roleId, permissionId])
 }
 
 // Checklist model - public travel inventory checklists generated by passengers

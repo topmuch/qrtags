@@ -1,14 +1,8 @@
-import { NextResponse } from 'next/server';
-import { getSession } from '@/lib/session';
+import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { withAuthHandler } from '@/lib/auth-middleware';
 
-export async function GET(req: Request) {
-  // SuperAdmin protection
-  const user = await getSession();
-  if (!user || user.role !== 'superadmin') {
-    return NextResponse.json({ error: 'Non autorisé' }, { status: 403 });
-  }
-
+async function getHandler() {
   const checks: { name: string; status: 'ok' | 'warn' | 'error'; detail: string; latencyMs?: number }[] = [];
   let hasCritical = false;
 
@@ -35,7 +29,6 @@ export async function GET(req: Request) {
   // 2. Environment variables
   const envVars = [
     { name: 'DATABASE_URL', required: true },
-    { name: 'NEXTAUTH_SECRET', required: true },
     { name: 'GROQ_API_KEY', required: false },
     { name: 'NEXT_PUBLIC_APP_URL', required: false },
     { name: 'ENCRYPTION_KEY', required: true },
@@ -115,3 +108,5 @@ export async function GET(req: Request) {
     checks,
   });
 }
+
+export const GET = withAuthHandler(getHandler, { requiredRole: 'superadmin' });

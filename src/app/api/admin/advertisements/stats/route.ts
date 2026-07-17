@@ -1,27 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withAuthHandler } from '@/lib/auth-middleware';
+import type { SessionUser } from '@/lib/session';
 import { db } from '@/lib/db';
-import { cookies } from 'next/headers';
 
-// GET - Get advertisement statistics (SuperAdmin only)
-export async function GET(request: NextRequest) {
+// GET - Get advertisement statistics (Admin only)
+async function getHandler(request: NextRequest, _user: SessionUser) {
   try {
-    // Check authentication
-    const cookieStore = await cookies();
-    const sessionToken = cookieStore.get('session')?.value;
-
-    if (!sessionToken) {
-      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
-    }
-
-    const session = await db.session.findUnique({
-      where: { id: sessionToken },
-      include: { user: true }
-    });
-
-    if (!session || session.user.role !== 'superadmin') {
-      return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
-    }
-
     const { searchParams } = new URL(request.url);
     const advertisementId = searchParams.get('id');
     const days = parseInt(searchParams.get('days') || '30');
@@ -165,3 +149,5 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+export const GET = withAuthHandler(getHandler, { requiredRoles: ['superadmin', 'admin', 'agent'] });

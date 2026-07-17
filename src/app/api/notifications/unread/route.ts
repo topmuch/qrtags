@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withAuthHandler } from '@/lib/auth-middleware';
+import type { SessionUser } from '@/lib/session';
 import { db } from '@/lib/db';
 
 // GET - Fetch unread notifications for SuperAdmin
-export async function GET(request: NextRequest) {
+async function getHandler(_request: NextRequest, _user: SessionUser) {
   try {
     // Get all unread notifications (broadcast to superadmins)
     const notifications = await db.notification.findMany({
@@ -24,3 +26,5 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+export const GET = withAuthHandler(getHandler);

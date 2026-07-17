@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withAuthHandler } from '@/lib/auth-middleware';
+import type { SessionUser } from '@/lib/session';
 import { sendEmail, getTestEmailTemplate, updateTestStatus, getEmailSettings } from '@/lib/email';
 
 export const dynamic = 'force-dynamic';
 
 // POST - Send a test email
-export async function POST(request: NextRequest) {
+async function postHandler(request: NextRequest, _user: SessionUser) {
   try {
     const body = await request.json();
     const { to } = body;
@@ -71,3 +73,5 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+export const POST = withAuthHandler(postHandler, { requiredRoles: ['superadmin', 'admin', 'agent'] });

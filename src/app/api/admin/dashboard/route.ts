@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { isActive } from '@/lib/status';
+import { withAuthHandler } from '@/lib/auth-middleware';
 
 // GET - Fetch dashboard statistics
-export async function GET() {
+async function getHandler() {
   try {
     // Get all baggages
     const baggages = await db.baggage.findMany({
@@ -166,3 +167,5 @@ function getTimeAgo(date: Date): string {
   if (diffDays < 7) return `Il y a ${diffDays} j`;
   return date.toLocaleDateString('fr-FR');
 }
+
+export const GET = withAuthHandler(getHandler, { requiredRole: 'superadmin' });

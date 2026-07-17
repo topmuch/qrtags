@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { Prisma } from '@prisma/client';
+import { withAuthHandler } from '@/lib/auth-middleware';
 
 // POST - Import database from JSON file
-export async function POST(request: NextRequest) {
+async function postHandler(request: NextRequest) {
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File;
@@ -39,17 +40,6 @@ export async function POST(request: NextRequest) {
         featureFlags: 0,
         messages: 0,
       };
-
-      // Clear existing data (optional - comment out if you want to merge)
-      // await tx.scanLog.deleteMany();
-      // await tx.baggage.deleteMany();
-      // await tx.user.deleteMany();
-      // await tx.agency.deleteMany();
-      // await tx.setting.deleteMany();
-      // await tx.page.deleteMany();
-      // await tx.banner.deleteMany();
-      // await tx.featureFlag.deleteMany();
-      // await tx.message.deleteMany();
 
       // Import agencies first (no dependencies)
       if (backup.data.agencies?.length > 0) {
@@ -212,3 +202,5 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+export const POST = withAuthHandler(postHandler, { requiredRole: 'superadmin' });
