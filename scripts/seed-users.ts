@@ -8,15 +8,20 @@ async function main() {
 
   // Créer une agence de test
   const agency = await prisma.agency.upsert({
-    where: { slug: 'test-agency' },
+    where: { slug: 'diop' },
     update: {},
     create: {
-      name: 'Agence Test Hajj',
-      slug: 'test-agency',
-      email: 'contact@test-agency.com',
-      phone: '+33 1 23 45 67 89',
-      address: 'Paris, France',
+      name: 'FRANCINE MAKELA',
+      slug: 'diop',
+      email: 'contact@francine-makela.com',
+      phone: '+221 77 123 45 67',
+      address: 'Dakar, Sénégal',
       active: true,
+      agencyType: 'travel',
+      plan: 'free',
+      onboardingCompleted: true,
+      maxTags: 5,
+      tagsUsed: 0,
     },
   });
 
@@ -28,13 +33,13 @@ async function main() {
 
   // Créer l'utilisateur SuperAdmin
   const admin = await prisma.user.upsert({
-    where: { email: 'admin@qrbag.com' },
+    where: { email: 'admin@qrtag.com' },
     update: {
       password: adminPassword,
       role: 'superadmin',
     },
     create: {
-      email: 'admin@qrbag.com',
+      email: 'admin@qrtag.com',
       name: 'Super Admin',
       password: adminPassword,
       role: 'superadmin',
@@ -45,15 +50,15 @@ async function main() {
 
   // Créer l'utilisateur Agence
   const agencyUser = await prisma.user.upsert({
-    where: { email: 'agence@qrbag.com' },
+    where: { email: 'agence@qrtag.com' },
     update: {
       password: agencyPassword,
       role: 'agency',
       agencyId: agency.id,
     },
     create: {
-      email: 'agence@qrbag.com',
-      name: 'Admin Agence Test',
+      email: 'agence@qrtag.com',
+      name: 'FRANCINE MAKELA',
       password: agencyPassword,
       role: 'agency',
       agencyId: agency.id,
@@ -64,9 +69,9 @@ async function main() {
 
   console.log('\n🎉 Comptes de test prêts !');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('🔐 Admin: admin@qrbag.com / admin123');
-  console.log('🏢 Agence: agence@qrbag.com / agence123');
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log('🔐 Admin: admin@qrtag.com / admin123');
+  console.log('🏢 Agence: agence@qrtag.com / agence123');
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 }
 
 main()

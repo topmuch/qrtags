@@ -6,8 +6,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import {
   ArrowLeft,
   ArrowRight,
-  Camera,
-  FileText,
   Sparkles,
   Globe,
   AlertCircle,
@@ -87,7 +85,7 @@ function InscrireContent() {
   const { t, lang, setLang, dir, countryCode } = useTranslation();
   const [objectCategory, setObjectCategory] = useState<ObjectCategory | ''>('');
   const [step, setStep] = useState(1);
-  const [activeTab, setActiveTab] = useState<'manual' | 'scan'>('manual');
+  // Scan tab removed — manual entry only
 
   const [loading, setLoading] = useState(false);
   const [phoneCountry, setPhoneCountry] = useState(countryCode);
@@ -232,47 +230,7 @@ function InscrireContent() {
                 {t('objects.select_category')}
               </h2>
 
-              {/* Tab Toggle — Manual / Scan (selected = #c5a643) */}
-              <div className="flex gap-2 mb-5">
-                <button
-                  onClick={() => setActiveTab('manual')}
-                  className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-semibold transition-all min-h-[44px] border-2 border-black ${
-                    activeTab === 'manual'
-                      ? 'bg-[#F97316] text-black shadow-lg'
-                      : 'bg-white/10 text-white hover:bg-white/20'
-                  }`}
-                >
-                  <FileText className="w-4 h-4" />
-                  {t('inscrire.manual_tab')}
-                </button>
-                <button
-                  onClick={() => setActiveTab('scan')}
-                  className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-semibold transition-all min-h-[44px] border-2 border-black ${
-                    activeTab === 'scan'
-                      ? 'bg-[#F97316] text-black shadow-lg'
-                      : 'bg-white/10 text-white hover:bg-white/20'
-                  }`}
-                >
-                  <Camera className="w-4 h-4" />
-                  {t('inscrire.scan_tab')}
-                </button>
-              </div>
-
-              {activeTab === 'scan' ? (
-                <div className="text-center py-6">
-                  <div className="w-20 h-20 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-dashed border-white/30">
-                    <Camera className="w-10 h-10 text-white/60" />
-                  </div>
-                  <h3 className="text-black font-semibold text-lg mb-2">{t('inscrire.scan_title')}</h3>
-                  <p className="text-black/70 text-sm mb-5">{t('inscrire.scan_desc')}</p>
-                  <button className="w-full py-4 px-6 bg-[#F97316] hover:bg-[#F97316]/80 text-black rounded-xl font-bold text-lg transition-colors flex items-center justify-center gap-2 min-h-[56px] shadow-lg">
-                    <Camera className="w-5 h-5" />
-                    {t('inscrire.scan_button')}
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <ObjectCategorySelector
+              <ObjectCategorySelector
                     selectedCategory={objectCategory}
                     onSelect={handleCategorySelect}
                     t={t}
@@ -287,8 +245,6 @@ function InscrireContent() {
                     {t('inscrire.next_step')}
                     <ArrowRight className="w-5 h-5" />
                   </button>
-                </>
-              )}
             </>
           )}
 
